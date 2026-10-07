@@ -1,5 +1,14 @@
 import { players } from "../../../data/players";
 import { season3 } from "../../../data/seasons/season-3";
+import { season4 } from "../../../data/seasons/season-4";
+
+type SeasonNumber = 1 | 2 | 3 | 4;
+
+type PageProps = {
+  searchParams: Promise<{
+    season?: string;
+  }>;
+};
 
 type CoopTeam = {
   id: string;
@@ -7,8 +16,35 @@ type CoopTeam = {
   players: string[];
 };
 
-export default function CoopCupPage() {
-  const teams = season3.ironCoopCup.teams as CoopTeam[];
+export default async function CoopCupPage({
+  searchParams,
+}: PageProps) {
+  const params = await searchParams;
+
+  const requestedSeason = Number(params.season);
+
+  const season: SeasonNumber =
+    requestedSeason >= 1 && requestedSeason <= 4
+      ? (requestedSeason as SeasonNumber)
+      : 3;
+
+  const seasonData =
+    season === 3
+      ? season3
+      : season === 4
+        ? season4
+        : null;
+
+  const teams = seasonData
+    ? (seasonData.ironCoopCup.teams as CoopTeam[])
+    : [];
+
+  const seasonStatus =
+    season === 1 || season === 2
+      ? "Турнір не проводився"
+      : season === 3
+        ? "Перший розіграш"
+        : "Підготовка";
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
@@ -65,11 +101,45 @@ export default function CoopCupPage() {
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/55">
             Командний турнір Iron League у форматі 2 на 2.
-            Команди отримають назви футбольних клубів УПЛ,
-            а кожну команду представлятимуть два гравці.
+            Кожну команду представляють два гравці, а команди
+            отримують назви футбольних клубів УПЛ.
           </p>
 
+          {/* SEASON SWITCHER */}
+          <div className="mt-8">
+            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
+              Обрати сезон
+            </div>
+
+            <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d] p-1">
+              {([1, 2, 3, 4] as const).map((seasonNumber) => (
+                <a
+                  key={seasonNumber}
+                  href={`/tournaments/coop-cup?season=${seasonNumber}`}
+                  className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
+                    season === seasonNumber
+                      ? "bg-blue-500 text-white"
+                      : "text-white/45 hover:text-white"
+                  }`}
+                >
+                  Сезон {seasonNumber}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* INFO */}
           <div className="mt-8 flex flex-wrap gap-3">
+            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Сезон
+              </span>
+
+              <span className="ml-2 font-black text-blue-300">
+                {season}
+              </span>
+            </div>
+
             <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
               <span className="text-sm text-white/40">
                 Формат
@@ -82,16 +152,6 @@ export default function CoopCupPage() {
 
             <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
               <span className="text-sm text-white/40">
-                Статус
-              </span>
-
-              <span className="ml-2 font-black">
-                Підготовка
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
                 Команд
               </span>
 
@@ -99,11 +159,21 @@ export default function CoopCupPage() {
                 {teams.length}
               </span>
             </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Статус
+              </span>
+
+              <span className="ml-2 font-black text-blue-300">
+                {seasonStatus}
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CONTENT */}
+      {/* TEAMS */}
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="mb-10">
           <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -115,7 +185,36 @@ export default function CoopCupPage() {
           </h2>
         </div>
 
-        {teams.length === 0 ? (
+        {/* SEASONS 1-2 */}
+        {season === 1 || season === 2 ? (
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-16 text-center">
+            <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.03] blur-[80px]" />
+
+            <div className="relative">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-3xl font-black text-white/25">
+                —
+              </div>
+
+              <h3 className="mt-6 text-3xl font-black">
+                Iron Co-op Cup ще не проводився
+              </h3>
+
+              <p className="mx-auto mt-4 max-w-xl leading-7 text-white/40">
+                У Сезонах 1 та 2 цього турніру ще не існувало.
+                Iron Co-op Cup вперше з&apos;явився у Сезоні 3
+                Iron League.
+              </p>
+
+              <a
+                href="/tournaments/coop-cup?season=3"
+                className="mt-8 inline-block rounded-xl bg-blue-500 px-6 py-3 font-bold transition hover:bg-blue-400"
+              >
+                Перейти до першого розіграшу →
+              </a>
+            </div>
+          </div>
+        ) : teams.length === 0 ? (
+          /* SEASONS 3-4 WITHOUT TEAMS */
           <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-16 text-center">
             <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[80px]" />
 
@@ -125,17 +224,18 @@ export default function CoopCupPage() {
               </div>
 
               <h3 className="mt-6 text-3xl font-black">
-                Формування команд ще не розпочалось
+                Команди ще не сформовано
               </h3>
 
               <p className="mx-auto mt-4 max-w-xl leading-7 text-white/45">
-                Команди будуть додані перед стартом нового сезону.
-                Кожна команда матиме назву клубу УПЛ і складатиметься
-                з двох гравців Iron League.
+                {season === 3
+                  ? "Це перший розіграш Iron Co-op Cup. Команди та пари гравців будуть додані після їх формування."
+                  : "Команди Iron Co-op Cup Сезону 4 будуть додані після формування складів нового сезону."}
               </p>
             </div>
           </div>
         ) : (
+          /* TEAMS */
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {teams.map((team) => {
               const teamPlayers = team.players
@@ -164,9 +264,10 @@ export default function CoopCupPage() {
 
                   <div>
                     {teamPlayers.map((player, index) => (
-                      <div
+                      <a
                         key={player.id}
-                        className="flex items-center gap-4 border-b border-white/5 px-6 py-5 last:border-b-0"
+                        href={`/players/${player.id}`}
+                        className="flex items-center gap-4 border-b border-white/5 px-6 py-5 transition last:border-b-0 hover:bg-white/[0.04]"
                       >
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 font-black text-blue-300">
                           {index + 1}
@@ -183,7 +284,7 @@ export default function CoopCupPage() {
                             </div>
                           )}
                         </div>
-                      </div>
+                      </a>
                     ))}
                   </div>
                 </div>
@@ -193,15 +294,70 @@ export default function CoopCupPage() {
         )}
       </section>
 
-      {/* FORMAT */}
+      {/* TOURNAMENT HISTORY */}
       <section className="border-t border-white/10 bg-white/[0.02]">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-            Формат турніру
+            Історія турніру
           </div>
 
           <h2 className="mt-3 text-3xl font-black">
-            Як працюватиме Iron Co-op Cup
+            Iron Co-op Cup
+          </h2>
+
+          <div className="mt-8 grid gap-5 md:grid-cols-4">
+            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
+              <div className="text-sm font-bold text-white/30">
+                Сезон 1
+              </div>
+
+              <div className="mt-4 text-lg font-black text-white/40">
+                Не проводився
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
+              <div className="text-sm font-bold text-white/30">
+                Сезон 2
+              </div>
+
+              <div className="mt-4 text-lg font-black text-white/40">
+                Не проводився
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.07] p-6">
+              <div className="text-sm font-bold text-blue-300">
+                Сезон 3
+              </div>
+
+              <div className="mt-4 text-lg font-black">
+                Перший розіграш
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
+              <div className="text-sm font-bold text-white/30">
+                Сезон 4
+              </div>
+
+              <div className="mt-4 text-lg font-black text-white/60">
+                Підготовка
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FORMAT */}
+      <section className="border-t border-white/10">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+            Формат
+          </div>
+
+          <h2 className="mt-3 text-3xl font-black">
+            Формат Iron Co-op Cup
           </h2>
 
           <div className="mt-8 grid gap-5 md:grid-cols-3">
@@ -211,11 +367,12 @@ export default function CoopCupPage() {
               </div>
 
               <h3 className="mt-5 text-xl font-black">
-                Команда
+                Клуб УПЛ
               </h3>
 
               <p className="mt-3 text-sm leading-6 text-white/40">
-                Кожна команда отримує назву футбольного клубу УПЛ.
+                Кожна команда отримує назву футбольного клубу
+                Української Прем&apos;єр-ліги.
               </p>
             </div>
 
@@ -229,7 +386,8 @@ export default function CoopCupPage() {
               </h3>
 
               <p className="mt-3 text-sm leading-6 text-white/40">
-                До складу кожної команди входять два учасники Iron League.
+                Кожну команду представляють два учасники
+                Iron League.
               </p>
             </div>
 
@@ -239,12 +397,12 @@ export default function CoopCupPage() {
               </div>
 
               <h3 className="mt-5 text-xl font-black">
-                Турнір
+                2 × 2
               </h3>
 
               <p className="mt-3 text-sm leading-6 text-white/40">
-                Формат змагання та турнірна сітка будуть додані
-                після формування команд.
+                Матчі проводяться у кооперативному форматі
+                двоє проти двох.
               </p>
             </div>
           </div>

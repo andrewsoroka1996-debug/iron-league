@@ -1,9 +1,24 @@
 import { players } from "../../../data/players";
 import { season3 } from "../../../data/seasons/season-3";
+import { season4 } from "../../../data/seasons/season-4";
 
-const associations = season3.associationsLeague.associations;
+type SeasonNumber = 1 | 2 | 3 | 4;
 
-type AssociationKey = keyof typeof associations;
+type AssociationKey =
+  | "fra"
+  | "bra"
+  | "esp"
+  | "eng"
+  | "ned"
+  | "ita"
+  | "arg"
+  | "por";
+
+type PageProps = {
+  searchParams: Promise<{
+    season?: string;
+  }>;
+};
 
 const associationCodes: Record<AssociationKey, string> = {
   fra: "FRA",
@@ -16,11 +31,58 @@ const associationCodes: Record<AssociationKey, string> = {
   por: "POR",
 };
 
-export default function AssociationsPage() {
-  const associationEntries = Object.entries(associations) as [
-    AssociationKey,
-    (typeof associations)[AssociationKey],
-  ][];
+export default async function AssociationsPage({
+  searchParams,
+}: PageProps) {
+  const params = await searchParams;
+
+  const requestedSeason = Number(params.season);
+
+  const season: SeasonNumber =
+    requestedSeason >= 1 && requestedSeason <= 4
+      ? (requestedSeason as SeasonNumber)
+      : 3;
+
+  const seasonData =
+    season === 3
+      ? season3
+      : season === 4
+        ? season4
+        : null;
+
+  const associations = seasonData
+    ? seasonData.associationsLeague.associations
+    : null;
+
+  const associationEntries = associations
+    ? (Object.entries(associations) as [
+        AssociationKey,
+        {
+          name: string;
+          players: readonly string[];
+        },
+      ][])
+    : [];
+
+  const totalPlayers = associationEntries.reduce(
+    (total, [, association]) =>
+      total + association.players.length,
+    0
+  );
+
+  const quarterfinals = seasonData
+    ? (seasonData.associationsCup.quarterfinals as {
+        home: AssociationKey;
+        away: AssociationKey;
+      }[])
+    : [];
+
+  const seasonStatus =
+    season === 1 || season === 2
+      ? "Архів — дані буде додано"
+      : season === 3
+        ? "Поточний сезон"
+        : "Підготовка";
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
@@ -68,7 +130,7 @@ export default function AssociationsPage() {
 
         <div className="relative mx-auto max-w-7xl px-6 py-20">
           <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
-            Iron League • Сезон 3
+            Iron League
           </div>
 
           <h1 className="mt-4 text-5xl font-black sm:text-6xl">
@@ -76,24 +138,71 @@ export default function AssociationsPage() {
           </h1>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/55">
-            Командний турнір Iron League. Вісім асоціацій,
-            кожна з яких складається із шести гравців.
+            Командний турнір Iron League. Склади асоціацій та
+            Кубок асоціацій зберігаються окремо для кожного сезону.
           </p>
+
+          {/* SEASON SWITCHER */}
+          <div className="mt-8">
+            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
+              Обрати сезон
+            </div>
+
+            <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d] p-1">
+              {([1, 2, 3, 4] as const).map((seasonNumber) => (
+                <a
+                  key={seasonNumber}
+                  href={`/tournaments/associations?season=${seasonNumber}`}
+                  className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
+                    season === seasonNumber
+                      ? "bg-blue-500 text-white"
+                      : "text-white/45 hover:text-white"
+                  }`}
+                >
+                  Сезон {seasonNumber}
+                </a>
+              ))}
+            </div>
+          </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
             <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
               <span className="text-sm text-white/40">
-                Асоціацій
+                Сезон
               </span>
-              <span className="ml-2 font-black">8</span>
+
+              <span className="ml-2 font-black text-blue-300">
+                {season}
+              </span>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
               <span className="text-sm text-white/40">
-                Гравців у команді
+                Асоціацій
               </span>
+
+              <span className="ml-2 font-black">
+                {associationEntries.length}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Гравців
+              </span>
+
+              <span className="ml-2 font-black">
+                {totalPlayers}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Статус
+              </span>
+
               <span className="ml-2 font-black text-blue-300">
-                6
+                {seasonStatus}
               </span>
             </div>
           </div>
@@ -112,64 +221,98 @@ export default function AssociationsPage() {
           </h2>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {associationEntries.map(([associationId, association]) => {
-            const associationPlayers = association.players
-              .map((id) =>
-                players.find((player) => player.id === id)
-              )
-              .filter(
-                (player): player is (typeof players)[number] =>
-                  player !== undefined
-              );
+        {season === 1 || season === 2 ? (
+          <div className="rounded-3xl border border-white/10 bg-[#07101d] px-8 py-16 text-center">
+            <h3 className="text-3xl font-black">
+              Дані сезону ще не додано
+            </h3>
 
-            return (
-              <div
-                key={associationId}
-                className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-xl"
-              >
-                <div className="border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-6 py-6">
-                  <div className="text-sm font-black tracking-[0.25em] text-blue-400">
-                    {associationCodes[associationId]}
-                  </div>
+            <p className="mx-auto mt-4 max-w-xl leading-7 text-white/40">
+              Склади асоціацій Сезону {season} будуть внесені
+              пізніше разом з історичними даними.
+            </p>
+          </div>
+        ) : totalPlayers === 0 ? (
+          <div className="rounded-3xl border border-white/10 bg-[#07101d] px-8 py-16 text-center">
+            <h3 className="text-3xl font-black">
+              Асоціації ще не сформовано
+            </h3>
 
-                  <h3 className="mt-3 text-2xl font-black">
-                    {association.name}
-                  </h3>
+            <p className="mx-auto mt-4 max-w-xl leading-7 text-white/40">
+              Склади асоціацій Сезону {season} будуть додані
+              після формування нового сезону.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {associationEntries.map(
+              ([associationId, association]) => {
+                const associationPlayers =
+                  association.players
+                    .map((id) =>
+                      players.find(
+                        (player) => player.id === id
+                      )
+                    )
+                    .filter(
+                      (
+                        player
+                      ): player is (typeof players)[number] =>
+                        player !== undefined
+                    );
 
-                  <div className="mt-2 text-xs uppercase tracking-[0.2em] text-white/35">
-                    {associationPlayers.length} гравців
-                  </div>
-                </div>
-
-                <div>
-                  {associationPlayers.map((player, index) => (
-                    <div
-                      key={player.id}
-                      className="flex items-center gap-3 border-b border-white/5 px-5 py-4 last:border-b-0"
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-xs font-black text-white/40">
-                        {index + 1}
+                return (
+                  <div
+                    key={associationId}
+                    className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-xl"
+                  >
+                    <div className="border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-6 py-6">
+                      <div className="text-sm font-black tracking-[0.25em] text-blue-400">
+                        {associationCodes[associationId]}
                       </div>
 
-                      <div className="min-w-0">
-                        <div className="truncate font-bold">
-                          {player.nickname}
-                        </div>
+                      <h3 className="mt-3 text-2xl font-black">
+                        {association.name}
+                      </h3>
 
-                        {player.account && (
-                          <div className="mt-1 truncate text-xs text-white/35">
-                            ({player.account})
-                          </div>
-                        )}
+                      <div className="mt-2 text-xs uppercase tracking-[0.2em] text-white/35">
+                        {associationPlayers.length} гравців
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+
+                    <div>
+                      {associationPlayers.map(
+                        (player, index) => (
+                          <a
+                            key={player.id}
+                            href={`/players/${player.id}`}
+                            className="flex items-center gap-3 border-b border-white/5 px-5 py-4 transition last:border-b-0 hover:bg-white/[0.04]"
+                          >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-xs font-black text-white/40">
+                              {index + 1}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="truncate font-bold">
+                                {player.nickname}
+                              </div>
+
+                              {player.account && (
+                                <div className="mt-1 truncate text-xs text-white/35">
+                                  ({player.account})
+                                </div>
+                              )}
+                            </div>
+                          </a>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+            )}
+          </div>
+        )}
       </section>
 
       {/* ASSOCIATIONS CUP */}
@@ -183,20 +326,35 @@ export default function AssociationsPage() {
             <h2 className="mt-3 text-4xl font-black">
               Кубок асоціацій
             </h2>
-
-            <p className="mt-4 max-w-2xl text-white/45">
-              Стартова стадія турніру — 1/4 фіналу.
-            </p>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            {season3.associationsCup.quarterfinals.map(
-              (match, index) => {
-                const homeId = match.home as AssociationKey;
-                const awayId = match.away as AssociationKey;
+          {season === 1 || season === 2 ? (
+            <div className="rounded-3xl border border-white/10 bg-[#07101d] px-8 py-12 text-center">
+              <p className="text-white/45">
+                Сітка Кубка асоціацій Сезону {season} буде
+                додана пізніше.
+              </p>
+            </div>
+          ) : quarterfinals.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-[#07101d] px-8 py-12 text-center">
+              <h3 className="text-2xl font-black">
+                Жеребкування ще не проведено
+              </h3>
 
-                const home = associations[homeId];
-                const away = associations[awayId];
+              <p className="mt-3 text-white/40">
+                Пари Кубка асоціацій Сезону {season} з&apos;являться
+                після жеребкування.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {quarterfinals.map((match, index) => {
+                if (!associations) {
+                  return null;
+                }
+
+                const home = associations[match.home];
+                const away = associations[match.away];
 
                 return (
                   <div
@@ -210,10 +368,9 @@ export default function AssociationsPage() {
                     </div>
 
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-9">
-                      {/* HOME */}
                       <div className="text-center">
                         <div className="text-sm font-black tracking-[0.25em] text-blue-400">
-                          {associationCodes[homeId]}
+                          {associationCodes[match.home]}
                         </div>
 
                         <div className="mt-3 text-2xl font-black">
@@ -221,7 +378,6 @@ export default function AssociationsPage() {
                         </div>
                       </div>
 
-                      {/* VS */}
                       <div className="text-center">
                         <div className="text-xs uppercase tracking-[0.25em] text-white/25">
                           versus
@@ -232,10 +388,9 @@ export default function AssociationsPage() {
                         </div>
                       </div>
 
-                      {/* AWAY */}
                       <div className="text-center">
                         <div className="text-sm font-black tracking-[0.25em] text-blue-400">
-                          {associationCodes[awayId]}
+                          {associationCodes[match.away]}
                         </div>
 
                         <div className="mt-3 text-2xl font-black">
@@ -245,14 +400,9 @@ export default function AssociationsPage() {
                     </div>
                   </div>
                 );
-              }
-            )}
-          </div>
-
-          <div className="mt-8 rounded-2xl border border-blue-400/15 bg-blue-500/[0.06] px-6 py-5 text-sm text-blue-200/70">
-            Півфінали та фінал будуть формуватися після визначення
-            переможців матчів 1/4 фіналу.
-          </div>
+              })}
+            </div>
+          )}
         </div>
       </section>
     </main>
