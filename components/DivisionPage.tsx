@@ -1,5 +1,5 @@
 import { players } from "../data/players";
-import { competitions } from "../data/competitions";
+import { season3 } from "../data/seasons/season-3";
 
 type DivisionNumber = 1 | 2 | 3 | 4;
 
@@ -10,16 +10,25 @@ type DivisionPageProps = {
 export default function DivisionPage({
   division,
 }: DivisionPageProps) {
-  const divisionData =
-    division === 1
-      ? competitions.division1
-      : division === 2
-        ? competitions.division2
-        : division === 3
-          ? competitions.division3
-          : competitions.division4;
+  let divisionPlayersIds: string[] = [];
 
-  const divisionPlayers = divisionData.players
+  if (division === 1) {
+    divisionPlayersIds = season3.division1.players;
+  }
+
+  if (division === 2) {
+    divisionPlayersIds = season3.division2.players;
+  }
+
+  if (division === 3) {
+    divisionPlayersIds = season3.division3.players;
+  }
+
+  if (division === 4) {
+    divisionPlayersIds = season3.division4.players;
+  }
+
+  const divisionPlayers = divisionPlayersIds
     .map((id) => players.find((player) => player.id === id))
     .filter(
       (player): player is (typeof players)[number] =>
@@ -68,6 +77,7 @@ export default function DivisionPage({
         />
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/60" />
+
         <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70" />
 
         <div className="relative mx-auto max-w-7xl px-6 py-20">
@@ -97,11 +107,11 @@ export default function DivisionPage({
 
             <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
               <span className="text-sm text-white/40">
-                Статус
+                Сезон
               </span>
 
               <span className="ml-2 font-black text-blue-300">
-                Підготовка до нового сезону
+                Сезон 3
               </span>
             </div>
           </div>
@@ -155,9 +165,11 @@ export default function DivisionPage({
                         {player.nickname}
                       </div>
 
-                      <div className="mt-1 text-xs text-white/35">
-                        ({player.account})
-                      </div>
+                      {player.account && (
+                        <div className="mt-1 text-xs text-white/35">
+                          ({player.account})
+                        </div>
+                      )}
                     </td>
 
                     <td className="px-4 py-4 text-center text-white/60">
@@ -198,6 +210,7 @@ export default function DivisionPage({
           </div>
         </div>
 
+        {/* LEGEND */}
         <div className="mt-6 flex flex-wrap gap-6 text-xs text-white/35">
           <span>
             <b className="text-white/60">І</b> — ігри
