@@ -1,28 +1,70 @@
 import { players } from "../data/players";
 import { season3 } from "../data/seasons/season-3";
+import { season4 } from "../data/seasons/season-4";
 
 type Competition =
   | "championsLeague"
   | "europaLeague"
   | "conferenceLeague";
 
+type SeasonNumber = 1 | 2 | 3 | 4;
+
 type GroupStagePageProps = {
   competition: Competition;
+  season: SeasonNumber;
+};
+
+const competitionNames: Record<Competition, string> = {
+  championsLeague: "Ліга чемпіонів",
+  europaLeague: "Ліга Європи",
+  conferenceLeague: "Ліга конференцій",
 };
 
 export default function GroupStagePage({
   competition,
+  season,
 }: GroupStagePageProps) {
-  const competitionData =
-    competition === "championsLeague"
-      ? season3.championsLeague
-      : competition === "europaLeague"
-        ? season3.europaLeague
-        : season3.conferenceLeague;
+  const seasonData =
+    season === 3
+      ? season3
+      : season === 4
+        ? season4
+        : null;
 
-  const groupEntries = Object.entries(
-    competitionData.groups
-  ) as [string, string[]][];
+  const competitionData = seasonData
+    ? seasonData[competition]
+    : null;
+
+  const groupEntries = competitionData
+    ? (Object.entries(competitionData.groups) as [
+        string,
+        readonly string[],
+      ][])
+    : [];
+
+  const totalPlayers = groupEntries.reduce(
+    (total, [, playerIds]) => total + playerIds.length,
+    0
+  );
+
+  const competitionName = competitionNames[competition];
+
+  const seasonStatus =
+    season === 1 || season === 2
+      ? "Архів — дані буде додано"
+      : season === 3
+        ? "Поточний сезон"
+        : "Підготовка";
+
+  const emptyTitle =
+    season === 1 || season === 2
+      ? "Дані сезону ще не додано"
+      : "Жеребкування ще не проведено";
+
+  const emptyText =
+    season === 1 || season === 2
+      ? `Історичні дані турніру «${competitionName}» Сезону ${season} будуть додані пізніше.`
+      : `Групи турніру «${competitionName}» Сезону ${season} будуть сформовані перед стартом турніру.`;
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
@@ -42,7 +84,7 @@ export default function GroupStagePage({
               </div>
 
               <div className="text-xs text-white/40">
-                {competitionData.name}
+                {competitionName}
               </div>
             </div>
           </a>
@@ -66,41 +108,79 @@ export default function GroupStagePage({
         />
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/65" />
-
         <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70" />
 
         <div className="relative mx-auto max-w-7xl px-6 py-20">
           <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
-            Iron League • Сезон 3
+            Iron League
           </div>
 
           <h1 className="mt-4 text-5xl font-black sm:text-6xl">
-            {competitionData.name}
+            {competitionName}
           </h1>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/55">
-            Груповий етап турніру. Склад учасників збережений для
-            історії третього сезону Iron League.
+            Груповий етап, склади учасників та історія турніру
+            за сезонами Iron League.
           </p>
 
-          <div className="mt-8 flex gap-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
-                Груп
-              </span>
-
-              <span className="ml-2 font-black">
-                {groupEntries.length}
-              </span>
+          {/* SEASON SWITCHER */}
+          <div className="mt-8">
+            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
+              Обрати сезон
             </div>
 
+            <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d] p-1">
+              {([1, 2, 3, 4] as const).map((seasonNumber) => (
+                <a
+                  key={seasonNumber}
+                  href={`/tournaments/${
+                    competition === "championsLeague"
+                      ? "champions-league"
+                      : competition === "europaLeague"
+                        ? "europa-league"
+                        : "conference-league"
+                  }?season=${seasonNumber}`}
+                  className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
+                    season === seasonNumber
+                      ? "bg-blue-500 text-white"
+                      : "text-white/45 hover:text-white"
+                  }`}
+                >
+                  Сезон {seasonNumber}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-3">
             <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
               <span className="text-sm text-white/40">
                 Сезон
               </span>
 
               <span className="ml-2 font-black text-blue-300">
-                3
+                {season}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Учасників
+              </span>
+
+              <span className="ml-2 font-black">
+                {totalPlayers}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Статус
+              </span>
+
+              <span className="ml-2 font-black text-blue-300">
+                {seasonStatus}
               </span>
             </div>
           </div>
@@ -119,60 +199,81 @@ export default function GroupStagePage({
           </h2>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {groupEntries.map(([groupName, playerIds]) => {
-            const groupPlayers = playerIds
-              .map((id) =>
-                players.find((player) => player.id === id)
-              )
-              .filter(
-                (player): player is (typeof players)[number] =>
-                  player !== undefined
-              );
+        {totalPlayers === 0 ? (
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-16 text-center">
+            <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[90px]" />
 
-            return (
-              <div
-                key={groupName}
-                className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-xl"
-              >
-                <div className="border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-6 py-5">
-                  <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                    Група
+            <div className="relative">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-xl font-black text-blue-300">
+                {season}
+              </div>
+
+              <h3 className="mt-6 text-3xl font-black">
+                {emptyTitle}
+              </h3>
+
+              <p className="mx-auto mt-4 max-w-xl leading-7 text-white/40">
+                {emptyText}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {groupEntries.map(([groupName, playerIds]) => {
+              const groupPlayers = playerIds
+                .map((id) =>
+                  players.find((player) => player.id === id)
+                )
+                .filter(
+                  (player): player is (typeof players)[number] =>
+                    player !== undefined
+                );
+
+              return (
+                <div
+                  key={groupName}
+                  className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-xl"
+                >
+                  <div className="border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-6 py-5">
+                    <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                      Група
+                    </div>
+
+                    <div className="mt-1 text-4xl font-black">
+                      {groupName}
+                    </div>
                   </div>
 
-                  <div className="mt-1 text-4xl font-black">
-                    {groupName}
-                  </div>
-                </div>
-
-                <div>
-                  {groupPlayers.map((player, index) => (
-                    <div
-                      key={player.id}
-                      className="flex items-center gap-4 border-b border-white/5 px-6 py-5 last:border-b-0"
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-sm font-black text-white/40">
-                        {index + 1}
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="truncate font-bold">
-                          {player.nickname}
+                  <div>
+                    {groupPlayers.map((player, index) => (
+                      <a
+                        key={player.id}
+                        href={`/players/${player.id}`}
+                        className="flex items-center gap-4 border-b border-white/5 px-6 py-5 transition last:border-b-0 hover:bg-white/[0.04]"
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-sm font-black text-white/40">
+                          {index + 1}
                         </div>
 
-                        {player.account && (
-                          <div className="mt-1 truncate text-xs text-white/35">
-                            ({player.account})
+                        <div className="min-w-0">
+                          <div className="truncate font-bold">
+                            {player.nickname}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+
+                          {player.account && (
+                            <div className="mt-1 truncate text-xs text-white/35">
+                              ({player.account})
+                            </div>
+                          )}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </main>
   );
