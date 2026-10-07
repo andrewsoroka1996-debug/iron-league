@@ -20,19 +20,43 @@ const results = [
 ];
 
 const divisions = [
-  { number: "01", name: "1 Дивізіон", leader: "Andrew_SM", points: 24 },
-  { number: "02", name: "2 Дивізіон", leader: "4ydeca", points: 21 },
-  { number: "03", name: "3 Дивізіон", leader: "Valdemar", points: 19 },
-  { number: "04", name: "4 Дивізіон", leader: "Soga", points: 18 },
+  { number: "01", name: "1 Дивізіон", leader: "Andrew_SM", points: 0 },
+  { number: "02", name: "2 Дивізіон", leader: "—", points: 0 },
+  { number: "03", name: "3 Дивізіон", leader: "—", points: 0 },
+  { number: "04", name: "4 Дивізіон", leader: "—", points: 0 },
 ];
 
 const tournaments = [
-  { name: "Ліга чемпіонів", short: "ЛЧ" },
-  { name: "Ліга Європи", short: "ЛЄ" },
-  { name: "Ліга конференцій", short: "ЛК" },
-  { name: "Кубки дивізіонів", short: "КД" },
-  { name: "Ліга асоціацій", short: "LA" },
-  { name: "Iron Co-op Cup", short: "CO" },
+  {
+    name: "Ліга чемпіонів",
+    short: "ЛЧ",
+    href: "/tournaments/champions-league",
+  },
+  {
+    name: "Ліга Європи",
+    short: "ЛЄ",
+    href: "/tournaments/europa-league",
+  },
+  {
+    name: "Ліга конференцій",
+    short: "ЛК",
+    href: "/tournaments/conference-league",
+  },
+  {
+    name: "Кубки дивізіонів",
+    short: "КД",
+    href: "/tournaments/division-cups",
+  },
+  {
+    name: "Ліга асоціацій",
+    short: "LA",
+    href: "/tournaments/associations",
+  },
+  {
+    name: "Iron Co-op Cup",
+    short: "CO",
+    href: "/tournaments/coop-cup",
+  },
 ];
 
 export default function Home() {
@@ -60,7 +84,7 @@ export default function Home() {
           </div>
 
           <nav className="hidden items-center gap-7 text-sm font-semibold text-white/60 lg:flex">
-            <a href="#" className="text-white">
+            <a href="/" className="text-white">
               Головна
             </a>
 
@@ -69,8 +93,8 @@ export default function Home() {
             </a>
 
             <a href="/divisions" className="transition hover:text-white">
-  Дивізіони
-</a>
+              Дивізіони
+            </a>
 
             <a href="#tournaments" className="transition hover:text-white">
               Турніри
@@ -105,7 +129,6 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/40" />
 
         <div className="relative mx-auto grid min-h-[720px] max-w-7xl items-center gap-14 px-6 py-20 lg:grid-cols-[1.1fr_0.9fr]">
-          {/* LEFT */}
           <div>
             <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
               <span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_12px_#60a5fa]" />
@@ -195,7 +218,9 @@ export default function Home() {
                       AS
                     </div>
 
-                    <div className="mt-5 text-xl font-black">Andrew_SM</div>
+                    <div className="mt-5 text-xl font-black">
+                      Andrew_SM
+                    </div>
                   </div>
 
                   <div className="text-center">
@@ -213,7 +238,9 @@ export default function Home() {
                       VD
                     </div>
 
-                    <div className="mt-5 text-xl font-black">Valdemar</div>
+                    <div className="mt-5 text-xl font-black">
+                      Valdemar
+                    </div>
                   </div>
                 </div>
 
@@ -257,13 +284,17 @@ export default function Home() {
                 {match.tournament}
               </div>
 
-              <div className="text-right font-bold">{match.home}</div>
+              <div className="text-right font-bold">
+                {match.home}
+              </div>
 
               <div className="rounded-lg bg-blue-500/15 px-5 py-2 text-xl font-black text-blue-300">
                 {match.score}
               </div>
 
-              <div className="font-bold">{match.away}</div>
+              <div className="font-bold">
+                {match.away}
+              </div>
             </div>
           ))}
         </div>
@@ -280,13 +311,16 @@ export default function Home() {
               Чемпіонат
             </div>
 
-            <h2 className="mt-3 text-4xl font-black">Дивізіони</h2>
+            <h2 className="mt-3 text-4xl font-black">
+              Дивізіони
+            </h2>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {divisions.map((division) => (
-              <div
-                key={division.name}
+              <a
+                key={division.number}
+                href={`/divisions/${Number(division.number)}`}
                 className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] p-6 transition duration-300 hover:-translate-y-1 hover:border-blue-400/40"
               >
                 <div className="absolute right-3 top-0 text-7xl font-black text-white/[0.025]">
@@ -307,14 +341,16 @@ export default function Home() {
                   </div>
 
                   <div className="mt-7 flex items-end justify-between border-t border-white/10 pt-5">
-                    <span className="text-sm text-white/35">Очки</span>
+                    <span className="text-sm text-white/35">
+                      Очки
+                    </span>
 
                     <span className="text-4xl font-black">
                       {division.points}
                     </span>
                   </div>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>
@@ -330,13 +366,16 @@ export default function Home() {
             Iron League
           </div>
 
-          <h2 className="mt-3 text-4xl font-black">Турніри</h2>
+          <h2 className="mt-3 text-4xl font-black">
+            Турніри
+          </h2>
         </div>
 
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {tournaments.map((tournament) => (
-            <div
+            <a
               key={tournament.name}
+              href={tournament.href}
               className="group relative min-h-52 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-500/10 via-[#07101d] to-[#030711] p-7 transition duration-300 hover:-translate-y-1 hover:border-blue-400/40"
             >
               <div className="absolute -right-5 -top-7 text-[110px] font-black text-white/[0.025]">
@@ -358,7 +397,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </div>
+            </a>
           ))}
         </div>
       </section>
@@ -378,9 +417,9 @@ export default function Home() {
 
           <div className="grid gap-5 lg:grid-cols-3">
             {[
-              "Новий тур Iron League стартував",
-              "Єврокубки: головні матчі тижня",
-              "Боротьба за лідерство у дивізіонах",
+              "Новий сезон Iron League",
+              "Єврокубки Iron League",
+              "Підготовка до наступного сезону",
             ].map((title, index) => (
               <article
                 key={title}
