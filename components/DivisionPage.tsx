@@ -3,6 +3,7 @@ import { season3 } from "../data/seasons/season-3";
 import { season4 } from "../data/seasons/season-4";
 import { divisionMatches } from "../data/division-matches";
 import { calculateStandings } from "../lib/calculateStandings";
+import DivisionSchedule from "./DivisionSchedule";
 
 type DivisionNumber = 1 | 2 | 3 | 4;
 type SeasonNumber = 1 | 2 | 3 | 4;
@@ -437,6 +438,10 @@ export default function DivisionPage({
           </>
         )}
       </section>
+      <DivisionSchedule
+  season={season}
+  division={division}
+/>
     </main>
   );
 }
