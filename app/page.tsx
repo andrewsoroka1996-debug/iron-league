@@ -104,9 +104,9 @@ export default function Home() {
   Гравці
 </a>
 
-            <a href="#" className="transition hover:text-white">
-              Історія
-            </a>
+            <a href="/history" className="transition hover:text-white">
+  Історія
+</a>
 
             <a href="#" className="transition hover:text-white">
               Новини
