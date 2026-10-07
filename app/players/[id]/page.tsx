@@ -1,11 +1,26 @@
 import { notFound } from "next/navigation";
 import { players } from "../../../data/players";
 import { season3 } from "../../../data/seasons/season-3";
+import { season4 } from "../../../data/seasons/season-4";
+
+type SeasonNumber = 1 | 2 | 3 | 4;
 
 type PageProps = {
   params: Promise<{
     id: string;
   }>;
+
+  searchParams: Promise<{
+    season?: string;
+  }>;
+};
+
+type SeasonData = typeof season3 | typeof season4;
+
+type CoopTeam = {
+  id: string;
+  name: string;
+  players: string[];
 };
 
 const associationCodes: Record<string, string> = {
@@ -19,31 +34,44 @@ const associationCodes: Record<string, string> = {
   por: "POR",
 };
 
-function getDivision(playerId: string) {
+function getSeasonData(
+  season: SeasonNumber
+): SeasonData | null {
+  if (season === 3) {
+    return season3;
+  }
+
+  if (season === 4) {
+    return season4;
+  }
+
+  return null;
+}
+
+function getDivision(
+  data: SeasonData,
+  playerId: string
+) {
   const divisions = [
     {
       number: 1,
       name: "1 Дивізіон",
-      players: season3.division1.players,
-      cup: "Кубок 1 Дивізіону",
+      players: data.division1.players as readonly string[],
     },
     {
       number: 2,
       name: "2 Дивізіон",
-      players: season3.division2.players,
-      cup: "Кубок 2 Дивізіону",
+      players: data.division2.players as readonly string[],
     },
     {
       number: 3,
       name: "3 Дивізіон",
-      players: season3.division3.players,
-      cup: "Кубок 3 Дивізіону",
+      players: data.division3.players as readonly string[],
     },
     {
       number: 4,
       name: "4 Дивізіон",
-      players: season3.division4.players,
-      cup: "Кубок 4 Дивізіону",
+      players: data.division4.players as readonly string[],
     },
   ];
 
@@ -52,33 +80,84 @@ function getDivision(playerId: string) {
   );
 }
 
+function getDivisionCup(
+  data: SeasonData,
+  playerId: string
+) {
+  const cups = [
+    {
+      number: 1,
+      name: "Кубок 1 Дивізіону",
+      players:
+        data.division1Cup.players as readonly string[],
+    },
+    {
+      number: 2,
+      name: "Кубок 2 Дивізіону",
+      players:
+        data.division2Cup.players as readonly string[],
+    },
+    {
+      number: 3,
+      name: "Кубок 3 Дивізіону",
+      players:
+        data.division3Cup.players as readonly string[],
+    },
+    {
+      number: 4,
+      name: "Кубок 4 Дивізіону",
+      players:
+        data.division4Cup.players as readonly string[],
+    },
+  ];
+
+  return cups.find((cup) =>
+    cup.players.includes(playerId)
+  );
+}
+
 function findGroup(
   groups: Record<string, readonly string[]>,
   playerId: string
 ) {
-  const group = Object.entries(groups).find(([, playerIds]) =>
-    playerIds.includes(playerId)
+  const result = Object.entries(groups).find(
+    ([, playerIds]) => playerIds.includes(playerId)
   );
 
-  return group?.[0] ?? null;
+  return result?.[0] ?? null;
 }
 
-function getEuropeanCompetitions(playerId: string) {
+function getEuropeanCompetitions(
+  data: SeasonData,
+  playerId: string
+) {
   const competitions = [
     {
       name: "Ліга чемпіонів",
       href: "/tournaments/champions-league",
-      groups: season3.championsLeague.groups,
+      groups:
+        data.championsLeague.groups as Record<
+          string,
+          readonly string[]
+        >,
     },
     {
       name: "Ліга Європи",
       href: "/tournaments/europa-league",
-      groups: season3.europaLeague.groups,
+      groups:
+        data.europaLeague.groups as Record<
+          string,
+          readonly string[]
+        >,
     },
     {
       name: "Ліга конференцій",
       href: "/tournaments/conference-league",
-      groups: season3.conferenceLeague.groups,
+      groups:
+        data.conferenceLeague.groups as Record<
+          string,
+          readonly string[]
+        >,
     },
   ];
 
@@ -86,20 +165,32 @@ function getEuropeanCompetitions(playerId: string) {
     .map((competition) => ({
       ...competition,
       group: findGroup(
-        competition.groups as Record<string, readonly string[]>,
+        competition.groups,
         playerId
       ),
     }))
-    .filter((competition) => competition.group !== null);
+    .filter(
+      (competition) => competition.group !== null
+    );
 }
 
-function getAssociation(playerId: string) {
+function getAssociation(
+  data: SeasonData,
+  playerId: string
+) {
   const entries = Object.entries(
-    season3.associationsLeague.associations
-  );
+    data.associationsLeague.associations
+  ) as [
+    string,
+    {
+      name: string;
+      players: readonly string[];
+    },
+  ][];
 
-  const result = entries.find(([, association]) =>
-    association.players.includes(playerId)
+  const result = entries.find(
+    ([, association]) =>
+      association.players.includes(playerId)
   );
 
   if (!result) {
@@ -110,17 +201,39 @@ function getAssociation(playerId: string) {
 
   return {
     id,
-    code: associationCodes[id] ?? id.toUpperCase(),
+    code:
+      associationCodes[id] ?? id.toUpperCase(),
     name: association.name,
   };
 }
 
-function getCoopTeam(playerId: string) {
-  const teams = season3.ironCoopCup.teams as {
-    id: string;
-    name: string;
-    players: string[];
-  }[];
+function playsAssociationsCup(
+  data: SeasonData,
+  associationId: string | undefined
+) {
+  if (!associationId) {
+    return false;
+  }
+
+  const matches =
+    data.associationsCup.quarterfinals as {
+      home: string;
+      away: string;
+    }[];
+
+  return matches.some(
+    (match) =>
+      match.home === associationId ||
+      match.away === associationId
+  );
+}
+
+function getCoopTeam(
+  data: SeasonData,
+  playerId: string
+) {
+  const teams =
+    data.ironCoopCup.teams as CoopTeam[];
 
   return teams.find((team) =>
     team.players.includes(playerId)
@@ -129,20 +242,66 @@ function getCoopTeam(playerId: string) {
 
 export default async function PlayerPage({
   params,
+  searchParams,
 }: PageProps) {
   const { id } = await params;
+  const query = await searchParams;
 
-  const player = players.find((player) => player.id === id);
+  const requestedSeason = Number(query.season);
+
+  const season: SeasonNumber =
+    requestedSeason >= 1 &&
+    requestedSeason <= 4
+      ? (requestedSeason as SeasonNumber)
+      : 3;
+
+  const player = players.find(
+    (player) => player.id === id
+  );
 
   if (!player) {
     notFound();
   }
 
-  const division = getDivision(player.id);
-  const europeanCompetitions =
-    getEuropeanCompetitions(player.id);
-  const association = getAssociation(player.id);
-  const coopTeam = getCoopTeam(player.id);
+  const seasonData = getSeasonData(season);
+
+  const division = seasonData
+    ? getDivision(seasonData, player.id)
+    : null;
+
+  const divisionCup = seasonData
+    ? getDivisionCup(seasonData, player.id)
+    : null;
+
+  const europeanCompetitions = seasonData
+    ? getEuropeanCompetitions(
+        seasonData,
+        player.id
+      )
+    : [];
+
+  const association = seasonData
+    ? getAssociation(seasonData, player.id)
+    : null;
+
+  const associationCup =
+    seasonData && association
+      ? playsAssociationsCup(
+          seasonData,
+          association.id
+        )
+      : false;
+
+  const coopTeam = seasonData
+    ? getCoopTeam(seasonData, player.id)
+    : null;
+
+  const hasParticipation =
+    Boolean(division) ||
+    Boolean(divisionCup) ||
+    europeanCompetitions.length > 0 ||
+    Boolean(association) ||
+    Boolean(coopTeam);
 
   const initials = player.nickname
     .replace(/[^a-zA-Z0-9]/g, "")
@@ -154,7 +313,10 @@ export default async function PlayerPage({
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a href="/" className="flex items-center gap-4">
+          <a
+            href="/"
+            className="flex items-center gap-4"
+          >
             <img
               src="/iron-league-logo.jpg"
               alt="Iron League"
@@ -174,7 +336,7 @@ export default async function PlayerPage({
 
           <a
             href="/players"
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-blue-300"
           >
             ← Усі гравці
           </a>
@@ -186,218 +348,274 @@ export default async function PlayerPage({
         <div
           className="absolute inset-0 bg-cover bg-center opacity-25"
           style={{
-            backgroundImage: "url('/stadium-bg.jpg')",
+            backgroundImage:
+              "url('/stadium-bg.jpg')",
           }}
         />
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/60" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70" />
 
-        <div className="relative mx-auto flex max-w-7xl flex-col gap-8 px-6 py-20 md:flex-row md:items-center">
-          <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-[32px] border border-blue-400/25 bg-blue-500/10 text-4xl font-black text-blue-300 shadow-[0_0_60px_rgba(59,130,246,0.15)]">
-            {initials}
-          </div>
-
-          <div>
-            <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
-              Iron League • Сезон 3
+        <div className="relative mx-auto max-w-7xl px-6 py-20">
+          <div className="flex flex-col gap-8 md:flex-row md:items-center">
+            <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-[32px] border border-blue-400/25 bg-blue-500/10 text-4xl font-black text-blue-300">
+              {initials}
             </div>
 
-            <h1 className="mt-3 break-words text-5xl font-black sm:text-6xl">
-              {player.nickname}
-            </h1>
-
-            {player.account && (
-              <div className="mt-3 text-lg text-white/40">
-                ({player.account})
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
+                Iron League
               </div>
-            )}
 
-            <div className="mt-7 flex flex-wrap gap-3">
-              {division && (
-                <a
-                  href={`/divisions/${division.number}`}
-                  className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-300"
-                >
-                  {division.name}
-                </a>
+              <h1 className="mt-3 break-words text-5xl font-black sm:text-6xl">
+                {player.nickname}
+              </h1>
+
+              {player.account && (
+                <div className="mt-3 text-lg text-white/40">
+                  ({player.account})
+                </div>
               )}
+            </div>
+          </div>
 
-              {association && (
-                <a
-                  href="/tournaments/associations"
-                  className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-bold text-white/70"
-                >
-                  {association.code} • {association.name}
-                </a>
+          {/* SEASON SWITCHER */}
+          <div className="mt-10">
+            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
+              Кар&apos;єра за сезонами
+            </div>
+
+            <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d] p-1">
+              {([1, 2, 3, 4] as const).map(
+                (seasonNumber) => (
+                  <a
+                    key={seasonNumber}
+                    href={`/players/${player.id}?season=${seasonNumber}`}
+                    className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
+                      season === seasonNumber
+                        ? "bg-blue-500 text-white"
+                        : "text-white/45 hover:text-white"
+                    }`}
+                  >
+                    Сезон {seasonNumber}
+                  </a>
+                )
               )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* SEASON PARTICIPATION */}
+      {/* SEASON */}
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="mb-10">
           <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-            Сезон 3
+            Кар&apos;єра
           </div>
 
           <h2 className="mt-3 text-3xl font-black">
-            Участь у турнірах
+            Сезон {season}
           </h2>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {/* DIVISION */}
-          {division && (
-            <a
-              href={`/divisions/${division.number}`}
-              className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
-            >
-              <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
-                Чемпіонат
-              </div>
+        {/* SEASONS 1-2 NOT IMPORTED */}
+        {!seasonData ? (
+          <div className="rounded-3xl border border-white/10 bg-[#07101d] px-8 py-14">
+            <h3 className="text-3xl font-black">
+              Архівні дані ще не внесені
+            </h3>
 
-              <div className="mt-4 text-2xl font-black">
-                {division.name}
-              </div>
+            <p className="mt-4 max-w-2xl leading-7 text-white/45">
+              Дані про участь {player.nickname} у
+              Сезоні {season} ще не перенесені до
+              архіву Iron League.
+            </p>
 
-              <div className="mt-3 text-sm text-white/40">
-                Перейти до дивізіону →
-              </div>
-            </a>
-          )}
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/30">
+              Це не означає, що гравець не брав
+              участі в цьому сезоні. Інформація буде
+              визначена після внесення історичних
+              складів і результатів.
+            </p>
+          </div>
+        ) : !hasParticipation ? (
+          /* PLAYER DID NOT PARTICIPATE */
+          <div className="rounded-3xl border border-white/10 bg-[#07101d] px-8 py-14">
+            <h3 className="text-3xl font-black">
+              Участь у сезоні не зафіксована
+            </h3>
 
-          {/* DIVISION CUP */}
-          {division && (
-            <a
-              href="/tournaments/division-cups"
-              className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
-            >
-              <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
-                Кубок
-              </div>
+            <p className="mt-4 max-w-2xl leading-7 text-white/45">
+              {season === 4
+                ? `${player.nickname} поки не заявлений до жодного турніру Сезону 4.`
+                : `${player.nickname} не знайдений у складах турнірів Сезону ${season}.`}
+            </p>
+          </div>
+        ) : (
+          /* PARTICIPATION */
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {division && (
+              <a
+                href={`/divisions/${division.number}?season=${season}`}
+                className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
+              >
+                <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
+                  Чемпіонат
+                </div>
 
-              <div className="mt-4 text-2xl font-black">
-                {division.cup}
-              </div>
+                <div className="mt-4 text-2xl font-black">
+                  {division.name}
+                </div>
+              </a>
+            )}
 
-              <div className="mt-3 text-sm text-white/40">
-                Турнір на вибування →
-              </div>
-            </a>
-          )}
+            {divisionCup && (
+              <a
+                href={`/tournaments/division-cups?season=${season}`}
+                className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
+              >
+                <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
+                  Кубок
+                </div>
 
-          {/* EUROPE */}
-          {europeanCompetitions.map((competition) => (
-            <a
-              key={competition.name}
-              href={competition.href}
-              className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
-            >
-              <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
-                Єврокубок
-              </div>
+                <div className="mt-4 text-2xl font-black">
+                  {divisionCup.name}
+                </div>
+              </a>
+            )}
 
-              <div className="mt-4 text-2xl font-black">
-                {competition.name}
-              </div>
+            {europeanCompetitions.map(
+              (competition) => (
+                <a
+                  key={competition.name}
+                  href={`${competition.href}?season=${season}`}
+                  className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
+                >
+                  <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
+                    Єврокубок
+                  </div>
 
-              <div className="mt-3 text-sm text-white/40">
-                Група {competition.group}
-              </div>
-            </a>
-          ))}
+                  <div className="mt-4 text-2xl font-black">
+                    {competition.name}
+                  </div>
 
-          {/* ASSOCIATION */}
-          {association && (
-            <a
-              href="/tournaments/associations"
-              className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
-            >
-              <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
-                Асоціація
-              </div>
+                  <div className="mt-3 text-sm text-white/40">
+                    Група {competition.group}
+                  </div>
+                </a>
+              )
+            )}
 
-              <div className="mt-4 text-2xl font-black">
-                {association.code} • {association.name}
-              </div>
+            {association && (
+              <a
+                href={`/tournaments/associations?season=${season}`}
+                className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
+              >
+                <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
+                  Ліга асоціацій
+                </div>
 
-              <div className="mt-3 text-sm text-white/40">
-                Ліга та Кубок асоціацій →
-              </div>
-            </a>
-          )}
+                <div className="mt-4 text-2xl font-black">
+                  {association.code} •{" "}
+                  {association.name}
+                </div>
+              </a>
+            )}
 
-          {/* CO-OP */}
-          {coopTeam && (
-            <a
-              href="/tournaments/coop-cup"
-              className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
-            >
-              <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
-                Iron Co-op Cup
-              </div>
+            {associationCup && association && (
+              <a
+                href={`/tournaments/associations?season=${season}`}
+                className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
+              >
+                <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
+                  Кубок асоціацій
+                </div>
 
-              <div className="mt-4 text-2xl font-black">
-                {coopTeam.name}
-              </div>
+                <div className="mt-4 text-2xl font-black">
+                  {association.code} •{" "}
+                  {association.name}
+                </div>
+              </a>
+            )}
 
-              <div className="mt-3 text-sm text-white/40">
-                Командний турнір 2 × 2 →
-              </div>
-            </a>
-          )}
-        </div>
+            {coopTeam && (
+              <a
+                href={`/tournaments/coop-cup?season=${season}`}
+                className="rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/40"
+              >
+                <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">
+                  Iron Co-op Cup
+                </div>
+
+                <div className="mt-4 text-2xl font-black">
+                  {coopTeam.name}
+                </div>
+
+                <div className="mt-3 text-sm text-white/40">
+                  Командний турнір 2 × 2
+                </div>
+              </a>
+            )}
+          </div>
+        )}
       </section>
 
-      {/* STATS PLACEHOLDER */}
+      {/* CAREER */}
       <section className="border-t border-white/10 bg-white/[0.02]">
         <div className="mx-auto max-w-7xl px-6 py-16">
-          <div className="mb-8">
-            <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-              Статистика
-            </div>
-
-            <h2 className="mt-3 text-3xl font-black">
-              Сезон 3
-            </h2>
+          <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+            Кар&apos;єра Iron League
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <h2 className="mt-3 text-3xl font-black">
+            Загальна статистика
+          </h2>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
               <div className="text-sm text-white/35">
-                Матчі
+                Сезонів
               </div>
-              <div className="mt-2 text-4xl font-black">0</div>
+
+              <div className="mt-2 text-4xl font-black">
+                —
+              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
               <div className="text-sm text-white/35">
-                Перемоги
+                Матчів
               </div>
-              <div className="mt-2 text-4xl font-black">0</div>
+
+              <div className="mt-2 text-4xl font-black">
+                —
+              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
               <div className="text-sm text-white/35">
-                Голи
+                Перемог
               </div>
-              <div className="mt-2 text-4xl font-black">0</div>
+
+              <div className="mt-2 text-4xl font-black">
+                —
+              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
               <div className="text-sm text-white/35">
-                Трофеї
+                Трофеїв
               </div>
-              <div className="mt-2 text-4xl font-black">0</div>
+
+              <div className="mt-2 text-4xl font-black">
+                —
+              </div>
             </div>
           </div>
 
           <p className="mt-6 text-sm text-white/30">
-            Статистика буде підключена до результатів матчів після
-            запуску системи нового сезону.
+            Загальна кар&apos;єрна статистика буде
+            обчислюватися автоматично після внесення
+            результатів усіх сезонів.
           </p>
         </div>
       </section>
