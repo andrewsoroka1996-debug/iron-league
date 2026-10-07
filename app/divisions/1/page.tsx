@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import DivisionPage from "../../../components/DivisionPage";
 
 type PageProps = {
@@ -9,6 +10,8 @@ type PageProps = {
 export default async function Page({
   searchParams,
 }: PageProps) {
+  await connection();
+
   const params = await searchParams;
 
   const requestedSeason = Number(params.season);
@@ -18,5 +21,10 @@ export default async function Page({
       ? (requestedSeason as 1 | 2 | 3 | 4)
       : 3;
 
-  return <DivisionPage division={1} season={season} />;
+  return (
+    <DivisionPage
+      division={1}
+      season={season}
+    />
+  );
 }

@@ -1,8 +1,9 @@
 import { players } from "../data/players";
 import { season3 } from "../data/seasons/season-3";
 import { season4 } from "../data/seasons/season-4";
-import { divisionMatches } from "../data/division-matches";
 import { calculateStandings } from "../lib/calculateStandings";
+import type { LeagueMatch } from "../lib/calculateStandings";
+import { supabase } from "../lib/supabase";
 import DivisionSchedule from "./DivisionSchedule";
 
 type DivisionNumber = 1 | 2 | 3 | 4;
@@ -13,7 +14,17 @@ type DivisionPageProps = {
   season: SeasonNumber;
 };
 
-export default function DivisionPage({
+type DatabaseMatch = {
+  id: string;
+  round: number | null;
+  home_id: string;
+  away_id: string;
+  home_goals: number | null;
+  away_goals: number | null;
+  status: string;
+};
+
+export default async function DivisionPage({
   division,
   season,
 }: DivisionPageProps) {
@@ -44,11 +55,54 @@ export default function DivisionPage({
     }
   }
 
-  const matches = divisionMatches[season][division];
+  /*
+    РЕЗУЛЬТАТИ З SUPABASE
+  */
+
+  const { data, error } = await supabase
+    .from("matches")
+    .select(
+      `
+        id,
+        round,
+        home_id,
+        away_id,
+        home_goals,
+        away_goals,
+        status
+      `
+    )
+    .eq("season", season)
+    .eq("competition", "division")
+    .eq("division", division);
+
+  const databaseMatches =
+    (data ?? []) as DatabaseMatch[];
+
+  const finishedMatches: LeagueMatch[] =
+    databaseMatches
+      .filter(
+        (match) =>
+          match.status === "finished" &&
+          match.home_goals !== null &&
+          match.away_goals !== null
+      )
+      .map((match) => ({
+        id: match.id,
+        round: match.round ?? undefined,
+        home: match.home_id,
+        away: match.away_id,
+        homeGoals: match.home_goals,
+        awayGoals: match.away_goals,
+      }));
+
+  /*
+    АВТОМАТИЧНА ТАБЛИЦЯ
+  */
 
   const standings = calculateStandings(
     divisionPlayersIds,
-    matches
+    finishedMatches
   );
 
   const table = standings
@@ -73,11 +127,7 @@ export default function DivisionPage({
         row !== null
     );
 
-  const playedMatches = matches.filter(
-    (match) =>
-      match.homeGoals !== null &&
-      match.awayGoals !== null
-  ).length;
+  const playedMatches = finishedMatches.length;
 
   const seasonStatus =
     season === 1 || season === 2
@@ -226,6 +276,13 @@ export default function DivisionPage({
               </span>
             </div>
           </div>
+
+          {/* SUPABASE ERROR */}
+          {error && (
+            <div className="mt-6 rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-sm text-red-200">
+              Не вдалося завантажити результати з бази даних.
+            </div>
+          )}
         </div>
       </section>
 
@@ -314,7 +371,6 @@ export default function DivisionPage({
                         key={row.playerId}
                         className="border-b border-white/5 transition last:border-b-0 hover:bg-white/[0.04]"
                       >
-                        {/* POSITION */}
                         <td className="px-5 py-4 text-center">
                           <div
                             className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg font-black ${
@@ -327,7 +383,6 @@ export default function DivisionPage({
                           </div>
                         </td>
 
-                        {/* PLAYER */}
                         <td className="px-5 py-4">
                           <a
                             href={`/players/${row.player.id}?season=${season}`}
@@ -345,37 +400,30 @@ export default function DivisionPage({
                           </a>
                         </td>
 
-                        {/* PLAYED */}
                         <td className="px-4 py-4 text-center text-white/60">
                           {row.played}
                         </td>
 
-                        {/* WINS */}
                         <td className="px-4 py-4 text-center text-white/60">
                           {row.wins}
                         </td>
 
-                        {/* DRAWS */}
                         <td className="px-4 py-4 text-center text-white/60">
                           {row.draws}
                         </td>
 
-                        {/* LOSSES */}
                         <td className="px-4 py-4 text-center text-white/60">
                           {row.losses}
                         </td>
 
-                        {/* GOALS FOR */}
                         <td className="px-4 py-4 text-center text-white/60">
                           {row.goalsFor}
                         </td>
 
-                        {/* GOALS AGAINST */}
                         <td className="px-4 py-4 text-center text-white/60">
                           {row.goalsAgainst}
                         </td>
 
-                        {/* GOAL DIFFERENCE */}
                         <td
                           className={`px-4 py-4 text-center font-semibold ${
                             row.goalDifference > 0
@@ -390,7 +438,6 @@ export default function DivisionPage({
                             : row.goalDifference}
                         </td>
 
-                        {/* POINTS */}
                         <td className="px-5 py-4 text-center text-xl font-black">
                           {row.points}
                         </td>
@@ -401,7 +448,6 @@ export default function DivisionPage({
               </div>
             </div>
 
-            {/* LEGEND */}
             <div className="mt-6 flex flex-wrap gap-6 text-xs text-white/35">
               <span>
                 <b className="text-white/60">І</b> — ігри
@@ -438,9 +484,11 @@ export default function DivisionPage({
           </>
         )}
       </section>
+
       <DivisionSchedule
   season={season}
   division={division}
+  results={databaseMatches}
 />
     </main>
   );
