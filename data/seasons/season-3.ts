@@ -328,13 +328,13 @@ export const season3 = {
       "frejzer",
     ],
   },
-    associationsLeague: {
+      associationsLeague: {
     id: "associations-league",
     name: "Ліга асоціацій",
     type: "team-league",
 
     associations: {
-      france: {
+      fra: {
         name: "Франція",
         players: [
           "gadyuka-88",
@@ -346,7 +346,7 @@ export const season3 = {
         ],
       },
 
-      brazil: {
+      bra: {
         name: "Бразилія",
         players: [
           "19lenya19",
@@ -358,7 +358,7 @@ export const season3 = {
         ],
       },
 
-      spain: {
+      esp: {
         name: "Іспанія",
         players: [
           "mykhaok",
@@ -370,7 +370,7 @@ export const season3 = {
         ],
       },
 
-      england: {
+      eng: {
         name: "Англія",
         players: [
           "no-stress23",
@@ -382,7 +382,7 @@ export const season3 = {
         ],
       },
 
-      netherlands: {
+      ned: {
         name: "Нідерланди",
         players: [
           "parabellum",
@@ -394,7 +394,7 @@ export const season3 = {
         ],
       },
 
-      italy: {
+      ita: {
         name: "Італія",
         players: [
           "proevolution10",
@@ -406,7 +406,7 @@ export const season3 = {
         ],
       },
 
-      argentina: {
+      arg: {
         name: "Аргентина",
         players: [
           "andrew-sm",
@@ -418,7 +418,7 @@ export const season3 = {
         ],
       },
 
-      portugal: {
+      por: {
         name: "Португалія",
         players: [
           "volodyabes",
@@ -439,20 +439,20 @@ export const season3 = {
 
     quarterfinals: [
       {
-        home: "france",
-        away: "brazil",
+        home: "fra",
+        away: "bra",
       },
       {
-        home: "spain",
-        away: "england",
+        home: "esp",
+        away: "eng",
       },
       {
-        home: "netherlands",
-        away: "italy",
+        home: "ned",
+        away: "ita",
       },
       {
-        home: "argentina",
-        away: "portugal",
+        home: "arg",
+        away: "por",
       },
     ],
   },
