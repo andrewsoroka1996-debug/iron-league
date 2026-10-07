@@ -68,9 +68,9 @@ export default function Home() {
               Матчі
             </a>
 
-            <a href="#divisions" className="transition hover:text-white">
-              Дивізіони
-            </a>
+            <a href="/divisions" className="transition hover:text-white">
+  Дивізіони
+</a>
 
             <a href="#tournaments" className="transition hover:text-white">
               Турніри
@@ -134,7 +134,7 @@ export default function Home() {
               </a>
 
               <a
-                href="#divisions"
+                href="/divisions"
                 className="rounded-xl border border-white/15 bg-white/[0.06] px-6 py-3.5 font-bold backdrop-blur transition hover:bg-white/[0.10]"
               >
                 Турнірні таблиці
