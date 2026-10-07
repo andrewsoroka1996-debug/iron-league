@@ -1,14 +1,29 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import { players } from "../../data/players";
 import { divisionSchedule } from "../../data/division-schedule";
 
-type SeasonNumber = 1 | 2 | 3 | 4;
-type DivisionNumber = 1 | 2 | 3 | 4;
+type SeasonNumber =
+  | 1
+  | 2
+  | 3
+  | 4;
+
+type DivisionNumber =
+  | 1
+  | 2
+  | 3
+  | 4;
 
 export default function AdminPage() {
-  const [password, setPassword] = useState("");
+  const [password, setPassword] =
+    useState("");
 
   const [season, setSeason] =
     useState<SeasonNumber>(3);
@@ -16,7 +31,8 @@ export default function AdminPage() {
   const [division, setDivision] =
     useState<DivisionNumber>(1);
 
-  const [round, setRound] = useState(1);
+  const [round, setRound] =
+    useState(1);
 
   const [matchId, setMatchId] =
     useState("");
@@ -33,12 +49,19 @@ export default function AdminPage() {
   const [loading, setLoading] =
     useState(false);
 
+  const [loadingResult, setLoadingResult] =
+    useState(false);
+
+  const [existingResult, setExistingResult] =
+    useState(false);
+
   const rounds =
     divisionSchedule[season][division];
 
   const selectedRound =
     rounds.find(
-      (item) => item.round === round
+      (item) =>
+        item.round === round
     );
 
   const matches =
@@ -47,15 +70,19 @@ export default function AdminPage() {
   const selectedMatch = useMemo(
     () =>
       matches.find(
-        (match) => match.id === matchId
+        (match) =>
+          match.id === matchId
       ),
     [matches, matchId]
   );
 
-  function getNickname(playerId: string) {
+  function getNickname(
+    playerId: string
+  ) {
     return (
       players.find(
-        (player) => player.id === playerId
+        (player) =>
+          player.id === playerId
       )?.nickname ?? playerId
     );
   }
@@ -65,8 +92,99 @@ export default function AdminPage() {
     setMatchId("");
     setHomeGoals("");
     setAwayGoals("");
+    setExistingResult(false);
     setMessage("");
   }
+
+  /*
+    Коли обираємо матч —
+    перевіряємо Supabase
+  */
+  useEffect(() => {
+    async function loadResult() {
+      if (!selectedMatch) {
+        setHomeGoals("");
+        setAwayGoals("");
+        setExistingResult(false);
+        return;
+      }
+
+      setLoadingResult(true);
+      setMessage("");
+
+      try {
+        const params =
+          new URLSearchParams({
+            season:
+              String(season),
+
+            division:
+              String(division),
+
+            round:
+              String(round),
+
+            home_id:
+              selectedMatch.home,
+
+            away_id:
+              selectedMatch.away,
+          });
+
+        const response =
+          await fetch(
+            `/api/admin/result?${params.toString()}`
+          );
+
+        const result =
+          await response.json();
+
+        if (!response.ok) {
+          setMessage(
+            result.error ??
+              "Не вдалося завантажити результат"
+          );
+
+          return;
+        }
+
+        if (result.match) {
+          setExistingResult(true);
+
+          setHomeGoals(
+            String(
+              result.match
+                .home_goals ?? ""
+            )
+          );
+
+          setAwayGoals(
+            String(
+              result.match
+                .away_goals ?? ""
+            )
+          );
+        } else {
+          setExistingResult(false);
+          setHomeGoals("");
+          setAwayGoals("");
+        }
+      } catch {
+        setMessage(
+          "Не вдалося завантажити результат"
+        );
+      } finally {
+        setLoadingResult(false);
+      }
+    }
+
+    loadResult();
+  }, [
+    selectedMatch,
+    season,
+    division,
+    round,
+  ]);
 
   async function saveResult(
     event: React.FormEvent
@@ -77,11 +195,15 @@ export default function AdminPage() {
       setMessage(
         "Введіть пароль адміністратора"
       );
+
       return;
     }
 
     if (!selectedMatch) {
-      setMessage("Оберіть матч");
+      setMessage(
+        "Оберіть матч"
+      );
+
       return;
     }
 
@@ -89,7 +211,10 @@ export default function AdminPage() {
       homeGoals === "" ||
       awayGoals === ""
     ) {
-      setMessage("Введіть рахунок");
+      setMessage(
+        "Введіть рахунок"
+      );
+
       return;
     }
 
@@ -97,36 +222,37 @@ export default function AdminPage() {
     setMessage("");
 
     try {
-      const response = await fetch(
-        "/api/admin/result",
-        {
-          method: "POST",
+      const response =
+        await fetch(
+          "/api/admin/result",
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-          body: JSON.stringify({
-            password,
-            season,
-            division,
-            round,
+            body: JSON.stringify({
+              password,
+              season,
+              division,
+              round,
 
-            home_id:
-              selectedMatch.home,
+              home_id:
+                selectedMatch.home,
 
-            away_id:
-              selectedMatch.away,
+              away_id:
+                selectedMatch.away,
 
-            home_goals:
-              Number(homeGoals),
+              home_goals:
+                Number(homeGoals),
 
-            away_goals:
-              Number(awayGoals),
-          }),
-        }
-      );
+              away_goals:
+                Number(awayGoals),
+            }),
+          }
+        );
 
       const result =
         await response.json();
@@ -136,15 +262,17 @@ export default function AdminPage() {
           result.error ??
             "Не вдалося зберегти результат"
         );
+
         return;
       }
 
-      setMessage(
-        "✅ Результат успішно збережено"
-      );
+      setExistingResult(true);
 
-      setHomeGoals("");
-      setAwayGoals("");
+      setMessage(
+        result.updated
+          ? "✅ Результат успішно оновлено"
+          : "✅ Результат успішно збережено"
+      );
     } catch {
       setMessage(
         "Помилка з'єднання із сервером"
@@ -156,42 +284,40 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
-      {/* HEADER */}
-      <header className="border-b border-white/10 bg-[#030711]">
+      <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
           <div>
             <div className="font-black tracking-[0.18em]">
               IRON LEAGUE
             </div>
 
-            <div className="mt-1 text-xs text-white/40">
+            <div className="text-xs text-white/40">
               Адмін-панель
             </div>
           </div>
 
           <a
             href="/"
-            className="text-sm font-bold text-blue-300"
+            className="font-bold text-blue-300"
           >
             ← На сайт
           </a>
         </div>
       </header>
 
-      {/* CONTENT */}
       <section className="mx-auto max-w-3xl px-6 py-16">
         <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
           Match Control
         </div>
 
         <h1 className="mt-3 text-4xl font-black">
-          Внести результат
+          Результати матчів
         </h1>
 
         <p className="mt-4 text-white/40">
-          Обери сезон, дивізіон, тур і матч.
-          Після збереження результат буде записано
-          в Supabase.
+          Новий результат можна
+          додати або змінити вже
+          збережений.
         </p>
 
         <form
@@ -200,15 +326,9 @@ export default function AdminPage() {
         >
           {/* PASSWORD */}
           <div>
-            <label className="text-sm font-bold text-white/60">
+            <label className="text-sm font-bold">
               Пароль адміністратора
             </label>
-
-            <p className="mt-2 text-xs leading-5 text-white/30">
-              Тут вводиш справжній пароль,
-              який записаний у .env.local після
-              ADMIN_PASSWORD=
-            </p>
 
             <input
               type="password"
@@ -219,13 +339,13 @@ export default function AdminPage() {
                 )
               }
               placeholder="Пароль адміністратора"
-              className="mt-3 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3 outline-none focus:border-blue-400/50"
+              className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             />
           </div>
 
           {/* SEASON */}
           <div>
-            <label className="text-sm font-bold text-white/60">
+            <label className="text-sm font-bold">
               Сезон
             </label>
 
@@ -242,27 +362,22 @@ export default function AdminPage() {
               }}
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             >
-              <option value={1}>
-                Сезон 1
-              </option>
-
-              <option value={2}>
-                Сезон 2
-              </option>
-
-              <option value={3}>
-                Сезон 3
-              </option>
-
-              <option value={4}>
-                Сезон 4
-              </option>
+              {[1, 2, 3, 4].map(
+                (number) => (
+                  <option
+                    key={number}
+                    value={number}
+                  >
+                    Сезон {number}
+                  </option>
+                )
+              )}
             </select>
           </div>
 
           {/* DIVISION */}
           <div>
-            <label className="text-sm font-bold text-white/60">
+            <label className="text-sm font-bold">
               Дивізіон
             </label>
 
@@ -279,34 +394,28 @@ export default function AdminPage() {
               }}
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             >
-              <option value={1}>
-                1 Дивізіон
-              </option>
-
-              <option value={2}>
-                2 Дивізіон
-              </option>
-
-              <option value={3}>
-                3 Дивізіон
-              </option>
-
-              <option value={4}>
-                4 Дивізіон
-              </option>
+              {[1, 2, 3, 4].map(
+                (number) => (
+                  <option
+                    key={number}
+                    value={number}
+                  >
+                    {number} Дивізіон
+                  </option>
+                )
+              )}
             </select>
           </div>
 
           {/* ROUND */}
           <div>
-            <label className="text-sm font-bold text-white/60">
+            <label className="text-sm font-bold">
               Тур
             </label>
 
             {rounds.length === 0 ? (
               <div className="mt-2 rounded-xl border border-yellow-400/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
-                Для цього дивізіону календар
-                ще не сформовано.
+                Календар ще не сформовано.
               </div>
             ) : (
               <select
@@ -319,8 +428,6 @@ export default function AdminPage() {
                   );
 
                   setMatchId("");
-                  setHomeGoals("");
-                  setAwayGoals("");
                   setMessage("");
                 }}
                 className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
@@ -342,7 +449,7 @@ export default function AdminPage() {
           {/* MATCH */}
           {rounds.length > 0 && (
             <div>
-              <label className="text-sm font-bold text-white/60">
+              <label className="text-sm font-bold">
                 Матч
               </label>
 
@@ -353,8 +460,6 @@ export default function AdminPage() {
                     event.target.value
                   );
 
-                  setHomeGoals("");
-                  setAwayGoals("");
                   setMessage("");
                 }}
                 className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
@@ -385,20 +490,30 @@ export default function AdminPage() {
 
           {/* SCORE */}
           {selectedMatch && (
-            <div>
-              <div className="mb-5 text-center text-xl font-black">
-                {getNickname(
-                  selectedMatch.home
-                )}
-                {" — "}
-                {getNickname(
-                  selectedMatch.away
+            <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <div className="text-lg font-black">
+                  Рахунок
+                </div>
+
+                {loadingResult ? (
+                  <div className="text-xs text-white/35">
+                    Завантаження...
+                  </div>
+                ) : existingResult ? (
+                  <div className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-bold text-green-400">
+                    Результат уже внесено
+                  </div>
+                ) : (
+                  <div className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-300">
+                    Новий результат
+                  </div>
                 )}
               </div>
 
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                 <div>
-                  <div className="mb-2 text-center text-xs text-white/40">
+                  <div className="mb-2 text-center text-sm font-bold">
                     {getNickname(
                       selectedMatch.home
                     )}
@@ -413,16 +528,16 @@ export default function AdminPage() {
                         event.target.value
                       )
                     }
-                    className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-2xl font-black"
+                    className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
                   />
                 </div>
 
-                <div className="mt-6 font-black text-white/30">
+                <div className="mt-7 text-2xl font-black text-white/25">
                   :
                 </div>
 
                 <div>
-                  <div className="mb-2 text-center text-xs text-white/40">
+                  <div className="mb-2 text-center text-sm font-bold">
                     {getNickname(
                       selectedMatch.away
                     )}
@@ -437,30 +552,31 @@ export default function AdminPage() {
                         event.target.value
                       )
                     }
-                    className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-2xl font-black"
+                    className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
                   />
                 </div>
               </div>
             </div>
           )}
 
-          {/* SAVE */}
           <button
             type="submit"
             disabled={
               loading ||
+              loadingResult ||
               !selectedMatch
             }
-            className="w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:opacity-40"
           >
             {loading
               ? "Збереження..."
-              : "Зберегти результат"}
+              : existingResult
+                ? "Оновити результат"
+                : "Зберегти результат"}
           </button>
 
-          {/* MESSAGE */}
           {message && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm">
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center">
               {message}
             </div>
           )}

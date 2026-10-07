@@ -5,6 +5,103 @@ import { divisionSchedule } from "../../../../data/division-schedule";
 type SeasonNumber = 1 | 2 | 3 | 4;
 type DivisionNumber = 1 | 2 | 3 | 4;
 
+/*
+  GET
+  Отримує вже збережений результат матчу
+*/
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+
+    const season = Number(
+      searchParams.get("season")
+    );
+
+    const division = Number(
+      searchParams.get("division")
+    );
+
+    const round = Number(
+      searchParams.get("round")
+    );
+
+    const homeId =
+      searchParams.get("home_id");
+
+    const awayId =
+      searchParams.get("away_id");
+
+    if (
+      !season ||
+      !division ||
+      !round ||
+      !homeId ||
+      !awayId
+    ) {
+      return NextResponse.json(
+        {
+          error: "Недостатньо даних",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const {
+      data,
+      error,
+    } = await supabaseAdmin
+      .from("matches")
+      .select(
+        `
+          id,
+          home_goals,
+          away_goals,
+          status
+        `
+      )
+      .eq("season", season)
+      .eq("competition", "division")
+      .eq("division", division)
+      .eq("round", round)
+      .eq("home_id", homeId)
+      .eq("away_id", awayId)
+      .limit(1);
+
+    if (error) {
+      return NextResponse.json(
+        {
+          error: error.message,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    const match =
+      data?.[0] ?? null;
+
+    return NextResponse.json({
+      match,
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        error: "Помилка сервера",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
+/*
+  POST
+  Створює або оновлює результат
+*/
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -20,20 +117,19 @@ export async function POST(request: Request) {
       away_goals,
     } = body;
 
-    // 1. Перевіряємо пароль адміністратора
-    // Пароль береться автоматично з:
-    // ADMIN_PASSWORD=66666666
-    // у твоєму .env.local
-    //
-    // У себе ти замінив 66666666
-    // на справжній пароль.
+    /*
+      ADMIN_PASSWORD береться
+      автоматично з .env.local
+    */
     if (
       !process.env.ADMIN_PASSWORD ||
-      password !== process.env.ADMIN_PASSWORD
+      password !==
+        process.env.ADMIN_PASSWORD
     ) {
       return NextResponse.json(
         {
-          error: "Невірний пароль адміністратора",
+          error:
+            "Невірний пароль адміністратора",
         },
         {
           status: 401,
@@ -41,7 +137,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Перевіряємо сезон
     if (
       !Number.isInteger(season) ||
       season < 1 ||
@@ -57,7 +152,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Перевіряємо дивізіон
     if (
       !Number.isInteger(division) ||
       division < 1 ||
@@ -73,7 +167,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Перевіряємо тур
     if (
       !Number.isInteger(round) ||
       round < 1
@@ -88,7 +181,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Перевіряємо рахунок
     if (
       !Number.isInteger(home_goals) ||
       !Number.isInteger(away_goals) ||
@@ -97,7 +189,8 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error: "Невірно введено рахунок",
+          error:
+            "Невірно введено рахунок",
         },
         {
           status: 400,
@@ -111,13 +204,15 @@ export async function POST(request: Request) {
     const divisionNumber =
       division as DivisionNumber;
 
-    // 6. Перевіряємо, що тур реально є
-    // у division-schedule.ts
+    /*
+      Перевіряємо тур
+    */
     const selectedRound =
       divisionSchedule[seasonNumber][
         divisionNumber
       ].find(
-        (item) => item.round === round
+        (item) =>
+          item.round === round
       );
 
     if (!selectedRound) {
@@ -132,8 +227,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7. Перевіряємо, що обрана пара
-    // реально є у цьому турі
+    /*
+      Перевіряємо матч
+    */
     const scheduledMatch =
       selectedRound.matches.find(
         (match) =>
@@ -153,8 +249,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // 8. Шукаємо, чи цей матч уже має
-    // результат у Supabase
+    /*
+      Шукаємо існуючий результат
+    */
     const {
       data: existingMatches,
       error: findError,
@@ -183,10 +280,11 @@ export async function POST(request: Request) {
     const existingMatch =
       existingMatches?.[0];
 
-    // 9. Якщо результат уже існує,
-    // оновлюємо його
+    /*
+      ОНОВЛЕННЯ
+    */
     if (existingMatch) {
-      const { error: updateError } =
+      const { error } =
         await supabaseAdmin
           .from("matches")
           .update({
@@ -196,12 +294,15 @@ export async function POST(request: Request) {
             played_at:
               new Date().toISOString(),
           })
-          .eq("id", existingMatch.id);
+          .eq(
+            "id",
+            existingMatch.id
+          );
 
-      if (updateError) {
+      if (error) {
         return NextResponse.json(
           {
-            error: updateError.message,
+            error: error.message,
           },
           {
             status: 500,
@@ -211,13 +312,16 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Результат оновлено",
+        updated: true,
+        message:
+          "Результат оновлено",
       });
     }
 
-    // 10. Якщо результату ще немає,
-    // створюємо новий запис
-    const { error: insertError } =
+    /*
+      НОВИЙ РЕЗУЛЬТАТ
+    */
+    const { error } =
       await supabaseAdmin
         .from("matches")
         .insert({
@@ -226,23 +330,19 @@ export async function POST(request: Request) {
           division,
           round,
           participant_type: "player",
-
           home_id,
           away_id,
-
           home_goals,
           away_goals,
-
           status: "finished",
-
           played_at:
             new Date().toISOString(),
         });
 
-    if (insertError) {
+    if (error) {
       return NextResponse.json(
         {
-          error: insertError.message,
+          error: error.message,
         },
         {
           status: 500,
@@ -252,11 +352,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Результат збережено",
+      updated: false,
+      message:
+        "Результат збережено",
     });
   } catch (error) {
     console.error(
-      "SAVE RESULT ERROR:",
+      "RESULT API ERROR:",
       error
     );
 
