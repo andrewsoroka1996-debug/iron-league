@@ -1,6 +1,8 @@
 import { players } from "../data/players";
 import { season3 } from "../data/seasons/season-3";
 import { season4 } from "../data/seasons/season-4";
+import { divisionMatches } from "../data/division-matches";
+import { calculateStandings } from "../lib/calculateStandings";
 
 type DivisionNumber = 1 | 2 | 3 | 4;
 type SeasonNumber = 1 | 2 | 3 | 4;
@@ -41,12 +43,40 @@ export default function DivisionPage({
     }
   }
 
-  const divisionPlayers = divisionPlayersIds
-    .map((id) => players.find((player) => player.id === id))
+  const matches = divisionMatches[season][division];
+
+  const standings = calculateStandings(
+    divisionPlayersIds,
+    matches
+  );
+
+  const table = standings
+    .map((row) => {
+      const player = players.find(
+        (player) => player.id === row.playerId
+      );
+
+      if (!player) {
+        return null;
+      }
+
+      return {
+        ...row,
+        player,
+      };
+    })
     .filter(
-      (player): player is (typeof players)[number] =>
-        player !== undefined
+      (
+        row
+      ): row is NonNullable<typeof row> =>
+        row !== null
     );
+
+  const playedMatches = matches.filter(
+    (match) =>
+      match.homeGoals !== null &&
+      match.awayGoals !== null
+  ).length;
 
   const seasonStatus =
     season === 1 || season === 2
@@ -70,7 +100,10 @@ export default function DivisionPage({
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a href="/" className="flex items-center gap-4">
+          <a
+            href="/"
+            className="flex items-center gap-4"
+          >
             <img
               src="/iron-league-logo.jpg"
               alt="Iron League"
@@ -102,11 +135,13 @@ export default function DivisionPage({
         <div
           className="absolute inset-0 bg-cover bg-center opacity-30"
           style={{
-            backgroundImage: "url('/stadium-bg.jpg')",
+            backgroundImage:
+              "url('/stadium-bg.jpg')",
           }}
         />
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/60" />
+
         <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70" />
 
         <div className="relative mx-auto max-w-7xl px-6 py-20">
@@ -119,8 +154,8 @@ export default function DivisionPage({
           </h1>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/55">
-            Турнірна таблиця та склад учасників {division} Дивізіону
-            Iron League.
+            Турнірна таблиця, результати та склад
+            учасників {division} Дивізіону Iron League.
           </p>
 
           {/* SEASON SWITCHER */}
@@ -130,19 +165,21 @@ export default function DivisionPage({
             </div>
 
             <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d] p-1">
-              {([1, 2, 3, 4] as const).map((seasonNumber) => (
-                <a
-                  key={seasonNumber}
-                  href={`/divisions/${division}?season=${seasonNumber}`}
-                  className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
-                    season === seasonNumber
-                      ? "bg-blue-500 text-white"
-                      : "text-white/45 hover:text-white"
-                  }`}
-                >
-                  Сезон {seasonNumber}
-                </a>
-              ))}
+              {([1, 2, 3, 4] as const).map(
+                (seasonNumber) => (
+                  <a
+                    key={seasonNumber}
+                    href={`/divisions/${division}?season=${seasonNumber}`}
+                    className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
+                      season === seasonNumber
+                        ? "bg-blue-500 text-white"
+                        : "text-white/45 hover:text-white"
+                    }`}
+                  >
+                    Сезон {seasonNumber}
+                  </a>
+                )
+              )}
             </div>
           </div>
 
@@ -164,7 +201,17 @@ export default function DivisionPage({
               </span>
 
               <span className="ml-2 font-black">
-                {divisionPlayers.length}
+                {divisionPlayersIds.length}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Зіграно матчів
+              </span>
+
+              <span className="ml-2 font-black">
+                {playedMatches}
               </span>
             </div>
 
@@ -193,7 +240,7 @@ export default function DivisionPage({
           </h2>
         </div>
 
-        {divisionPlayers.length === 0 ? (
+        {divisionPlayersIds.length === 0 ? (
           <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-16 text-center">
             <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[90px]" />
 
@@ -218,73 +265,133 @@ export default function DivisionPage({
                 <table className="w-full min-w-[1000px]">
                   <thead className="border-b border-white/10 bg-white/[0.035]">
                     <tr className="text-xs font-bold uppercase tracking-wider text-white/35">
-                      <th className="px-5 py-4 text-center">#</th>
-                      <th className="px-5 py-4 text-left">Гравець</th>
-                      <th className="px-4 py-4 text-center">І</th>
-                      <th className="px-4 py-4 text-center">В</th>
-                      <th className="px-4 py-4 text-center">Н</th>
-                      <th className="px-4 py-4 text-center">П</th>
-                      <th className="px-4 py-4 text-center">ЗМ</th>
-                      <th className="px-4 py-4 text-center">ПМ</th>
-                      <th className="px-4 py-4 text-center">РМ</th>
-                      <th className="px-5 py-4 text-center">О</th>
+                      <th className="px-5 py-4 text-center">
+                        #
+                      </th>
+
+                      <th className="px-5 py-4 text-left">
+                        Гравець
+                      </th>
+
+                      <th className="px-4 py-4 text-center">
+                        І
+                      </th>
+
+                      <th className="px-4 py-4 text-center">
+                        В
+                      </th>
+
+                      <th className="px-4 py-4 text-center">
+                        Н
+                      </th>
+
+                      <th className="px-4 py-4 text-center">
+                        П
+                      </th>
+
+                      <th className="px-4 py-4 text-center">
+                        ЗМ
+                      </th>
+
+                      <th className="px-4 py-4 text-center">
+                        ПМ
+                      </th>
+
+                      <th className="px-4 py-4 text-center">
+                        РМ
+                      </th>
+
+                      <th className="px-5 py-4 text-center">
+                        О
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {divisionPlayers.map((player, index) => (
+                    {table.map((row, index) => (
                       <tr
-                        key={player.id}
+                        key={row.playerId}
                         className="border-b border-white/5 transition last:border-b-0 hover:bg-white/[0.04]"
                       >
+                        {/* POSITION */}
                         <td className="px-5 py-4 text-center">
-                          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.05] font-black text-white/60">
+                          <div
+                            className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg font-black ${
+                              index < 3
+                                ? "bg-blue-500/15 text-blue-300"
+                                : "bg-white/[0.05] text-white/60"
+                            }`}
+                          >
                             {index + 1}
                           </div>
                         </td>
 
+                        {/* PLAYER */}
                         <td className="px-5 py-4">
-                          <div className="font-bold">
-                            {player.nickname}
-                          </div>
-
-                          {player.account && (
-                            <div className="mt-1 text-xs text-white/35">
-                              ({player.account})
+                          <a
+                            href={`/players/${row.player.id}?season=${season}`}
+                            className="group"
+                          >
+                            <div className="font-bold transition group-hover:text-blue-300">
+                              {row.player.nickname}
                             </div>
-                          )}
+
+                            {row.player.account && (
+                              <div className="mt-1 text-xs text-white/35">
+                                ({row.player.account})
+                              </div>
+                            )}
+                          </a>
                         </td>
 
+                        {/* PLAYED */}
                         <td className="px-4 py-4 text-center text-white/60">
-                          0
+                          {row.played}
                         </td>
 
+                        {/* WINS */}
                         <td className="px-4 py-4 text-center text-white/60">
-                          0
+                          {row.wins}
                         </td>
 
+                        {/* DRAWS */}
                         <td className="px-4 py-4 text-center text-white/60">
-                          0
+                          {row.draws}
                         </td>
 
+                        {/* LOSSES */}
                         <td className="px-4 py-4 text-center text-white/60">
-                          0
+                          {row.losses}
                         </td>
 
+                        {/* GOALS FOR */}
                         <td className="px-4 py-4 text-center text-white/60">
-                          0
+                          {row.goalsFor}
                         </td>
 
+                        {/* GOALS AGAINST */}
                         <td className="px-4 py-4 text-center text-white/60">
-                          0
+                          {row.goalsAgainst}
                         </td>
 
-                        <td className="px-4 py-4 text-center text-white/50">
-                          0
+                        {/* GOAL DIFFERENCE */}
+                        <td
+                          className={`px-4 py-4 text-center font-semibold ${
+                            row.goalDifference > 0
+                              ? "text-green-400"
+                              : row.goalDifference < 0
+                                ? "text-red-400"
+                                : "text-white/50"
+                          }`}
+                        >
+                          {row.goalDifference > 0
+                            ? `+${row.goalDifference}`
+                            : row.goalDifference}
                         </td>
 
+                        {/* POINTS */}
                         <td className="px-5 py-4 text-center text-xl font-black">
-                          0
+                          {row.points}
                         </td>
                       </tr>
                     ))}
