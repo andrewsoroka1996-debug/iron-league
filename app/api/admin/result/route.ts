@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
-import { divisionSchedule } from "../../../../data/division-schedule";
-
-type SeasonNumber = 1 | 2 | 3 | 4;
-type DivisionNumber = 1 | 2 | 3 | 4;
 
 /*
   GET
-  Отримує вже збережений результат матчу
+  Завантажує вже збережений матч/результат
+  із Supabase.
 */
 export async function GET(request: Request) {
   try {
@@ -56,6 +53,11 @@ export async function GET(request: Request) {
       .select(
         `
           id,
+          season,
+          division,
+          round,
+          home_id,
+          away_id,
           home_goals,
           away_goals,
           status
@@ -80,13 +82,15 @@ export async function GET(request: Request) {
       );
     }
 
-    const match =
-      data?.[0] ?? null;
-
     return NextResponse.json({
-      match,
+      match: data?.[0] ?? null,
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      "GET RESULT ERROR:",
+      error
+    );
+
     return NextResponse.json(
       {
         error: "Помилка сервера",
@@ -100,7 +104,8 @@ export async function GET(request: Request) {
 
 /*
   POST
-  Створює або оновлює результат
+  Вносить або змінює результат
+  ВЖЕ ІСНУЮЧОГО матчу календаря.
 */
 export async function POST(request: Request) {
   try {
@@ -118,8 +123,12 @@ export async function POST(request: Request) {
     } = body;
 
     /*
-      ADMIN_PASSWORD береться
-      автоматично з .env.local
+      Пароль береться з .env.local:
+
+      ADMIN_PASSWORD=66666666
+
+      66666666 у тебе замінено
+      на справжній пароль.
     */
     if (
       !process.env.ADMIN_PASSWORD ||
@@ -137,6 +146,9 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+      Перевірка сезону
+    */
     if (
       !Number.isInteger(season) ||
       season < 1 ||
@@ -152,6 +164,9 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+      Перевірка дивізіону
+    */
     if (
       !Number.isInteger(division) ||
       division < 1 ||
@@ -167,6 +182,9 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+      Перевірка туру
+    */
     if (
       !Number.isInteger(round) ||
       round < 1
@@ -181,6 +199,9 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+      Перевірка рахунку
+    */
     if (
       !Number.isInteger(home_goals) ||
       !Number.isInteger(away_goals) ||
@@ -198,66 +219,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const seasonNumber =
-      season as SeasonNumber;
-
-    const divisionNumber =
-      division as DivisionNumber;
-
     /*
-      Перевіряємо тур
-    */
-    const selectedRound =
-      divisionSchedule[seasonNumber][
-        divisionNumber
-      ].find(
-        (item) =>
-          item.round === round
-      );
-
-    if (!selectedRound) {
-      return NextResponse.json(
-        {
-          error:
-            "Такий тур відсутній у календарі",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /*
-      Перевіряємо матч
-    */
-    const scheduledMatch =
-      selectedRound.matches.find(
-        (match) =>
-          match.home === home_id &&
-          match.away === away_id
-      );
-
-    if (!scheduledMatch) {
-      return NextResponse.json(
-        {
-          error:
-            "Такий матч відсутній у календарі цього туру",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /*
-      Шукаємо існуючий результат
+      Шукаємо матч безпосередньо
+      в календарі Supabase.
     */
     const {
-      data: existingMatches,
+      data: matches,
       error: findError,
     } = await supabaseAdmin
       .from("matches")
-      .select("id")
+      .select(
+        `
+          id,
+          status
+        `
+      )
       .eq("season", season)
       .eq("competition", "division")
       .eq("division", division)
@@ -277,72 +253,52 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingMatch =
-      existingMatches?.[0];
+    const match =
+      matches?.[0];
 
     /*
-      ОНОВЛЕННЯ
+      Якщо матчу немає в Supabase,
+      результат вводити заборонено.
+
+      Спочатку матч повинен бути
+      створений у календарі.
     */
-    if (existingMatch) {
-      const { error } =
-        await supabaseAdmin
-          .from("matches")
-          .update({
-            home_goals,
-            away_goals,
-            status: "finished",
-            played_at:
-              new Date().toISOString(),
-          })
-          .eq(
-            "id",
-            existingMatch.id
-          );
-
-      if (error) {
-        return NextResponse.json(
-          {
-            error: error.message,
-          },
-          {
-            status: 500,
-          }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        updated: true,
-        message:
-          "Результат оновлено",
-      });
+    if (!match) {
+      return NextResponse.json(
+        {
+          error:
+            "Такий матч відсутній у календарі",
+        },
+        {
+          status: 400,
+        }
+      );
     }
 
     /*
-      НОВИЙ РЕЗУЛЬТАТ
+      Оновлюємо той самий запис:
+      scheduled -> finished
     */
-    const { error } =
-      await supabaseAdmin
-        .from("matches")
-        .insert({
-          season,
-          competition: "division",
-          division,
-          round,
-          participant_type: "player",
-          home_id,
-          away_id,
-          home_goals,
-          away_goals,
-          status: "finished",
-          played_at:
-            new Date().toISOString(),
-        });
+    const {
+      error: updateError,
+    } = await supabaseAdmin
+      .from("matches")
+      .update({
+        home_goals,
+        away_goals,
 
-    if (error) {
+        status: "finished",
+
+        played_at:
+          new Date().toISOString(),
+      })
+      .eq("id", match.id);
+
+    if (updateError) {
       return NextResponse.json(
         {
-          error: error.message,
+          error:
+            updateError.message,
         },
         {
           status: 500,
@@ -350,15 +306,21 @@ export async function POST(request: Request) {
       );
     }
 
+    const wasFinished =
+      match.status === "finished";
+
     return NextResponse.json({
       success: true,
-      updated: false,
-      message:
-        "Результат збережено",
+
+      updated: wasFinished,
+
+      message: wasFinished
+        ? "Результат оновлено"
+        : "Результат збережено",
     });
   } catch (error) {
     console.error(
-      "RESULT API ERROR:",
+      "POST RESULT ERROR:",
       error
     );
 

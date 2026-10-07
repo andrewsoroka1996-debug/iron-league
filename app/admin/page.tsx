@@ -1,27 +1,37 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
 
 import { players } from "../../data/players";
-import { divisionSchedule } from "../../data/division-schedule";
+import { season3 } from "../../data/seasons/season-3";
+import { season4 } from "../../data/seasons/season-4";
 
-type SeasonNumber =
-  | 1
-  | 2
-  | 3
-  | 4;
+type SeasonNumber = 1 | 2 | 3 | 4;
+type DivisionNumber = 1 | 2 | 3 | 4;
 
-type DivisionNumber =
-  | 1
-  | 2
-  | 3
-  | 4;
+type AdminTab = "results" | "calendar";
+
+type CalendarMatch = {
+  id: string;
+  season: number;
+  division: number | null;
+  round: number | null;
+  home_id: string;
+  away_id: string;
+  home_goals: number | null;
+  away_goals: number | null;
+  status: string;
+};
 
 export default function AdminPage() {
+  const [tab, setTab] =
+    useState<AdminTab>("results");
+
   const [password, setPassword] =
     useState("");
 
@@ -30,6 +40,12 @@ export default function AdminPage() {
 
   const [division, setDivision] =
     useState<DivisionNumber>(1);
+
+  const [calendarMatches, setCalendarMatches] =
+    useState<CalendarMatch[]>([]);
+
+  const [calendarLoading, setCalendarLoading] =
+    useState(false);
 
   const [round, setRound] =
     useState(1);
@@ -43,98 +59,109 @@ export default function AdminPage() {
   const [awayGoals, setAwayGoals] =
     useState("");
 
+  const [manualRound, setManualRound] =
+    useState(1);
+
+  const [manualHome, setManualHome] =
+    useState("");
+
+  const [manualAway, setManualAway] =
+    useState("");
+
   const [message, setMessage] =
     useState("");
 
   const [loading, setLoading] =
     useState(false);
 
-  const [loadingResult, setLoadingResult] =
-    useState(false);
-
-  const [existingResult, setExistingResult] =
-    useState(false);
-
-  const rounds =
-    divisionSchedule[season][division];
-
-  const selectedRound =
-    rounds.find(
-      (item) =>
-        item.round === round
-    );
-
-  const matches =
-    selectedRound?.matches ?? [];
-
-  const selectedMatch = useMemo(
-    () =>
-      matches.find(
-        (match) =>
-          match.id === matchId
-      ),
-    [matches, matchId]
-  );
-
-  function getNickname(
-    playerId: string
-  ) {
+  function getNickname(playerId: string) {
     return (
       players.find(
-        (player) =>
-          player.id === playerId
+        (player) => player.id === playerId
       )?.nickname ?? playerId
     );
   }
 
-  function resetSelection() {
-    setRound(1);
-    setMatchId("");
-    setHomeGoals("");
-    setAwayGoals("");
-    setExistingResult(false);
-    setMessage("");
-  }
-
-  /*
-    Коли обираємо матч —
-    перевіряємо Supabase
-  */
-  useEffect(() => {
-    async function loadResult() {
-      if (!selectedMatch) {
-        setHomeGoals("");
-        setAwayGoals("");
-        setExistingResult(false);
-        return;
+  function getDivisionPlayerIds(
+    selectedSeason: SeasonNumber,
+    selectedDivision: DivisionNumber
+  ): readonly string[] {
+    if (selectedSeason === 3) {
+      if (selectedDivision === 1) {
+        return season3.division1.players;
       }
 
-      setLoadingResult(true);
-      setMessage("");
+      if (selectedDivision === 2) {
+        return season3.division2.players;
+      }
+
+      if (selectedDivision === 3) {
+        return season3.division3.players;
+      }
+
+      return season3.division4.players;
+    }
+
+    if (selectedSeason === 4) {
+      if (selectedDivision === 1) {
+        return season4.division1.players;
+      }
+
+      if (selectedDivision === 2) {
+        return season4.division2.players;
+      }
+
+      if (selectedDivision === 3) {
+        return season4.division3.players;
+      }
+
+      return season4.division4.players;
+    }
+
+    /*
+      Сезони 1 і 2 ми ще не перенесли
+      у season-1.ts / season-2.ts.
+    */
+    return [];
+  }
+
+  const divisionPlayerIds =
+    getDivisionPlayerIds(
+      season,
+      division
+    );
+
+  const divisionPlayers =
+    divisionPlayerIds
+      .map((id) =>
+        players.find(
+          (player) => player.id === id
+        )
+      )
+      .filter(
+        (
+          player
+        ): player is (typeof players)[number] =>
+          player !== undefined
+      );
+
+  /*
+    ============================
+    ЗАВАНТАЖЕННЯ КАЛЕНДАРЯ
+    ============================
+  */
+
+  const loadCalendar =
+    useCallback(async () => {
+      setCalendarLoading(true);
 
       try {
-        const params =
-          new URLSearchParams({
-            season:
-              String(season),
-
-            division:
-              String(division),
-
-            round:
-              String(round),
-
-            home_id:
-              selectedMatch.home,
-
-            away_id:
-              selectedMatch.away,
-          });
-
-        const response =
-          await fetch(
-            `/api/admin/result?${params.toString()}`
-          );
+        const response = await fetch(
+          `/api/admin/calendar?season=${season}&division=${division}`,
+          {
+            cache: "no-store",
+          }
+        );
 
         const result =
           await response.json();
@@ -142,49 +169,148 @@ export default function AdminPage() {
         if (!response.ok) {
           setMessage(
             result.error ??
-              "Не вдалося завантажити результат"
+              "Не вдалося завантажити календар"
           );
 
           return;
         }
 
-        if (result.match) {
-          setExistingResult(true);
+        const matches =
+          (result.matches ??
+            []) as CalendarMatch[];
 
-          setHomeGoals(
-            String(
-              result.match
-                .home_goals ?? ""
+        setCalendarMatches(matches);
+
+        const availableRounds =
+          Array.from(
+            new Set(
+              matches
+                .map(
+                  (match) =>
+                    match.round
+                )
+                .filter(
+                  (
+                    value
+                  ): value is number =>
+                    value !== null
+                )
             )
+          ).sort(
+            (a, b) => a - b
           );
 
-          setAwayGoals(
-            String(
-              result.match
-                .away_goals ?? ""
-            )
-          );
-        } else {
-          setExistingResult(false);
-          setHomeGoals("");
-          setAwayGoals("");
-        }
+        setRound(
+          availableRounds[0] ?? 1
+        );
+
+        setMatchId("");
+        setHomeGoals("");
+        setAwayGoals("");
       } catch {
         setMessage(
-          "Не вдалося завантажити результат"
+          "Помилка завантаження календаря"
         );
       } finally {
-        setLoadingResult(false);
+        setCalendarLoading(false);
       }
+    }, [season, division]);
+
+  useEffect(() => {
+    void loadCalendar();
+  }, [loadCalendar]);
+
+  /*
+    ============================
+    ТУРИ
+    ============================
+  */
+
+  const roundNumbers =
+    useMemo(() => {
+      return Array.from(
+        new Set(
+          calendarMatches
+            .map(
+              (match) =>
+                match.round
+            )
+            .filter(
+              (
+                value
+              ): value is number =>
+                value !== null
+            )
+        )
+      ).sort(
+        (a, b) => a - b
+      );
+    }, [calendarMatches]);
+
+  const roundMatches =
+    useMemo(() => {
+      return calendarMatches.filter(
+        (match) =>
+          match.round === round
+      );
+    }, [
+      calendarMatches,
+      round,
+    ]);
+
+  const selectedMatch =
+    useMemo(() => {
+      return roundMatches.find(
+        (match) =>
+          match.id === matchId
+      );
+    }, [
+      roundMatches,
+      matchId,
+    ]);
+
+  /*
+    Якщо вибрано матч,
+    підтягуємо його поточний рахунок.
+  */
+
+  useEffect(() => {
+    if (!selectedMatch) {
+      setHomeGoals("");
+      setAwayGoals("");
+      return;
     }
 
-    loadResult();
-  }, [
-    selectedMatch,
-    season,
-    division,
-    round,
-  ]);
+    if (
+      selectedMatch.status ===
+        "finished" &&
+      selectedMatch.home_goals !==
+        null &&
+      selectedMatch.away_goals !==
+        null
+    ) {
+      setHomeGoals(
+        String(
+          selectedMatch.home_goals
+        )
+      );
+
+      setAwayGoals(
+        String(
+          selectedMatch.away_goals
+        )
+      );
+    } else {
+      setHomeGoals("");
+      setAwayGoals("");
+    }
+  }, [selectedMatch]);
+
+  /*
+    ============================
+    ЗБЕРЕЖЕННЯ РЕЗУЛЬТАТУ
+    ============================
+  */
 
   async function saveResult(
     event: React.FormEvent
@@ -195,7 +321,6 @@ export default function AdminPage() {
       setMessage(
         "Введіть пароль адміністратора"
       );
-
       return;
     }
 
@@ -203,7 +328,6 @@ export default function AdminPage() {
       setMessage(
         "Оберіть матч"
       );
-
       return;
     }
 
@@ -214,7 +338,6 @@ export default function AdminPage() {
       setMessage(
         "Введіть рахунок"
       );
-
       return;
     }
 
@@ -240,10 +363,10 @@ export default function AdminPage() {
               round,
 
               home_id:
-                selectedMatch.home,
+                selectedMatch.home_id,
 
               away_id:
-                selectedMatch.away,
+                selectedMatch.away_id,
 
               home_goals:
                 Number(homeGoals),
@@ -266,13 +389,13 @@ export default function AdminPage() {
         return;
       }
 
-      setExistingResult(true);
-
       setMessage(
         result.updated
-          ? "✅ Результат успішно оновлено"
-          : "✅ Результат успішно збережено"
+          ? "✅ Результат оновлено"
+          : "✅ Результат збережено"
       );
+
+      await loadCalendar();
     } catch {
       setMessage(
         "Помилка з'єднання із сервером"
@@ -282,16 +405,241 @@ export default function AdminPage() {
     }
   }
 
+  /*
+    ============================
+    РУЧНЕ ДОДАВАННЯ МАТЧУ
+    СЕЗОНИ 1–3
+    ============================
+  */
+
+  async function addManualMatch(
+    event: React.FormEvent
+  ) {
+    event.preventDefault();
+
+    if (!password) {
+      setMessage(
+        "Введіть пароль адміністратора"
+      );
+      return;
+    }
+
+    if (
+      season < 1 ||
+      season > 3
+    ) {
+      setMessage(
+        "Ручне формування призначене для Сезонів 1–3"
+      );
+      return;
+    }
+
+    if (
+      !manualHome ||
+      !manualAway
+    ) {
+      setMessage(
+        "Оберіть обох гравців"
+      );
+      return;
+    }
+
+    if (
+      manualHome === manualAway
+    ) {
+      setMessage(
+        "Гравець не може грати сам із собою"
+      );
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const response =
+        await fetch(
+          "/api/admin/calendar",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              password,
+
+              action:
+                "manual",
+
+              season,
+              division,
+
+              round:
+                manualRound,
+
+              home_id:
+                manualHome,
+
+              away_id:
+                manualAway,
+            }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error ??
+            "Не вдалося додати матч"
+        );
+
+        return;
+      }
+
+      setMessage(
+        "✅ Матч додано до календаря"
+      );
+
+      setManualHome("");
+      setManualAway("");
+
+      await loadCalendar();
+    } catch {
+      setMessage(
+        "Помилка з'єднання із сервером"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /*
+    ============================
+    АВТОМАТИЧНЕ ЖЕРЕБКУВАННЯ
+    СЕЗОН 4
+    ============================
+  */
+
+  async function generateCalendar() {
+    if (!password) {
+      setMessage(
+        "Введіть пароль адміністратора"
+      );
+      return;
+    }
+
+    if (season !== 4) {
+      setMessage(
+        "Автоматичне жеребкування призначене для Сезону 4"
+      );
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const response =
+        await fetch(
+          "/api/admin/calendar",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              password,
+
+              action:
+                "generate",
+
+              season: 4,
+              division,
+            }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error ??
+            "Не вдалося створити календар"
+        );
+
+        return;
+      }
+
+      setMessage(
+        `✅ ${result.message}. Турів: ${result.rounds}, матчів: ${result.matches}`
+      );
+
+      await loadCalendar();
+    } catch {
+      setMessage(
+        "Помилка з'єднання із сервером"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /*
+    ============================
+    ЗМІНА СЕЗОНУ / ДИВІЗІОНУ
+    ============================
+  */
+
+  function changeSeason(
+    value: SeasonNumber
+  ) {
+    setSeason(value);
+
+    setRound(1);
+    setMatchId("");
+
+    setManualRound(1);
+    setManualHome("");
+    setManualAway("");
+
+    setMessage("");
+  }
+
+  function changeDivision(
+    value: DivisionNumber
+  ) {
+    setDivision(value);
+
+    setRound(1);
+    setMatchId("");
+
+    setManualRound(1);
+    setManualHome("");
+    setManualAway("");
+
+    setMessage("");
+  }
+
   return (
     <main className="min-h-screen bg-[#030711] text-white">
-      <header className="border-b border-white/10">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
+      {/* HEADER */}
+      <header className="border-b border-white/10 bg-[#030711]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <div>
             <div className="font-black tracking-[0.18em]">
               IRON LEAGUE
             </div>
 
-            <div className="text-xs text-white/40">
+            <div className="mt-1 text-xs text-white/40">
               Адмін-панель
             </div>
           </div>
@@ -305,28 +653,49 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <section className="mx-auto max-w-3xl px-6 py-16">
-        <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-          Match Control
-        </div>
-
-        <h1 className="mt-3 text-4xl font-black">
-          Результати матчів
+      <section className="mx-auto max-w-6xl px-6 py-14">
+        <h1 className="text-4xl font-black">
+          Керування Iron League
         </h1>
 
-        <p className="mt-4 text-white/40">
-          Новий результат можна
-          додати або змінити вже
-          збережений.
-        </p>
+        {/* TABS */}
+        <div className="mt-8 inline-flex rounded-xl border border-white/10 bg-[#07101d] p-1">
+          <button
+            type="button"
+            onClick={() => {
+              setTab("results");
+              setMessage("");
+            }}
+            className={`rounded-lg px-6 py-3 text-sm font-bold transition ${
+              tab === "results"
+                ? "bg-blue-500 text-white"
+                : "text-white/45 hover:text-white"
+            }`}
+          >
+            Результати
+          </button>
 
-        <form
-          onSubmit={saveResult}
-          className="mt-10 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
-        >
+          <button
+            type="button"
+            onClick={() => {
+              setTab("calendar");
+              setMessage("");
+            }}
+            className={`rounded-lg px-6 py-3 text-sm font-bold transition ${
+              tab === "calendar"
+                ? "bg-blue-500 text-white"
+                : "text-white/45 hover:text-white"
+            }`}
+          >
+            Календар
+          </button>
+        </div>
+
+        {/* COMMON SETTINGS */}
+        <div className="mt-8 grid gap-5 rounded-3xl border border-white/10 bg-[#07101d] p-7 md:grid-cols-3">
           {/* PASSWORD */}
           <div>
-            <label className="text-sm font-bold">
+            <label className="text-sm font-bold text-white/60">
               Пароль адміністратора
             </label>
 
@@ -338,249 +707,543 @@ export default function AdminPage() {
                   event.target.value
                 )
               }
-              placeholder="Пароль адміністратора"
+              placeholder="Пароль"
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             />
           </div>
 
           {/* SEASON */}
           <div>
-            <label className="text-sm font-bold">
+            <label className="text-sm font-bold text-white/60">
               Сезон
             </label>
 
             <select
               value={season}
-              onChange={(event) => {
-                setSeason(
+              onChange={(event) =>
+                changeSeason(
                   Number(
                     event.target.value
                   ) as SeasonNumber
-                );
-
-                resetSelection();
-              }}
+                )
+              }
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             >
-              {[1, 2, 3, 4].map(
-                (number) => (
-                  <option
-                    key={number}
-                    value={number}
-                  >
-                    Сезон {number}
-                  </option>
-                )
-              )}
+              <option value={1}>
+                Сезон 1
+              </option>
+
+              <option value={2}>
+                Сезон 2
+              </option>
+
+              <option value={3}>
+                Сезон 3
+              </option>
+
+              <option value={4}>
+                Сезон 4
+              </option>
             </select>
           </div>
 
           {/* DIVISION */}
           <div>
-            <label className="text-sm font-bold">
+            <label className="text-sm font-bold text-white/60">
               Дивізіон
             </label>
 
             <select
               value={division}
-              onChange={(event) => {
-                setDivision(
+              onChange={(event) =>
+                changeDivision(
                   Number(
                     event.target.value
                   ) as DivisionNumber
-                );
-
-                resetSelection();
-              }}
+                )
+              }
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             >
-              {[1, 2, 3, 4].map(
-                (number) => (
-                  <option
-                    key={number}
-                    value={number}
-                  >
-                    {number} Дивізіон
-                  </option>
-                )
-              )}
+              <option value={1}>
+                1 Дивізіон
+              </option>
+
+              <option value={2}>
+                2 Дивізіон
+              </option>
+
+              <option value={3}>
+                3 Дивізіон
+              </option>
+
+              <option value={4}>
+                4 Дивізіон
+              </option>
             </select>
           </div>
+        </div>
 
-          {/* ROUND */}
-          <div>
-            <label className="text-sm font-bold">
-              Тур
-            </label>
+        {/* =========================
+            RESULTS TAB
+        ========================== */}
+        {tab === "results" && (
+          <form
+            onSubmit={saveResult}
+            className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
+          >
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                Матч
+              </div>
 
-            {rounds.length === 0 ? (
-              <div className="mt-2 rounded-xl border border-yellow-400/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
-                Календар ще не сформовано.
+              <h2 className="mt-2 text-3xl font-black">
+                Внести результат
+              </h2>
+            </div>
+
+            {calendarLoading ? (
+              <div className="rounded-xl bg-white/[0.04] p-5 text-white/40">
+                Завантаження календаря...
+              </div>
+            ) : roundNumbers.length === 0 ? (
+              <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
+                Для цього дивізіону календар ще
+                не створено.
               </div>
             ) : (
-              <select
-                value={round}
-                onChange={(event) => {
-                  setRound(
-                    Number(
-                      event.target.value
-                    )
-                  );
+              <>
+                {/* ROUND */}
+                <div>
+                  <label className="text-sm font-bold">
+                    Тур
+                  </label>
 
-                  setMatchId("");
-                  setMessage("");
-                }}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
-              >
-                {rounds.map(
-                  (item) => (
-                    <option
-                      key={item.round}
-                      value={item.round}
-                    >
-                      Тур {item.round}
-                    </option>
-                  )
-                )}
-              </select>
-            )}
-          </div>
+                  <select
+                    value={round}
+                    onChange={(event) => {
+                      setRound(
+                        Number(
+                          event.target.value
+                        )
+                      );
 
-          {/* MATCH */}
-          {rounds.length > 0 && (
-            <div>
-              <label className="text-sm font-bold">
-                Матч
-              </label>
-
-              <select
-                value={matchId}
-                onChange={(event) => {
-                  setMatchId(
-                    event.target.value
-                  );
-
-                  setMessage("");
-                }}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
-              >
-                <option value="">
-                  Оберіть матч
-                </option>
-
-                {matches.map(
-                  (match) => (
-                    <option
-                      key={match.id}
-                      value={match.id}
-                    >
-                      {getNickname(
-                        match.home
-                      )}
-                      {" — "}
-                      {getNickname(
-                        match.away
-                      )}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-          )}
-
-          {/* SCORE */}
-          {selectedMatch && (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-              <div className="mb-5 flex items-center justify-between gap-4">
-                <div className="text-lg font-black">
-                  Рахунок
+                      setMatchId("");
+                    }}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                  >
+                    {roundNumbers.map(
+                      (number) => (
+                        <option
+                          key={number}
+                          value={number}
+                        >
+                          Тур {number}
+                        </option>
+                      )
+                    )}
+                  </select>
                 </div>
 
-                {loadingResult ? (
-                  <div className="text-xs text-white/35">
-                    Завантаження...
+                {/* MATCH */}
+                <div>
+                  <label className="text-sm font-bold">
+                    Матч
+                  </label>
+
+                  <select
+                    value={matchId}
+                    onChange={(event) =>
+                      setMatchId(
+                        event.target.value
+                      )
+                    }
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                  >
+                    <option value="">
+                      Оберіть матч
+                    </option>
+
+                    {roundMatches.map(
+                      (match) => (
+                        <option
+                          key={match.id}
+                          value={match.id}
+                        >
+                          {getNickname(
+                            match.home_id
+                          )}
+                          {" — "}
+                          {getNickname(
+                            match.away_id
+                          )}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                {/* SCORE */}
+                {selectedMatch && (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+                    <div className="mb-6 flex items-center justify-between gap-4">
+                      <h3 className="text-xl font-black">
+                        Рахунок
+                      </h3>
+
+                      {selectedMatch.status ===
+                      "finished" ? (
+                        <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-bold text-green-400">
+                          Результат внесено
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-300">
+                          Матч не зіграно
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                      <div>
+                        <div className="mb-2 text-center font-bold">
+                          {getNickname(
+                            selectedMatch.home_id
+                          )}
+                        </div>
+
+                        <input
+                          type="number"
+                          min="0"
+                          value={homeGoals}
+                          onChange={(event) =>
+                            setHomeGoals(
+                              event.target.value
+                            )
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
+                        />
+                      </div>
+
+                      <div className="mt-7 text-2xl font-black text-white/25">
+                        :
+                      </div>
+
+                      <div>
+                        <div className="mb-2 text-center font-bold">
+                          {getNickname(
+                            selectedMatch.away_id
+                          )}
+                        </div>
+
+                        <input
+                          type="number"
+                          min="0"
+                          value={awayGoals}
+                          onChange={(event) =>
+                            setAwayGoals(
+                              event.target.value
+                            )
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
+                        />
+                      </div>
+                    </div>
                   </div>
-                ) : existingResult ? (
-                  <div className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-bold text-green-400">
-                    Результат уже внесено
+                )}
+
+                <button
+                  type="submit"
+                  disabled={
+                    loading ||
+                    !selectedMatch
+                  }
+                  className="w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:opacity-40"
+                >
+                  {loading
+                    ? "Збереження..."
+                    : selectedMatch?.status ===
+                        "finished"
+                      ? "Оновити результат"
+                      : "Зберегти результат"}
+                </button>
+              </>
+            )}
+          </form>
+        )}
+
+        {/* =========================
+            CALENDAR TAB
+        ========================== */}
+        {tab === "calendar" && (
+          <div className="mt-8 space-y-8">
+            {/* SEASONS 1-3 */}
+            {season <= 3 && (
+              <form
+                onSubmit={addManualMatch}
+                className="space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
+              >
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                    Історичний календар
+                  </div>
+
+                  <h2 className="mt-2 text-3xl font-black">
+                    Додати матч вручну
+                  </h2>
+
+                  <p className="mt-3 text-white/40">
+                    Для Сезонів 1–3 ми відтворюємо
+                    справжні історичні тури без
+                    автоматичного жеребкування.
+                  </p>
+                </div>
+
+                {(season === 1 ||
+                  season === 2) &&
+                divisionPlayers.length === 0 ? (
+                  <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-sm text-yellow-200">
+                    Спочатку потрібно внести
+                    склади Сезону {season}.
+                    Після цього тут з&apos;являться
+                    гравці для ручного формування
+                    календаря.
                   </div>
                 ) : (
-                  <div className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-300">
-                    Новий результат
-                  </div>
+                  <>
+                    <div>
+                      <label className="text-sm font-bold">
+                        Номер туру
+                      </label>
+
+                      <input
+                        type="number"
+                        min="1"
+                        value={manualRound}
+                        onChange={(event) =>
+                          setManualRound(
+                            Number(
+                              event.target.value
+                            )
+                          )
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-bold">
+                        Господар
+                      </label>
+
+                      <select
+                        value={manualHome}
+                        onChange={(event) =>
+                          setManualHome(
+                            event.target.value
+                          )
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                      >
+                        <option value="">
+                          Оберіть гравця
+                        </option>
+
+                        {divisionPlayers.map(
+                          (player) => (
+                            <option
+                              key={player.id}
+                              value={player.id}
+                            >
+                              {player.nickname}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-bold">
+                        Гість
+                      </label>
+
+                      <select
+                        value={manualAway}
+                        onChange={(event) =>
+                          setManualAway(
+                            event.target.value
+                          )
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                      >
+                        <option value="">
+                          Оберіть гравця
+                        </option>
+
+                        {divisionPlayers.map(
+                          (player) => (
+                            <option
+                              key={player.id}
+                              value={player.id}
+                            >
+                              {player.nickname}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={
+                        loading ||
+                        divisionPlayers.length ===
+                          0
+                      }
+                      className="w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:opacity-40"
+                    >
+                      Додати матч до календаря
+                    </button>
+                  </>
                 )}
-              </div>
+              </form>
+            )}
 
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                <div>
-                  <div className="mb-2 text-center text-sm font-bold">
-                    {getNickname(
-                      selectedMatch.home
-                    )}
+            {/* SEASON 4 */}
+            {season === 4 && (
+              <div className="rounded-3xl border border-white/10 bg-[#07101d] p-7">
+                <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                  Новий сезон
+                </div>
+
+                <h2 className="mt-2 text-3xl font-black">
+                  Автоматичне жеребкування
+                </h2>
+
+                <p className="mt-4 max-w-2xl leading-7 text-white/40">
+                  Система один раз випадково
+                  перемішає 16 гравців і створить
+                  30 турів. Тур 16 буде дзеркалом
+                  Туру 1, Тур 17 — Туру 2 і так
+                  далі.
+                </p>
+
+                <div className="mt-7 rounded-2xl border border-white/10 bg-[#030711] p-5">
+                  <div className="text-sm text-white/40">
+                    Гравців у дивізіоні
                   </div>
 
-                  <input
-                    type="number"
-                    min="0"
-                    value={homeGoals}
-                    onChange={(event) =>
-                      setHomeGoals(
-                        event.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
-                  />
-                </div>
-
-                <div className="mt-7 text-2xl font-black text-white/25">
-                  :
-                </div>
-
-                <div>
-                  <div className="mb-2 text-center text-sm font-bold">
-                    {getNickname(
-                      selectedMatch.away
-                    )}
+                  <div className="mt-2 text-4xl font-black">
+                    {divisionPlayerIds.length}
+                    <span className="text-xl text-white/25">
+                      {" "}
+                      / 16
+                    </span>
                   </div>
-
-                  <input
-                    type="number"
-                    min="0"
-                    value={awayGoals}
-                    onChange={(event) =>
-                      setAwayGoals(
-                        event.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
-                  />
                 </div>
+
+                <button
+                  type="button"
+                  onClick={
+                    generateCalendar
+                  }
+                  disabled={
+                    loading ||
+                    divisionPlayerIds.length !==
+                      16 ||
+                    calendarMatches.length > 0
+                  }
+                  className="mt-6 w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {calendarMatches.length > 0
+                    ? "Календар уже створено"
+                    : divisionPlayerIds.length !==
+                        16
+                      ? "Потрібно 16 гравців"
+                      : "Провести жеребкування"}
+                </button>
               </div>
-            </div>
-          )}
+            )}
 
-          <button
-            type="submit"
-            disabled={
-              loading ||
-              loadingResult ||
-              !selectedMatch
-            }
-            className="w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:opacity-40"
-          >
-            {loading
-              ? "Збереження..."
-              : existingResult
-                ? "Оновити результат"
-                : "Зберегти результат"}
-          </button>
+            {/* CALENDAR PREVIEW */}
+            <div className="rounded-3xl border border-white/10 bg-[#07101d] p-7">
+              <h2 className="text-2xl font-black">
+                Поточний календар
+              </h2>
 
-          {message && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center">
-              {message}
+              {calendarLoading ? (
+                <div className="mt-6 text-white/40">
+                  Завантаження...
+                </div>
+              ) : calendarMatches.length ===
+                0 ? (
+                <div className="mt-6 text-white/40">
+                  Матчів ще немає.
+                </div>
+              ) : (
+                <div className="mt-6 space-y-6">
+                  {roundNumbers.map(
+                    (roundNumber) => {
+                      const matches =
+                        calendarMatches.filter(
+                          (match) =>
+                            match.round ===
+                            roundNumber
+                        );
+
+                      return (
+                        <div
+                          key={roundNumber}
+                          className="overflow-hidden rounded-2xl border border-white/10"
+                        >
+                          <div className="bg-white/[0.04] px-5 py-3 font-black">
+                            Тур{" "}
+                            {roundNumber}
+                          </div>
+
+                          {matches.map(
+                            (match) => (
+                              <div
+                                key={
+                                  match.id
+                                }
+                                className="grid grid-cols-[1fr_auto_1fr] gap-4 border-t border-white/5 px-5 py-4"
+                              >
+                                <div className="text-right">
+                                  {getNickname(
+                                    match.home_id
+                                  )}
+                                </div>
+
+                                <div className="font-black text-white/30">
+                                  {match.status ===
+                                  "finished"
+                                    ? `${match.home_goals} : ${match.away_goals}`
+                                    : "VS"}
+                                </div>
+
+                                <div>
+                                  {getNickname(
+                                    match.away_id
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              )}
             </div>
-          )}
-        </form>
+          </div>
+        )}
+
+        {/* MESSAGE */}
+        {message && (
+          <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center">
+            {message}
+          </div>
+        )}
       </section>
     </main>
   );

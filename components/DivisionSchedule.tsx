@@ -1,5 +1,4 @@
 import { players } from "../data/players";
-import { divisionSchedule } from "../data/division-schedule";
 
 type SeasonNumber = 1 | 2 | 3 | 4;
 type DivisionNumber = 1 | 2 | 3 | 4;
@@ -25,56 +24,42 @@ export default function DivisionSchedule({
   division,
   results,
 }: DivisionScheduleProps) {
-  const rounds =
-    divisionSchedule[season][division];
-
-  function getPlayer(playerId: string) {
-    return players.find(
-      (player) => player.id === playerId
+  function getNickname(playerId: string) {
+    return (
+      players.find(
+        (player) => player.id === playerId
+      )?.nickname ?? playerId
     );
   }
 
-  function getSavedResult(
-    round: number,
-    home: string,
-    away: string
-  ) {
-    const result = results.find(
-      (item) =>
-        item.round === round &&
-        item.status === "finished" &&
+  const matchesWithRound = results
+    .filter(
+      (match) =>
+        match.round !== null &&
         (
-          (
-            item.home_id === home &&
-            item.away_id === away
-          ) ||
-          (
-            item.home_id === away &&
-            item.away_id === home
-          )
+          match.status === "scheduled" ||
+          match.status === "finished"
         )
-    );
+    )
+    .sort((a, b) => {
+      if ((a.round ?? 0) !== (b.round ?? 0)) {
+        return (a.round ?? 0) - (b.round ?? 0);
+      }
 
-    if (!result) {
-      return null;
-    }
+      return a.home_id.localeCompare(
+        b.home_id
+      );
+    });
 
-    const sameDirection =
-      result.home_id === home &&
-      result.away_id === away;
+  const roundNumbers = Array.from(
+    new Set(
+      matchesWithRound.map(
+        (match) => match.round as number
+      )
+    )
+  ).sort((a, b) => a - b);
 
-    return {
-      homeGoals: sameDirection
-        ? result.home_goals
-        : result.away_goals,
-
-      awayGoals: sameDirection
-        ? result.away_goals
-        : result.home_goals,
-    };
-  }
-
-  if (rounds.length === 0) {
+  if (matchesWithRound.length === 0) {
     return (
       <section className="border-t border-white/10 bg-white/[0.02]">
         <div className="mx-auto max-w-7xl px-6 py-16">
@@ -91,10 +76,10 @@ export default function DivisionSchedule({
               Календар ще не сформовано
             </h3>
 
-            <p className="mx-auto mt-4 max-w-xl text-white/40">
+            <p className="mx-auto mt-4 max-w-xl leading-7 text-white/40">
               Матчі {division} Дивізіону Сезону{" "}
               {season} з&apos;являться тут після
-              формування календаря.
+              створення календаря.
             </p>
           </div>
         </div>
@@ -116,96 +101,97 @@ export default function DivisionSchedule({
         </div>
 
         <div className="space-y-8">
-          {rounds.map((round) => (
-            <div
-              key={round.round}
-              className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]"
-            >
-              <div className="border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-6 py-5">
-                <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                  Чемпіонат
+          {roundNumbers.map((roundNumber) => {
+            const roundMatches =
+              matchesWithRound.filter(
+                (match) =>
+                  match.round === roundNumber
+              );
+
+            return (
+              <div
+                key={roundNumber}
+                className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]"
+              >
+                <div className="border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-6 py-5">
+                  <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                    Чемпіонат
+                  </div>
+
+                  <h3 className="mt-1 text-2xl font-black">
+                    Тур {roundNumber}
+                  </h3>
                 </div>
 
-                <h3 className="mt-1 text-2xl font-black">
-                  Тур {round.round}
-                </h3>
-              </div>
+                <div>
+                  {roundMatches.map((match) => {
+                    const finished =
+                      match.status ===
+                        "finished" &&
+                      match.home_goals !==
+                        null &&
+                      match.away_goals !==
+                        null;
 
-              <div>
-                {round.matches.map((match) => {
-                  const home =
-                    getPlayer(match.home);
-
-                  const away =
-                    getPlayer(match.away);
-
-                  const savedResult =
-                    getSavedResult(
-                      round.round,
-                      match.home,
-                      match.away
-                    );
-
-                  const finished =
-                    savedResult !== null &&
-                    savedResult.homeGoals !== null &&
-                    savedResult.awayGoals !== null;
-
-                  return (
-                    <div
-                      key={match.id}
-                      className="grid items-center gap-4 border-b border-white/5 px-6 py-5 last:border-b-0 md:grid-cols-[1fr_auto_1fr]"
-                    >
-                      {/* HOME */}
-                      <a
-                        href={`/players/${match.home}?season=${season}`}
-                        className="text-center font-bold transition hover:text-blue-300 md:text-right"
+                    return (
+                      <div
+                        key={match.id}
+                        className="grid items-center gap-4 border-b border-white/5 px-6 py-5 last:border-b-0 md:grid-cols-[1fr_auto_1fr]"
                       >
-                        {home?.nickname ??
-                          match.home}
-                      </a>
+                        <a
+                          href={`/players/${match.home_id}?season=${season}`}
+                          className="text-center font-bold transition hover:text-blue-300 md:text-right"
+                        >
+                          {getNickname(
+                            match.home_id
+                          )}
+                        </a>
 
-                      {/* SCORE */}
-                      <div className="text-center">
-                        {finished ? (
-                          <div>
-                            <div className="inline-flex min-w-24 justify-center rounded-xl bg-blue-500/15 px-5 py-2 text-xl font-black text-blue-300">
-                              {savedResult.homeGoals}
-                              {" : "}
-                              {savedResult.awayGoals}
-                            </div>
+                        <div className="text-center">
+                          {finished ? (
+                            <div>
+                              <div className="inline-flex min-w-24 justify-center rounded-xl bg-blue-500/15 px-5 py-2 text-xl font-black text-blue-300">
+                                {
+                                  match.home_goals
+                                }
+                                {" : "}
+                                {
+                                  match.away_goals
+                                }
+                              </div>
 
-                            <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-green-400/70">
-                              Завершено
+                              <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-green-400/70">
+                                Завершено
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="inline-flex min-w-24 justify-center rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-bold text-white/35">
-                              VS
-                            </div>
+                          ) : (
+                            <div>
+                              <div className="inline-flex min-w-24 justify-center rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-bold text-white/35">
+                                VS
+                              </div>
 
-                            <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/20">
-                              Не зіграно
+                              <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/20">
+                                Не зіграно
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
+
+                        <a
+                          href={`/players/${match.away_id}?season=${season}`}
+                          className="text-center font-bold transition hover:text-blue-300 md:text-left"
+                        >
+                          {getNickname(
+                            match.away_id
+                          )}
+                        </a>
                       </div>
-
-                      {/* AWAY */}
-                      <a
-                        href={`/players/${match.away}?season=${season}`}
-                        className="text-center font-bold transition hover:text-blue-300 md:text-left"
-                      >
-                        {away?.nickname ??
-                          match.away}
-                      </a>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
