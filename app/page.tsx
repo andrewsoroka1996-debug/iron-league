@@ -100,9 +100,9 @@ export default function Home() {
               Турніри
             </a>
 
-            <a href="#" className="transition hover:text-white">
-              Гравці
-            </a>
+            <a href="/players" className="transition hover:text-white">
+  Гравці
+</a>
 
             <a href="#" className="transition hover:text-white">
               Історія

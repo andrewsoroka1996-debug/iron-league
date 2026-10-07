@@ -130,53 +130,64 @@ export default function PlayersPage() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {playersWithDivision.map((player) => (
-            <div
-              key={player.id}
-              className="group overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] transition duration-300 hover:-translate-y-1 hover:border-blue-400/40"
-            >
-              <div className="border-b border-white/10 bg-gradient-to-br from-blue-500/15 to-transparent p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-xl font-black text-blue-300">
-                    {player.nickname
-                      .replace(/[^a-zA-Z0-9]/g, "")
-                      .slice(0, 2)
-                      .toUpperCase()}
+          {playersWithDivision.map((player) => {
+            const initials = player.nickname
+              .replace(/[^a-zA-Z0-9]/g, "")
+              .slice(0, 2)
+              .toUpperCase();
+
+            return (
+              <a
+                key={player.id}
+                href={`/players/${player.id}`}
+                className="group block overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] transition duration-300 hover:-translate-y-1 hover:border-blue-400/40 hover:shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+              >
+                <div className="border-b border-white/10 bg-gradient-to-br from-blue-500/15 to-transparent p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-xl font-black text-blue-300 transition group-hover:border-blue-400/40 group-hover:bg-blue-500/15">
+                      {initials}
+                    </div>
+
+                    {player.division && (
+                      <div className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-bold text-white/50">
+                        {player.division} Дивізіон
+                      </div>
+                    )}
                   </div>
 
-                  {player.division && (
-                    <div className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-bold text-white/50">
-                      {player.division} Дивізіон
+                  <h3 className="mt-6 break-words text-xl font-black">
+                    {player.nickname}
+                  </h3>
+
+                  {player.account && (
+                    <div className="mt-2 break-words text-sm text-white/35">
+                      ({player.account})
                     </div>
                   )}
                 </div>
 
-                <h3 className="mt-6 break-words text-xl font-black">
-                  {player.nickname}
-                </h3>
-
-                {player.account && (
-                  <div className="mt-2 break-words text-sm text-white/35">
-                    ({player.account})
+                <div className="p-6">
+                  <div className="text-xs uppercase tracking-[0.2em] text-white/30">
+                    Поточний статус
                   </div>
-                )}
-              </div>
 
-              <div className="p-6">
-                <div className="text-xs uppercase tracking-[0.2em] text-white/30">
-                  Поточний статус
-                </div>
+                  <div className="mt-2 font-bold text-blue-300">
+                    Учасник Iron League
+                  </div>
 
-                <div className="mt-2 font-bold text-blue-300">
-                  Учасник Iron League
-                </div>
+                  <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5 text-sm">
+                    <span className="text-white/35">
+                      Відкрити профіль
+                    </span>
 
-                <div className="mt-6 border-t border-white/10 pt-5 text-sm text-white/35">
-                  Профіль гравця буде доступний →
+                    <span className="font-bold text-blue-400 transition group-hover:translate-x-1">
+                      →
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              </a>
+            );
+          })}
         </div>
       </section>
     </main>
