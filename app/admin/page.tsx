@@ -8,6 +8,9 @@ import {
 } from "react";
 
 import { players } from "../../data/players";
+
+import { season1 } from "../../data/seasons/season-1";
+import { season2 } from "../../data/seasons/season-2";
 import { season3 } from "../../data/seasons/season-3";
 import { season4 } from "../../data/seasons/season-4";
 
@@ -21,10 +24,13 @@ type CalendarMatch = {
   season: number;
   division: number | null;
   round: number | null;
+
   home_id: string;
   away_id: string;
+
   home_goals: number | null;
   away_goals: number | null;
+
   status: string;
 };
 
@@ -41,11 +47,15 @@ export default function AdminPage() {
   const [division, setDivision] =
     useState<DivisionNumber>(1);
 
-  const [calendarMatches, setCalendarMatches] =
-    useState<CalendarMatch[]>([]);
+  const [
+    calendarMatches,
+    setCalendarMatches,
+  ] = useState<CalendarMatch[]>([]);
 
-  const [calendarLoading, setCalendarLoading] =
-    useState(false);
+  const [
+    calendarLoading,
+    setCalendarLoading,
+  ] = useState(false);
 
   const [round, setRound] =
     useState(1);
@@ -74,18 +84,79 @@ export default function AdminPage() {
   const [loading, setLoading] =
     useState(false);
 
-  function getNickname(playerId: string) {
+  /*
+    ==================================
+    НІКНЕЙМ ГРАВЦЯ
+    ==================================
+  */
+
+  function getNickname(
+    playerId: string
+  ) {
     return (
       players.find(
-        (player) => player.id === playerId
+        (player) =>
+          player.id === playerId
       )?.nickname ?? playerId
     );
   }
+
+  /*
+    ==================================
+    СКЛАД ДИВІЗІОНУ
+    ==================================
+  */
 
   function getDivisionPlayerIds(
     selectedSeason: SeasonNumber,
     selectedDivision: DivisionNumber
   ): readonly string[] {
+    /*
+      СЕЗОН 1
+      Було тільки 3 дивізіони.
+    */
+
+    if (selectedSeason === 1) {
+      if (selectedDivision === 1) {
+        return season1.division1.players;
+      }
+
+      if (selectedDivision === 2) {
+        return season1.division2.players;
+      }
+
+      if (selectedDivision === 3) {
+        return season1.division3.players;
+      }
+
+      return [];
+    }
+
+    /*
+      СЕЗОН 2
+      Було 4 дивізіони.
+    */
+
+    if (selectedSeason === 2) {
+      if (selectedDivision === 1) {
+        return season2.division1.players;
+      }
+
+      if (selectedDivision === 2) {
+        return season2.division2.players;
+      }
+
+      if (selectedDivision === 3) {
+        return season2.division3.players;
+      }
+
+      return season2.division4.players;
+    }
+
+    /*
+      СЕЗОН 3
+    */
+
     if (selectedSeason === 3) {
       if (selectedDivision === 1) {
         return season3.division1.players;
@@ -102,27 +173,23 @@ export default function AdminPage() {
       return season3.division4.players;
     }
 
-    if (selectedSeason === 4) {
-      if (selectedDivision === 1) {
-        return season4.division1.players;
-      }
+    /*
+      СЕЗОН 4
+    */
 
-      if (selectedDivision === 2) {
-        return season4.division2.players;
-      }
-
-      if (selectedDivision === 3) {
-        return season4.division3.players;
-      }
-
-      return season4.division4.players;
+    if (selectedDivision === 1) {
+      return season4.division1.players;
     }
 
-    /*
-      Сезони 1 і 2 ми ще не перенесли
-      у season-1.ts / season-2.ts.
-    */
-    return [];
+    if (selectedDivision === 2) {
+      return season4.division2.players;
+    }
+
+    if (selectedDivision === 3) {
+      return season4.division3.players;
+    }
+
+    return season4.division4.players;
   }
 
   const divisionPlayerIds =
@@ -135,7 +202,8 @@ export default function AdminPage() {
     divisionPlayerIds
       .map((id) =>
         players.find(
-          (player) => player.id === id
+          (player) =>
+            player.id === id
         )
       )
       .filter(
@@ -145,10 +213,14 @@ export default function AdminPage() {
           player !== undefined
       );
 
+  const divisionDidNotExist =
+    season === 1 &&
+    division === 4;
+
   /*
-    ============================
+    ==================================
     ЗАВАНТАЖЕННЯ КАЛЕНДАРЯ
-    ============================
+    ==================================
   */
 
   const loadCalendar =
@@ -156,12 +228,13 @@ export default function AdminPage() {
       setCalendarLoading(true);
 
       try {
-        const response = await fetch(
-          `/api/admin/calendar?season=${season}&division=${division}`,
-          {
-            cache: "no-store",
-          }
-        );
+        const response =
+          await fetch(
+            `/api/admin/calendar?season=${season}&division=${division}`,
+            {
+              cache: "no-store",
+            }
+          );
 
         const result =
           await response.json();
@@ -214,16 +287,19 @@ export default function AdminPage() {
       } finally {
         setCalendarLoading(false);
       }
-    }, [season, division]);
+    }, [
+      season,
+      division,
+    ]);
 
   useEffect(() => {
     void loadCalendar();
   }, [loadCalendar]);
 
   /*
-    ============================
-    ТУРИ
-    ============================
+    ==================================
+    СПИСОК ТУРІВ
+    ==================================
   */
 
   const roundNumbers =
@@ -247,6 +323,12 @@ export default function AdminPage() {
       );
     }, [calendarMatches]);
 
+  /*
+    ==================================
+    МАТЧІ ОБРАНОГО ТУРУ
+    ==================================
+  */
+
   const roundMatches =
     useMemo(() => {
       return calendarMatches.filter(
@@ -257,6 +339,12 @@ export default function AdminPage() {
       calendarMatches,
       round,
     ]);
+
+  /*
+    ==================================
+    ОБРАНИЙ МАТЧ
+    ==================================
+  */
 
   const selectedMatch =
     useMemo(() => {
@@ -270,8 +358,8 @@ export default function AdminPage() {
     ]);
 
   /*
-    Якщо вибрано матч,
-    підтягуємо його поточний рахунок.
+    Якщо результат уже внесений,
+    показуємо поточний рахунок.
   */
 
   useEffect(() => {
@@ -307,9 +395,9 @@ export default function AdminPage() {
   }, [selectedMatch]);
 
   /*
-    ============================
+    ==================================
     ЗБЕРЕЖЕННЯ РЕЗУЛЬТАТУ
-    ============================
+    ==================================
   */
 
   async function saveResult(
@@ -358,6 +446,7 @@ export default function AdminPage() {
 
             body: JSON.stringify({
               password,
+
               season,
               division,
               round,
@@ -406,10 +495,10 @@ export default function AdminPage() {
   }
 
   /*
-    ============================
+    ==================================
     РУЧНЕ ДОДАВАННЯ МАТЧУ
     СЕЗОНИ 1–3
-    ============================
+    ==================================
   */
 
   async function addManualMatch(
@@ -421,16 +510,23 @@ export default function AdminPage() {
       setMessage(
         "Введіть пароль адміністратора"
       );
+
       return;
     }
 
-    if (
-      season < 1 ||
-      season > 3
-    ) {
+    if (season > 3) {
       setMessage(
-        "Ручне формування призначене для Сезонів 1–3"
+        "Ручне формування використовується для Сезонів 1–3"
       );
+
+      return;
+    }
+
+    if (divisionDidNotExist) {
+      setMessage(
+        "4 Дивізіону в Сезоні 1 не існувало"
+      );
+
       return;
     }
 
@@ -441,15 +537,18 @@ export default function AdminPage() {
       setMessage(
         "Оберіть обох гравців"
       );
+
       return;
     }
 
     if (
-      manualHome === manualAway
+      manualHome ===
+      manualAway
     ) {
       setMessage(
         "Гравець не може грати сам із собою"
       );
+
       return;
     }
 
@@ -519,10 +618,10 @@ export default function AdminPage() {
   }
 
   /*
-    ============================
+    ==================================
     АВТОМАТИЧНЕ ЖЕРЕБКУВАННЯ
     СЕЗОН 4
-    ============================
+    ==================================
   */
 
   async function generateCalendar() {
@@ -530,6 +629,7 @@ export default function AdminPage() {
       setMessage(
         "Введіть пароль адміністратора"
       );
+
       return;
     }
 
@@ -537,6 +637,7 @@ export default function AdminPage() {
       setMessage(
         "Автоматичне жеребкування призначене для Сезону 4"
       );
+
       return;
     }
 
@@ -592,12 +693,6 @@ export default function AdminPage() {
       setLoading(false);
     }
   }
-
-  /*
-    ============================
-    ЗМІНА СЕЗОНУ / ДИВІЗІОНУ
-    ============================
-  */
 
   function changeSeason(
     value: SeasonNumber
@@ -693,7 +788,6 @@ export default function AdminPage() {
 
         {/* COMMON SETTINGS */}
         <div className="mt-8 grid gap-5 rounded-3xl border border-white/10 bg-[#07101d] p-7 md:grid-cols-3">
-          {/* PASSWORD */}
           <div>
             <label className="text-sm font-bold text-white/60">
               Пароль адміністратора
@@ -712,7 +806,6 @@ export default function AdminPage() {
             />
           </div>
 
-          {/* SEASON */}
           <div>
             <label className="text-sm font-bold text-white/60">
               Сезон
@@ -747,7 +840,6 @@ export default function AdminPage() {
             </select>
           </div>
 
-          {/* DIVISION */}
           <div>
             <label className="text-sm font-bold text-white/60">
               Дивізіон
@@ -783,36 +875,27 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* =========================
-            RESULTS TAB
-        ========================== */}
+        {/* RESULTS */}
         {tab === "results" && (
           <form
             onSubmit={saveResult}
             className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
           >
-            <div>
-              <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                Матч
-              </div>
-
-              <h2 className="mt-2 text-3xl font-black">
-                Внести результат
-              </h2>
-            </div>
+            <h2 className="text-3xl font-black">
+              Внести результат
+            </h2>
 
             {calendarLoading ? (
-              <div className="rounded-xl bg-white/[0.04] p-5 text-white/40">
+              <div className="text-white/40">
                 Завантаження календаря...
               </div>
             ) : roundNumbers.length === 0 ? (
               <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
-                Для цього дивізіону календар ще
-                не створено.
+                Для цього дивізіону календар
+                ще не створено.
               </div>
             ) : (
               <>
-                {/* ROUND */}
                 <div>
                   <label className="text-sm font-bold">
                     Тур
@@ -844,7 +927,6 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {/* MATCH */}
                 <div>
                   <label className="text-sm font-bold">
                     Матч
@@ -882,7 +964,6 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {/* SCORE */}
                 {selectedMatch && (
                   <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
                     <div className="mb-6 flex items-center justify-between gap-4">
@@ -970,12 +1051,9 @@ export default function AdminPage() {
           </form>
         )}
 
-        {/* =========================
-            CALENDAR TAB
-        ========================== */}
+        {/* CALENDAR */}
         {tab === "calendar" && (
           <div className="mt-8 space-y-8">
-            {/* SEASONS 1-3 */}
             {season <= 3 && (
               <form
                 onSubmit={addManualMatch}
@@ -991,21 +1069,16 @@ export default function AdminPage() {
                   </h2>
 
                   <p className="mt-3 text-white/40">
-                    Для Сезонів 1–3 ми відтворюємо
-                    справжні історичні тури без
-                    автоматичного жеребкування.
+                    Для Сезонів 1–3 ми
+                    відтворюємо реальні
+                    історичні тури.
                   </p>
                 </div>
 
-                {(season === 1 ||
-                  season === 2) &&
-                divisionPlayers.length === 0 ? (
-                  <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-sm text-yellow-200">
-                    Спочатку потрібно внести
-                    склади Сезону {season}.
-                    Після цього тут з&apos;являться
-                    гравці для ручного формування
-                    календаря.
+                {divisionDidNotExist ? (
+                  <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
+                    4 Дивізіону в Сезоні 1
+                    ще не існувало.
                   </div>
                 ) : (
                   <>
@@ -1095,8 +1168,7 @@ export default function AdminPage() {
                       type="submit"
                       disabled={
                         loading ||
-                        divisionPlayers.length ===
-                          0
+                        divisionPlayers.length === 0
                       }
                       className="w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:opacity-40"
                     >
@@ -1107,7 +1179,6 @@ export default function AdminPage() {
               </form>
             )}
 
-            {/* SEASON 4 */}
             {season === 4 && (
               <div className="rounded-3xl border border-white/10 bg-[#07101d] p-7">
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -1118,12 +1189,10 @@ export default function AdminPage() {
                   Автоматичне жеребкування
                 </h2>
 
-                <p className="mt-4 max-w-2xl leading-7 text-white/40">
-                  Система один раз випадково
-                  перемішає 16 гравців і створить
-                  30 турів. Тур 16 буде дзеркалом
-                  Туру 1, Тур 17 — Туру 2 і так
-                  далі.
+                <p className="mt-4 text-white/40">
+                  Система випадково перемішає
+                  16 учасників і створить
+                  30 турів.
                 </p>
 
                 <div className="mt-7 rounded-2xl border border-white/10 bg-[#030711] p-5">
@@ -1133,6 +1202,7 @@ export default function AdminPage() {
 
                   <div className="mt-2 text-4xl font-black">
                     {divisionPlayerIds.length}
+
                     <span className="text-xl text-white/25">
                       {" "}
                       / 16
@@ -1147,23 +1217,21 @@ export default function AdminPage() {
                   }
                   disabled={
                     loading ||
-                    divisionPlayerIds.length !==
-                      16 ||
+                    divisionPlayerIds.length !== 16 ||
                     calendarMatches.length > 0
                   }
-                  className="mt-6 w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="mt-6 w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:opacity-40"
                 >
                   {calendarMatches.length > 0
                     ? "Календар уже створено"
-                    : divisionPlayerIds.length !==
-                        16
+                    : divisionPlayerIds.length !== 16
                       ? "Потрібно 16 гравців"
                       : "Провести жеребкування"}
                 </button>
               </div>
             )}
 
-            {/* CALENDAR PREVIEW */}
+            {/* CURRENT CALENDAR */}
             <div className="rounded-3xl border border-white/10 bg-[#07101d] p-7">
               <h2 className="text-2xl font-black">
                 Поточний календар
@@ -1173,8 +1241,7 @@ export default function AdminPage() {
                 <div className="mt-6 text-white/40">
                   Завантаження...
                 </div>
-              ) : calendarMatches.length ===
-                0 ? (
+              ) : calendarMatches.length === 0 ? (
                 <div className="mt-6 text-white/40">
                   Матчів ще немає.
                 </div>
@@ -1195,16 +1262,13 @@ export default function AdminPage() {
                           className="overflow-hidden rounded-2xl border border-white/10"
                         >
                           <div className="bg-white/[0.04] px-5 py-3 font-black">
-                            Тур{" "}
-                            {roundNumber}
+                            Тур {roundNumber}
                           </div>
 
                           {matches.map(
                             (match) => (
                               <div
-                                key={
-                                  match.id
-                                }
+                                key={match.id}
                                 className="grid grid-cols-[1fr_auto_1fr] gap-4 border-t border-white/5 px-5 py-4"
                               >
                                 <div className="text-right">
@@ -1238,7 +1302,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* MESSAGE */}
         {message && (
           <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center">
             {message}

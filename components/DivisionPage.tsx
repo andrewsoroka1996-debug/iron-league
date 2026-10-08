@@ -1,9 +1,17 @@
 import { players } from "../data/players";
+
+import { season1 } from "../data/seasons/season-1";
+import { season2 } from "../data/seasons/season-2";
 import { season3 } from "../data/seasons/season-3";
 import { season4 } from "../data/seasons/season-4";
-import { calculateStandings } from "../lib/calculateStandings";
-import type { LeagueMatch } from "../lib/calculateStandings";
+
+import {
+  calculateStandings,
+  type LeagueMatch,
+} from "../lib/calculateStandings";
+
 import { supabase } from "../lib/supabase";
+
 import DivisionSchedule from "./DivisionSchedule";
 
 type DivisionNumber = 1 | 2 | 3 | 4;
@@ -24,39 +32,86 @@ type DatabaseMatch = {
   status: string;
 };
 
+function getDivisionPlayers(
+  season: SeasonNumber,
+  division: DivisionNumber
+): readonly string[] {
+  // СЕЗОН 1 — тільки 3 дивізіони
+  if (season === 1) {
+    if (division === 1) {
+      return season1.division1.players;
+    }
+
+    if (division === 2) {
+      return season1.division2.players;
+    }
+
+    if (division === 3) {
+      return season1.division3.players;
+    }
+
+    return [];
+  }
+
+  // СЕЗОН 2 — 4 дивізіони
+  if (season === 2) {
+    if (division === 1) {
+      return season2.division1.players;
+    }
+
+    if (division === 2) {
+      return season2.division2.players;
+    }
+
+    if (division === 3) {
+      return season2.division3.players;
+    }
+
+    return season2.division4.players;
+  }
+
+  // СЕЗОН 3
+  if (season === 3) {
+    if (division === 1) {
+      return season3.division1.players;
+    }
+
+    if (division === 2) {
+      return season3.division2.players;
+    }
+
+    if (division === 3) {
+      return season3.division3.players;
+    }
+
+    return season3.division4.players;
+  }
+
+  // СЕЗОН 4
+  if (division === 1) {
+    return season4.division1.players;
+  }
+
+  if (division === 2) {
+    return season4.division2.players;
+  }
+
+  if (division === 3) {
+    return season4.division3.players;
+  }
+
+  return season4.division4.players;
+}
+
 export default async function DivisionPage({
   division,
   season,
 }: DivisionPageProps) {
-  const seasonData =
-    season === 3
-      ? season3
-      : season === 4
-        ? season4
-        : null;
-
-  let divisionPlayersIds: readonly string[] = [];
-
-  if (seasonData) {
-    if (division === 1) {
-      divisionPlayersIds = seasonData.division1.players;
-    }
-
-    if (division === 2) {
-      divisionPlayersIds = seasonData.division2.players;
-    }
-
-    if (division === 3) {
-      divisionPlayersIds = seasonData.division3.players;
-    }
-
-    if (division === 4) {
-      divisionPlayersIds = seasonData.division4.players;
-    }
-  }
+  const divisionPlayersIds =
+    getDivisionPlayers(season, division);
 
   /*
-    РЕЗУЛЬТАТИ З SUPABASE
+    МАТЧІ З SUPABASE
   */
 
   const { data, error } = await supabase
@@ -74,10 +129,18 @@ export default async function DivisionPage({
     )
     .eq("season", season)
     .eq("competition", "division")
-    .eq("division", division);
+    .eq("division", division)
+    .order("round", {
+      ascending: true,
+    });
 
   const databaseMatches =
     (data ?? []) as DatabaseMatch[];
+
+  /*
+    Для таблиці враховуємо
+    тільки завершені матчі.
+  */
 
   const finishedMatches: LeagueMatch[] =
     databaseMatches
@@ -97,18 +160,20 @@ export default async function DivisionPage({
       }));
 
   /*
-    АВТОМАТИЧНА ТАБЛИЦЯ
+    АВТОМАТИЧНА ТУРНІРНА ТАБЛИЦЯ
   */
 
-  const standings = calculateStandings(
-    divisionPlayersIds,
-    finishedMatches
-  );
+  const standings =
+    calculateStandings(
+      divisionPlayersIds,
+      finishedMatches
+    );
 
   const table = standings
     .map((row) => {
       const player = players.find(
-        (player) => player.id === row.playerId
+        (player) =>
+          player.id === row.playerId
       );
 
       if (!player) {
@@ -127,24 +192,52 @@ export default async function DivisionPage({
         row !== null
     );
 
-  const playedMatches = finishedMatches.length;
+  const playedMatches =
+    finishedMatches.length;
+
+  /*
+    СТАТУС СЕЗОНУ
+  */
 
   const seasonStatus =
     season === 1 || season === 2
-      ? "Архів — дані буде додано"
+      ? "Архів"
       : season === 3
         ? "Поточний сезон"
         : "Підготовка";
 
-  const emptyTitle =
-    season === 1 || season === 2
-      ? "Дані сезону ще не додано"
-      : "Склад ще не сформовано";
+  /*
+    ОСОБЛИВІ ВИПАДКИ
+  */
 
-  const emptyText =
-    season === 1 || season === 2
-      ? `Історичні дані ${division} Дивізіону Сезону ${season} будуть додані пізніше.`
-      : `Учасники ${division} Дивізіону Сезону ${season} будуть додані після формування складу нового сезону.`;
+  const divisionDidNotExist =
+    season === 1 &&
+    division === 4;
+
+  let emptyTitle =
+    "Склад ще не сформовано";
+
+  let emptyText =
+    `Учасники ${division} Дивізіону Сезону ${season} будуть додані пізніше.`;
+
+  if (divisionDidNotExist) {
+    emptyTitle =
+      "4 Дивізіон ще не існував";
+
+    emptyText =
+      "У Сезоні 1 Iron League змагання проходили у трьох дивізіонах. 4 Дивізіон з'явився пізніше.";
+  }
+
+  if (
+    season === 4 &&
+    divisionPlayersIds.length === 0
+  ) {
+    emptyTitle =
+      "Склад ще не сформовано";
+
+    emptyText =
+      `${division} Дивізіон Сезону 4 буде сформовано перед стартом нового сезону.`;
+  }
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
@@ -277,10 +370,10 @@ export default async function DivisionPage({
             </div>
           </div>
 
-          {/* SUPABASE ERROR */}
           {error && (
             <div className="mt-6 rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-sm text-red-200">
-              Не вдалося завантажити результати з бази даних.
+              Не вдалося завантажити результати
+              з бази даних.
             </div>
           )}
         </div>
@@ -366,83 +459,85 @@ export default async function DivisionPage({
                   </thead>
 
                   <tbody>
-                    {table.map((row, index) => (
-                      <tr
-                        key={row.playerId}
-                        className="border-b border-white/5 transition last:border-b-0 hover:bg-white/[0.04]"
-                      >
-                        <td className="px-5 py-4 text-center">
-                          <div
-                            className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg font-black ${
-                              index < 3
-                                ? "bg-blue-500/15 text-blue-300"
-                                : "bg-white/[0.05] text-white/60"
+                    {table.map(
+                      (row, index) => (
+                        <tr
+                          key={row.playerId}
+                          className="border-b border-white/5 transition last:border-b-0 hover:bg-white/[0.04]"
+                        >
+                          <td className="px-5 py-4 text-center">
+                            <div
+                              className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg font-black ${
+                                index < 3
+                                  ? "bg-blue-500/15 text-blue-300"
+                                  : "bg-white/[0.05] text-white/60"
+                              }`}
+                            >
+                              {index + 1}
+                            </div>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <a
+                              href={`/players/${row.player.id}?season=${season}`}
+                              className="group"
+                            >
+                              <div className="font-bold transition group-hover:text-blue-300">
+                                {row.player.nickname}
+                              </div>
+
+                              {row.player.account && (
+                                <div className="mt-1 text-xs text-white/35">
+                                  ({row.player.account})
+                                </div>
+                              )}
+                            </a>
+                          </td>
+
+                          <td className="px-4 py-4 text-center text-white/60">
+                            {row.played}
+                          </td>
+
+                          <td className="px-4 py-4 text-center text-white/60">
+                            {row.wins}
+                          </td>
+
+                          <td className="px-4 py-4 text-center text-white/60">
+                            {row.draws}
+                          </td>
+
+                          <td className="px-4 py-4 text-center text-white/60">
+                            {row.losses}
+                          </td>
+
+                          <td className="px-4 py-4 text-center text-white/60">
+                            {row.goalsFor}
+                          </td>
+
+                          <td className="px-4 py-4 text-center text-white/60">
+                            {row.goalsAgainst}
+                          </td>
+
+                          <td
+                            className={`px-4 py-4 text-center font-semibold ${
+                              row.goalDifference > 0
+                                ? "text-green-400"
+                                : row.goalDifference < 0
+                                  ? "text-red-400"
+                                  : "text-white/50"
                             }`}
                           >
-                            {index + 1}
-                          </div>
-                        </td>
+                            {row.goalDifference > 0
+                              ? `+${row.goalDifference}`
+                              : row.goalDifference}
+                          </td>
 
-                        <td className="px-5 py-4">
-                          <a
-                            href={`/players/${row.player.id}?season=${season}`}
-                            className="group"
-                          >
-                            <div className="font-bold transition group-hover:text-blue-300">
-                              {row.player.nickname}
-                            </div>
-
-                            {row.player.account && (
-                              <div className="mt-1 text-xs text-white/35">
-                                ({row.player.account})
-                              </div>
-                            )}
-                          </a>
-                        </td>
-
-                        <td className="px-4 py-4 text-center text-white/60">
-                          {row.played}
-                        </td>
-
-                        <td className="px-4 py-4 text-center text-white/60">
-                          {row.wins}
-                        </td>
-
-                        <td className="px-4 py-4 text-center text-white/60">
-                          {row.draws}
-                        </td>
-
-                        <td className="px-4 py-4 text-center text-white/60">
-                          {row.losses}
-                        </td>
-
-                        <td className="px-4 py-4 text-center text-white/60">
-                          {row.goalsFor}
-                        </td>
-
-                        <td className="px-4 py-4 text-center text-white/60">
-                          {row.goalsAgainst}
-                        </td>
-
-                        <td
-                          className={`px-4 py-4 text-center font-semibold ${
-                            row.goalDifference > 0
-                              ? "text-green-400"
-                              : row.goalDifference < 0
-                                ? "text-red-400"
-                                : "text-white/50"
-                          }`}
-                        >
-                          {row.goalDifference > 0
-                            ? `+${row.goalDifference}`
-                            : row.goalDifference}
-                        </td>
-
-                        <td className="px-5 py-4 text-center text-xl font-black">
-                          {row.points}
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="px-5 py-4 text-center text-xl font-black">
+                            {row.points}
+                          </td>
+                        </tr>
+                      )
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -485,11 +580,14 @@ export default async function DivisionPage({
         )}
       </section>
 
-      <DivisionSchedule
-  season={season}
-  division={division}
-  results={databaseMatches}
-/>
+      {/* CALENDAR */}
+      {!divisionDidNotExist && (
+        <DivisionSchedule
+          season={season}
+          division={division}
+          results={databaseMatches}
+        />
+      )}
     </main>
   );
 }

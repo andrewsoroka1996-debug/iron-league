@@ -319,4 +319,130 @@ export const players = [
     nickname: "frejzer",
     account: "super_emoticom.frejzer",
   },
+    {
+    id: "monkeyscott",
+    nickname: "monkeyscott",
+    account: "monkey_1980",
+  },
+  {
+    id: "6abovha",
+    nickname: "6ABOBHA",
+    account: "aventiy",
+  },
+    {
+    id: "ha4truka4pro",
+    nickname: "Ha4Truka4Pro",
+    account: "228_serhii_228",
+  },
+  {
+    id: "futband1t",
+    nickname: "futband1t",
+    account: "futband1t",
+  },
+  {
+    id: "edjuk",
+    nickname: "EDJUK",
+    account: "eftdgujk",
+  },
+  {
+    id: "kandrat94",
+    nickname: "Kandrat94",
+    account: "kandrat94.",
+  },
+  {
+    id: "nazarius",
+    nickname: "NAZARIUS",
+    account: "nazarius_ua_83",
+  },
+  {
+    id: "zlyi-zenyk",
+    nickname: "Злий Зеник",
+  },
+    {
+    id: "cybercothlete",
+    nickname: "Cybercothlete",
+    account: "antonchernichko6861",
+  },
+  {
+    id: "mao",
+    nickname: "Mao",
+    account: "mao111",
+  },
+  {
+    id: "romario",
+    nickname: "-Romario-",
+    account: "_pomapuo_",
+  },
+  {
+    id: "mykyta",
+    nickname: "Mykyta",
+    account: "mykytatata",
+  },
+  {
+    id: "maks191",
+    nickname: "Maks191",
+    account: "mastiksoul8",
+  },
+  {
+    id: "mokasi",
+    nickname: "Mokasi",
+    account: "mokasi4",
+  },
+  {
+    id: "vasylhladysh",
+    nickname: "Vasylhladysh",
+  },
+   {
+    id: "v0id-ex",
+    nickname: "v0id_ex",
+    account: "c4r0n",
+  },
+    {
+    id: "edikzhuk",
+    nickname: "ЕдікЖук",
+  },
+  {
+    id: "manfromukraine",
+    nickname: "ManFromUkraine",
+    account: "evgeniys0163_43464",
+  },
+  {
+    id: "casey-js",
+    nickname: "Casey_Js",
+    account: "casey_js",
+  },
+  {
+    id: "skazhenyy-pes",
+    nickname: "SkazhenYy_Pes",
+    account: "skazheyypes",
+  },
+  {
+    id: "rds",
+    nickname: "RDS",
+    account: "RDS",
+  },
+  {
+    id: "van-bommel",
+    nickname: "Van_Bommel",
+    account: "bordinho_47739",
+  },
+  {
+    id: "goall-getter",
+    nickname: "Goall Getter",
+    account: "alexanderlubotin",
+  },
+  {
+    id: "a",
+    nickname: "A",
+  },
+  {
+    id: "dimashk-ua-unl",
+    nickname: "DimashK_UA_UNL",
+    account: "dimas14_88",
+  },
+  {
+    id: "snakee",
+    nickname: "snakee",
+    account: "stylish_eagle_22206",
+  },
 ];
