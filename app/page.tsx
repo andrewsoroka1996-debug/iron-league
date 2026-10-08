@@ -1,3 +1,5 @@
+import { seasonCompetitions } from "../data/competitions/season-competitions";
+
 const results = [
   {
     home: "Andrew_SM",
@@ -20,44 +22,152 @@ const results = [
 ];
 
 const divisions = [
-  { number: "01", name: "1 Дивізіон", leader: "Andrew_SM", points: 0 },
-  { number: "02", name: "2 Дивізіон", leader: "—", points: 0 },
-  { number: "03", name: "3 Дивізіон", leader: "—", points: 0 },
-  { number: "04", name: "4 Дивізіон", leader: "—", points: 0 },
+  {
+    number: "01",
+    name: "1 Дивізіон",
+    leader: "Andrew_SM",
+    points: 0,
+  },
+  {
+    number: "02",
+    name: "2 Дивізіон",
+    leader: "—",
+    points: 0,
+  },
+  {
+    number: "03",
+    name: "3 Дивізіон",
+    leader: "—",
+    points: 0,
+  },
+  {
+    number: "04",
+    name: "4 Дивізіон",
+    leader: "—",
+    points: 0,
+  },
 ];
 
-const tournaments = [
+/*
+  ========================================
+  ПОТОЧНИЙ СЕЗОН
+  ========================================
+*/
+
+const currentSeason = 3 as const;
+
+/*
+  ========================================
+  КАРТКИ ТУРНІРІВ
+  ========================================
+
+  Тут зберігаємо тільки інформацію,
+  потрібну для відображення картки.
+
+  Чи існує турнір у конкретному сезоні,
+  визначає seasonCompetitions.
+*/
+
+const tournamentCards = [
   {
+    id: "champions-league",
     name: "Ліга чемпіонів",
     short: "ЛЧ",
     href: "/tournaments/champions-league",
   },
   {
+    id: "europa-league",
     name: "Ліга Європи",
     short: "ЛЄ",
     href: "/tournaments/europa-league",
   },
   {
+    id: "conference-league",
     name: "Ліга конференцій",
     short: "ЛК",
     href: "/tournaments/conference-league",
   },
   {
+    id: "european-super-cup",
+    name: "Суперкубок Європи",
+    short: "СК",
+    href: "#",
+  },
+  {
+    id: "division-cups",
     name: "Кубки дивізіонів",
     short: "КД",
     href: "/tournaments/division-cups",
   },
   {
+    id: "league-of-associations",
     name: "Ліга асоціацій",
     short: "LA",
     href: "/tournaments/associations",
   },
   {
+    id: "associations-cup",
+    name: "Кубок асоціацій",
+    short: "КА",
+    href: "#",
+  },
+  {
+    id: "iron-coop-cup",
     name: "Iron Co-op Cup",
     short: "CO",
     href: "/tournaments/coop-cup",
   },
 ];
+
+/*
+  ========================================
+  ТУРНІРИ ПОТОЧНОГО СЕЗОНУ
+  ========================================
+*/
+
+const currentSeasonCompetitions =
+  seasonCompetitions[currentSeason];
+
+const currentCompetitionIds = new Set(
+  currentSeasonCompetitions.map(
+    (competition) => competition.id
+  )
+);
+
+/*
+  Кубки дивізіонів у реєстрі зберігаються
+  окремо:
+
+  division-1-cup
+  division-2-cup
+  division-3-cup
+  division-4-cup
+
+  На головній показуємо їх однією карткою.
+*/
+
+const hasDivisionCups =
+  currentSeasonCompetitions.some(
+    (competition) =>
+      competition.category ===
+      "division-cup"
+  );
+
+const tournaments =
+  tournamentCards.filter(
+    (tournament) => {
+      if (
+        tournament.id ===
+        "division-cups"
+      ) {
+        return hasDivisionCups;
+      }
+
+      return currentCompetitionIds.has(
+        tournament.id
+      );
+    }
+  );
 
 export default function Home() {
   return (
@@ -84,31 +194,52 @@ export default function Home() {
           </div>
 
           <nav className="hidden items-center gap-7 text-sm font-semibold text-white/60 lg:flex">
-            <a href="/" className="text-white">
+            <a
+              href="/"
+              className="text-white"
+            >
               Головна
             </a>
 
-            <a href="#matches" className="transition hover:text-white">
+            <a
+              href="#matches"
+              className="transition hover:text-white"
+            >
               Матчі
             </a>
 
-            <a href="/divisions" className="transition hover:text-white">
+            <a
+              href="/divisions"
+              className="transition hover:text-white"
+            >
               Дивізіони
             </a>
 
-            <a href="#tournaments" className="transition hover:text-white">
+            <a
+              href="#tournaments"
+              className="transition hover:text-white"
+            >
               Турніри
             </a>
 
-            <a href="/players" className="transition hover:text-white">
-  Гравці
-</a>
+            <a
+              href="/players"
+              className="transition hover:text-white"
+            >
+              Гравці
+            </a>
 
-            <a href="/history" className="transition hover:text-white">
-  Історія
-</a>
+            <a
+              href="/history"
+              className="transition hover:text-white"
+            >
+              Історія
+            </a>
 
-            <a href="#" className="transition hover:text-white">
+            <a
+              href="#"
+              className="transition hover:text-white"
+            >
               Новини
             </a>
           </nav>
@@ -120,7 +251,8 @@ export default function Home() {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('/stadium-bg.jpg')",
+            backgroundImage:
+              "url('/stadium-bg.jpg')",
           }}
         />
 
@@ -144,8 +276,11 @@ export default function Home() {
             </div>
 
             <p className="mt-7 max-w-xl text-lg leading-8 text-white/65">
-              Єдина платформа Iron League: матчі, дивізіони, єврокубки,
-              статистика, результати, турнірні таблиці та історія ліги.
+              Єдина платформа Iron League:
+              матчі, дивізіони, єврокубки,
+              статистика, результати,
+              турнірні таблиці та історія
+              ліги.
             </p>
 
             <div className="mt-9 flex flex-wrap gap-4">
@@ -166,21 +301,30 @@ export default function Home() {
 
             <div className="mt-12 grid max-w-xl grid-cols-3 gap-4">
               <div>
-                <div className="text-3xl font-black">4</div>
+                <div className="text-3xl font-black">
+                  4
+                </div>
+
                 <div className="mt-1 text-xs uppercase tracking-widest text-white/40">
                   Дивізіони
                 </div>
               </div>
 
               <div>
-                <div className="text-3xl font-black">6+</div>
+                <div className="text-3xl font-black">
+                  {tournaments.length}+
+                </div>
+
                 <div className="mt-1 text-xs uppercase tracking-widest text-white/40">
                   Турнірів
                 </div>
               </div>
 
               <div>
-                <div className="text-3xl font-black">∞</div>
+                <div className="text-3xl font-black">
+                  ∞
+                </div>
+
                 <div className="mt-1 text-xs uppercase tracking-widest text-white/40">
                   Емоцій
                 </div>
@@ -245,7 +389,8 @@ export default function Home() {
                 </div>
 
                 <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-center text-sm text-white/45">
-                  Центральний матч туру Iron League
+                  Центральний матч туру
+                  Iron League
                 </div>
               </div>
             </div>
@@ -254,7 +399,10 @@ export default function Home() {
       </section>
 
       {/* RESULTS */}
-      <section id="matches" className="mx-auto max-w-7xl px-6 py-20">
+      <section
+        id="matches"
+        className="mx-auto max-w-7xl px-6 py-20"
+      >
         <div className="mb-10 flex items-end justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -320,7 +468,9 @@ export default function Home() {
             {divisions.map((division) => (
               <a
                 key={division.number}
-                href={`/divisions/${Number(division.number)}`}
+                href={`/divisions/${Number(
+                  division.number
+                )}`}
                 className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] p-6 transition duration-300 hover:-translate-y-1 hover:border-blue-400/40"
               >
                 <div className="absolute right-3 top-0 text-7xl font-black text-white/[0.025]">
@@ -369,36 +519,45 @@ export default function Home() {
           <h2 className="mt-3 text-4xl font-black">
             Турніри
           </h2>
+
+          <div className="mt-2 text-sm text-white/35">
+            Сезон {currentSeason}
+          </div>
         </div>
 
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {tournaments.map((tournament) => (
-            <a
-              key={tournament.name}
-              href={tournament.href}
-              className="group relative min-h-52 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-500/10 via-[#07101d] to-[#030711] p-7 transition duration-300 hover:-translate-y-1 hover:border-blue-400/40"
-            >
-              <div className="absolute -right-5 -top-7 text-[110px] font-black text-white/[0.025]">
-                {tournament.short}
-              </div>
-
-              <div className="relative flex h-full flex-col justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/10 font-black text-blue-300">
+          {tournaments.map(
+            (tournament) => (
+              <a
+                key={tournament.id}
+                href={tournament.href}
+                className="group relative min-h-52 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-500/10 via-[#07101d] to-[#030711] p-7 transition duration-300 hover:-translate-y-1 hover:border-blue-400/40"
+              >
+                <div className="absolute -right-5 -top-7 text-[110px] font-black text-white/[0.025]">
                   {tournament.short}
                 </div>
 
-                <div>
-                  <div className="text-2xl font-black">
-                    {tournament.name}
+                <div className="relative flex h-full flex-col justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/10 font-black text-blue-300">
+                    {tournament.short}
                   </div>
 
-                  <div className="mt-2 text-sm text-white/35">
-                    Перейти до турніру →
+                  <div>
+                    <div className="text-2xl font-black">
+                      {tournament.name}
+                    </div>
+
+                    <div className="mt-2 text-sm text-white/35">
+                      {tournament.href ===
+                      "#"
+                        ? "Сторінка буде додана"
+                        : "Перейти до турніру →"}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </a>
-          ))}
+              </a>
+            )
+          )}
         </div>
       </section>
 
@@ -420,24 +579,29 @@ export default function Home() {
               "Новий сезон Iron League",
               "Єврокубки Iron League",
               "Підготовка до наступного сезону",
-            ].map((title, index) => (
-              <article
-                key={title}
-                className="rounded-3xl border border-white/10 bg-[#07101d] p-7"
-              >
-                <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
-                  Iron League • 0{index + 1}
-                </div>
+            ].map(
+              (title, index) => (
+                <article
+                  key={title}
+                  className="rounded-3xl border border-white/10 bg-[#07101d] p-7"
+                >
+                  <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
+                    Iron League • 0
+                    {index + 1}
+                  </div>
 
-                <h3 className="mt-5 text-2xl font-black leading-tight">
-                  {title}
-                </h3>
+                  <h3 className="mt-5 text-2xl font-black leading-tight">
+                    {title}
+                  </h3>
 
-                <p className="mt-4 text-sm leading-6 text-white/40">
-                  Новини, результати та головні події турнірів Iron League.
-                </p>
-              </article>
-            ))}
+                  <p className="mt-4 text-sm leading-6 text-white/40">
+                    Новини, результати та
+                    головні події турнірів
+                    Iron League.
+                  </p>
+                </article>
+              )
+            )}
           </div>
         </div>
       </section>

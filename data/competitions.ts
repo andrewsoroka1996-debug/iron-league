@@ -89,7 +89,7 @@ export const competitions = {
       "eugene-magic",
       "valento",
       "yuraboo",
-      "paruk",
+      "pavuk",
       "oleg500",
       "frejzer",
     ],
@@ -218,7 +218,7 @@ export const competitions = {
         "frejzer",
         "levlad11",
         "yokoay",
-        "paruk",
+        "pavuk",
       ],
 
       D: [
@@ -323,7 +323,7 @@ export const competitions = {
       "eugene-magic",
       "valento",
       "yuraboo",
-      "paruk",
+      "pavuk",
       "oleg500",
       "frejzer",
     ],

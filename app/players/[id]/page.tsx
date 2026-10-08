@@ -179,8 +179,8 @@ function getAssociation(
   playerId: string
 ) {
   const entries = Object.entries(
-    data.associationsLeague.associations
-  ) as [
+  data.associationsCup
+) as [
     string,
     {
       name: string;

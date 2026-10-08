@@ -305,10 +305,10 @@ export const players = [
     account: "yuraboo.",
   },
   {
-    id: "paruk",
-    nickname: "Парук",
-    account: "ruslan710spider",
-  },
+  id: "pavuk",
+  nickname: "Павук",
+  account: "ruslan710spider",
+},
   {
     id: "oleg500",
     nickname: "Oleg500",
@@ -445,4 +445,63 @@ export const players = [
     nickname: "snakee",
     account: "stylish_eagle_22206",
   },
+  {
+  id: "makson",
+  nickname: "Makson",
+},
+{
+  id: "sigizmund",
+  nickname: "sigizmund",
+  account: "d.sigizmund_40121",
+},
+{
+  id: "aleksanches1997",
+  nickname: "AlekSanches1997",
+  account: "aleksanches1997",
+},
+{
+  id: "vlads92",
+  nickname: "VladS92",
+  account: "vlads92_65133",
+},
+{
+  id: "clyncy",
+  nickname: "clyncy",
+  account: "ik008734",
+},
+{
+  id: "peerseey-7",
+  nickname: "Peerseey_7",
+  account: "persey3433",
+},
+{
+  id: "sherif-milan",
+  nickname: "sherif.milan",
+  account: "sherif00329",
+},
+{
+  id: "haos3171",
+  nickname: "haos3171",
+  account: "vitaliy082216",
+},
+{
+  id: "luckypunch",
+  nickname: "LuckyPunch",
+  account: "_extremal.",
+},
+{
+  id: "arseniy",
+  nickname: "Arseniy",
+  account: "arsenii03321",
+},
+{
+  id: "xhaka-ars",
+  nickname: "Xhaka_Ars",
+  account: "xhaka0681",
+},
+{
+  id: "the-game2x2",
+  nickname: "The_Game2x2",
+  account: "shchekalov",
+},
 ];
