@@ -14,11 +14,17 @@ export default async function Page({
 
   const params = await searchParams;
 
-  const requestedSeason = Number(params.season);
+  const requestedSeason =
+    Number(params.season);
 
   const season =
-    requestedSeason >= 1 && requestedSeason <= 4
-      ? (requestedSeason as 1 | 2 | 3 | 4)
+    requestedSeason >= 1 &&
+    requestedSeason <= 4
+      ? (requestedSeason as
+          | 1
+          | 2
+          | 3
+          | 4)
       : 3;
 
   return (
