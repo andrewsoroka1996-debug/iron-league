@@ -16,17 +16,14 @@ import {
 } from "../../../data/competitions/season-competitions";
 
 import { getCompetitionPlayers } from "../../../data/competitions/get-competition-players";
-
 import { getCompetitionAssociations } from "../../../data/competitions/get-competition-associations";
-
 import { getCompetitionGroups } from "../../../data/competitions/get-competition-groups";
-
 import { getCompetitionStages } from "../../../data/competitions/get-competition-stages";
 
-type ParticipantType =
-  | "player"
-  | "association"
-  | "team";
+import AssociationSeriesForm from "./AssociationSeriesForm";
+import AssociationSeriesSummary from "./AssociationSeriesSummary";
+import TwoLegSeriesForm from "./TwoLegSeriesForm";
+import TwoLegSeriesSummary from "./TwoLegSeriesSummary";
 
 type TournamentMatch = {
   id: string;
@@ -56,6 +53,7 @@ type TournamentMatch = {
   played_at: string | null;
 
   series_id: string | null;
+
   series_home_id: string | null;
   series_away_id: string | null;
 
@@ -64,77 +62,62 @@ type TournamentMatch = {
 
 /*
   ========================================
-  ТИП УЧАСНИКА
+  ЧИ ЄВРОКУБОК
   ========================================
-
-  Кубок асоціацій має спеціальну
-  логіку нижче.
-
-  Iron Co-op Cup = команди.
-
-  Решта = гравці.
 */
 
-function getParticipantType(
+function isEuropeanCompetition(
   competitionId: string
-): ParticipantType {
-  if (
-    competitionId ===
-    "associations-cup"
-  ) {
-    return "association";
-  }
-
-  if (
-    competitionId ===
-    "iron-coop-cup"
-  ) {
-    return "team";
-  }
-
-  return "player";
+) {
+  return (
+    competitionId === "champions-league" ||
+    competitionId === "europa-league" ||
+    competitionId === "conference-league"
+  );
 }
 
 /*
   ========================================
-  ЧИ ДВОМАТЧЕВЕ ПРОТИСТОЯННЯ
+  ДВОМАТЧЕВІ СТАДІЇ ЄВРОКУБКІВ
   ========================================
 
-  Плей-оф ЛЧ / ЛЄ / ЛК:
-  2 матчі.
+  1/8
+  1/4
+  1/2
 
-  Iron Co-op Cup:
-  2 матчі на всіх стадіях.
-
-  Кубки дивізіонів:
-  1 матч.
-
-  Суперкубок:
-  1 матч.
+  Фінал = 1 матч.
 */
 
 function isTwoLeggedCompetition(
   competitionId: string,
   stage: string
 ) {
-  const europeanCompetition =
-    competitionId ===
-      "champions-league" ||
-    competitionId ===
-      "europa-league" ||
-    competitionId ===
-      "conference-league";
+  const isTwoLeggedStage =
+    stage === "round-of-16" ||
+    stage === "quarterfinal" ||
+    stage === "semifinal";
 
   if (
-    europeanCompetition &&
-    stage !== "group"
+    isEuropeanCompetition(
+      competitionId
+    ) &&
+    isTwoLeggedStage
   ) {
     return true;
   }
 
+  /*
+    Iron Co-op Cup теж
+    двоматчевий на всіх стадіях,
+    включно з фіналом.
+
+    Саму форму підключимо,
+    коли будуть сформовані
+    16 команд.
+  */
+
   if (
-    competitionId ===
-    "iron-coop-cup"
+    competitionId === "iron-coop-cup"
   ) {
     return true;
   }
@@ -159,8 +142,7 @@ export default function TournamentAdminPage() {
     competitionId,
     setCompetitionId,
   ] = useState(
-    seasonCompetitions[3][0]?.id ??
-      ""
+    seasonCompetitions[3][0]?.id ?? ""
   );
 
   /*
@@ -178,9 +160,6 @@ export default function TournamentAdminPage() {
   const [round, setRound] =
     useState("");
 
-  const [leg, setLeg] =
-    useState<1 | 2>(1);
-
   const [homeId, setHomeId] =
     useState("");
 
@@ -196,10 +175,7 @@ export default function TournamentAdminPage() {
   const [
     matches,
     setMatches,
-  ] =
-    useState<TournamentMatch[]>(
-      []
-    );
+  ] = useState<TournamentMatch[]>([]);
 
   const [
     matchesLoading,
@@ -210,6 +186,12 @@ export default function TournamentAdminPage() {
     selectedMatchId,
     setSelectedMatchId,
   ] = useState("");
+
+  /*
+    ========================================
+    РАХУНОК
+    ========================================
+  */
 
   const [
     homeGoals,
@@ -223,7 +205,7 @@ export default function TournamentAdminPage() {
 
   /*
     ========================================
-    ЗАГАЛЬНИЙ СТАН
+    СТАН
     ========================================
   */
 
@@ -232,6 +214,11 @@ export default function TournamentAdminPage() {
 
   const [message, setMessage] =
     useState("");
+
+  const [
+    summaryRefreshKey,
+    setSummaryRefreshKey,
+  ] = useState(0);
 
   /*
     ========================================
@@ -255,19 +242,7 @@ export default function TournamentAdminPage() {
     ]);
 
   const division =
-    competitionConfig?.division ??
-    null;
-
-  /*
-    ========================================
-    ТИП УЧАСНИКІВ
-    ========================================
-  */
-
-  const participantType =
-    getParticipantType(
-      competitionId
-    );
+    competitionConfig?.division ?? null;
 
   /*
     ========================================
@@ -283,18 +258,12 @@ export default function TournamentAdminPage() {
 
       return getCompetitionStages({
         season,
-        competition:
-          competitionId,
+        competition: competitionId,
       });
     }, [
       season,
       competitionId,
     ]);
-
-  /*
-    Автоматично вибираємо
-    першу правильну стадію.
-  */
 
   useEffect(() => {
     if (
@@ -305,13 +274,13 @@ export default function TournamentAdminPage() {
       return;
     }
 
-    const exists =
+    const stageExists =
       availableStages.some(
-        (item) =>
-          item.value === stage
+        (stageOption) =>
+          stageOption.value === stage
       );
 
-    if (!exists) {
+    if (!stageExists) {
       setStage(
         availableStages[0].value
       );
@@ -335,8 +304,7 @@ export default function TournamentAdminPage() {
 
       return getCompetitionGroups({
         season,
-        competition:
-          competitionId,
+        competition: competitionId,
       });
     }, [
       season,
@@ -346,21 +314,11 @@ export default function TournamentAdminPage() {
   const hasGroups =
     availableGroups.length > 0;
 
-  /*
-    Група потрібна тільки
-    на груповому етапі.
-  */
-
   useEffect(() => {
     if (stage !== "group") {
       setGroupName("");
     }
   }, [stage]);
-
-  /*
-    Перевіряємо, чи вибрана
-    група ще існує.
-  */
 
   useEffect(() => {
     if (
@@ -381,7 +339,7 @@ export default function TournamentAdminPage() {
 
   /*
     ========================================
-    LEG
+    ЧИ ПОТРІБНА ДВОМАТЧЕВА ФОРМА
     ========================================
   */
 
@@ -392,28 +350,19 @@ export default function TournamentAdminPage() {
     );
 
   /*
-    Якщо турнір одноматчевий —
-    автоматично leg = 1.
-  */
-
-  useEffect(() => {
-    if (!usesTwoLegs) {
-      setLeg(1);
-    }
-  }, [usesTwoLegs]);
-
-  /*
     ========================================
-    ГРАВЦІ
+    ДОСТУПНІ ГРАВЦІ
     ========================================
   */
 
   const availablePlayerIds =
     useMemo(() => {
       if (
-        participantType !==
-          "player" ||
-        !competitionId
+        !competitionId ||
+        competitionId ===
+          "associations-cup" ||
+        competitionId ===
+          "iron-coop-cup"
       ) {
         return [];
       }
@@ -433,7 +382,6 @@ export default function TournamentAdminPage() {
       season,
       competitionId,
       normalizedGroupName,
-      participantType,
       stage,
     ]);
 
@@ -455,7 +403,7 @@ export default function TournamentAdminPage() {
       return getCompetitionAssociations({
         season,
         competition:
-          competitionId,
+          "associations-cup",
       });
     }, [
       season,
@@ -464,13 +412,16 @@ export default function TournamentAdminPage() {
 
   /*
     ========================================
-    ОЧИЩЕННЯ НЕВІРНИХ УЧАСНИКІВ
+    ОЧИЩЕННЯ НЕВІРНИХ ГРАВЦІВ
     ========================================
   */
 
   useEffect(() => {
     if (
-      participantType !== "player"
+      competitionId ===
+        "associations-cup" ||
+      competitionId ===
+        "iron-coop-cup"
     ) {
       return;
     }
@@ -493,77 +444,38 @@ export default function TournamentAdminPage() {
       setAwayId("");
     }
   }, [
-    participantType,
     availablePlayerIds,
     homeId,
     awayId,
-  ]);
-
-  useEffect(() => {
-    if (
-      participantType !==
-      "association"
-    ) {
-      return;
-    }
-
-    const ids =
-      availableAssociations.map(
-        (association) =>
-          association.id
-      );
-
-    if (
-      homeId &&
-      !ids.includes(homeId)
-    ) {
-      setHomeId("");
-    }
-
-    if (
-      awayId &&
-      !ids.includes(awayId)
-    ) {
-      setAwayId("");
-    }
-  }, [
-    participantType,
-    availableAssociations,
-    homeId,
-    awayId,
+    competitionId,
   ]);
 
   /*
     ========================================
-    НАЗВА УЧАСНИКА
+    НАЗВА ГРАВЦЯ
     ========================================
   */
 
+  function getPlayerName(
+    playerId: string
+  ) {
+    return (
+      players.find(
+        (player) =>
+          player.id === playerId
+      )?.nickname ?? playerId
+    );
+  }
+
   function getParticipantName(
     id: string,
-    type = "player"
+    type: string
   ) {
-    if (
-      type === "association"
-    ) {
-      return (
-        availableAssociations.find(
-          (association) =>
-            association.id === id
-        )?.name ?? id
-      );
-    }
-
     if (type === "team") {
       return id;
     }
 
-    return (
-      players.find(
-        (player) =>
-          player.id === id
-      )?.nickname ?? id
-    );
+    return getPlayerName(id);
   }
 
   /*
@@ -722,14 +634,14 @@ export default function TournamentAdminPage() {
     setGroupName("");
     setRound("");
 
-    setLeg(1);
-
     setHomeId("");
     setAwayId("");
 
     setSelectedMatchId("");
 
     setMessage("");
+
+    setSummaryRefreshKey(0);
   }
 
   /*
@@ -739,15 +651,15 @@ export default function TournamentAdminPage() {
   */
 
   function changeCompetition(
-    id: string
+    newCompetitionId: string
   ) {
-    setCompetitionId(id);
+    setCompetitionId(
+      newCompetitionId
+    );
 
     setStage("");
     setGroupName("");
     setRound("");
-
-    setLeg(1);
 
     setHomeId("");
     setAwayId("");
@@ -755,16 +667,27 @@ export default function TournamentAdminPage() {
     setSelectedMatchId("");
 
     setMessage("");
+
+    setSummaryRefreshKey(0);
   }
 
   /*
     ========================================
-    СТВОРЕННЯ ЗВИЧАЙНОГО МАТЧУ
+    СТВОРЕННЯ ОДНОГО МАТЧУ
     ========================================
+
+    Використовується для:
+
+    - дивізіонів
+    - кваліфікації
+    - груп єврокубків
+    - фіналу ЛЧ / ЛЄ / ЛК
+    - кубків дивізіонів
+    - Суперкубка
   */
 
   async function createMatch(
-    event: FormEvent
+    event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
@@ -792,41 +715,6 @@ export default function TournamentAdminPage() {
       return;
     }
 
-    /*
-      Кубок асоціацій має
-      окрему логіку 6 на 6.
-
-      Поки не створюємо його
-      як один звичайний матч.
-    */
-
-    if (
-      competitionId ===
-      "associations-cup"
-    ) {
-      setMessage(
-        "Кубок асоціацій буде створюватися окремо як серія з 6 матчів."
-      );
-
-      return;
-    }
-
-    /*
-      Iron Co-op Cup поки
-      не має сформованих команд.
-    */
-
-    if (
-      competitionId ===
-      "iron-coop-cup"
-    ) {
-      setMessage(
-        "Команди Iron Co-op Cup ще не сформовані."
-      );
-
-      return;
-    }
-
     if (
       stage === "group" &&
       hasGroups &&
@@ -839,17 +727,22 @@ export default function TournamentAdminPage() {
       return;
     }
 
-    if (!homeId || !awayId) {
+    if (
+      !homeId ||
+      !awayId
+    ) {
       setMessage(
-        "Оберіть обох учасників"
+        "Оберіть обох гравців"
       );
 
       return;
     }
 
-    if (homeId === awayId) {
+    if (
+      homeId === awayId
+    ) {
       setMessage(
-        "Учасник не може грати сам із собою"
+        "Гравець не може грати сам із собою"
       );
 
       return;
@@ -892,10 +785,13 @@ export default function TournamentAdminPage() {
                   ? null
                   : Number(round),
 
-              leg:
-                usesTwoLegs
-                  ? leg
-                  : 1,
+              /*
+                Усі матчі,
+                створені через цю форму,
+                одноматчеві.
+              */
+
+              leg: 1,
 
               participant_type:
                 "player",
@@ -953,7 +849,7 @@ export default function TournamentAdminPage() {
   */
 
   async function saveResult(
-    event: FormEvent
+    event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
@@ -1056,6 +952,11 @@ export default function TournamentAdminPage() {
       );
 
       await loadMatches();
+
+      setSummaryRefreshKey(
+        (current) =>
+          current + 1
+      );
     } catch {
       setMessage(
         "Помилка з'єднання із сервером"
@@ -1064,12 +965,6 @@ export default function TournamentAdminPage() {
       setLoading(false);
     }
   }
-
-  /*
-    ========================================
-    UI
-    ========================================
-  */
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
@@ -1180,9 +1075,7 @@ export default function TournamentAdminPage() {
             </label>
 
             <select
-              value={
-                competitionId
-              }
+              value={competitionId}
               onChange={(event) =>
                 changeCompetition(
                   event.target.value
@@ -1242,32 +1135,188 @@ export default function TournamentAdminPage() {
           </div>
         )}
 
-        {/* CREATE MATCH */}
+        {/* ASSOCIATIONS CUP */}
 
-        {competitionId && (
-          <form
-            onSubmit={createMatch}
-            className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
-          >
+        {competitionId ===
+          "associations-cup" && (
+          <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
             <div>
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                Календар
+                Кубок асоціацій
               </div>
 
               <h2 className="mt-2 text-3xl font-black">
-                Створити матч
+                Створити протистояння
               </h2>
             </div>
-
-            {/* STAGE */}
 
             <div>
               <label className="text-sm font-bold">
                 Стадія
               </label>
 
-              {availableStages.length >
-              0 ? (
+              <select
+                value={stage}
+                onChange={(event) =>
+                  setStage(
+                    event.target.value
+                  )
+                }
+                className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+              >
+                {availableStages.map(
+                  (stageOption) => (
+                    <option
+                      key={
+                        stageOption.value
+                      }
+                      value={
+                        stageOption.value
+                      }
+                    >
+                      {
+                        stageOption.label
+                      }
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+
+            <AssociationSeriesForm
+              password={password}
+              season={season}
+              stage={stage}
+              associations={
+                availableAssociations
+              }
+              onCreated={() => {
+                void loadMatches();
+              }}
+            />
+          </div>
+        )}
+
+        {/* IRON CO-OP */}
+
+        {competitionId ===
+          "iron-coop-cup" && (
+          <div className="mt-8 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+            <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+              Iron Co-op Cup
+            </div>
+
+            <h2 className="mt-2 text-3xl font-black">
+              Команди ще не сформовані
+            </h2>
+
+            <p className="mt-4 leading-7 text-white/40">
+              Формат уже визначений:
+              16 команд, по 2 гравці,
+              двоматчевий плей-оф
+              включно з фіналом.
+            </p>
+          </div>
+        )}
+
+        {/* EUROPEAN TWO LEG SERIES */}
+
+        {competitionId &&
+          competitionId !==
+            "associations-cup" &&
+          competitionId !==
+            "iron-coop-cup" &&
+          usesTwoLegs && (
+            <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                  Плей-оф
+                </div>
+
+                <h2 className="mt-2 text-3xl font-black">
+                  Створити двоматчеве протистояння
+                </h2>
+              </div>
+
+              <div>
+                <label className="text-sm font-bold">
+                  Стадія
+                </label>
+
+                <select
+                  value={stage}
+                  onChange={(event) =>
+                    setStage(
+                      event.target.value
+                    )
+                  }
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                >
+                  {availableStages.map(
+                    (stageOption) => (
+                      <option
+                        key={
+                          stageOption.value
+                        }
+                        value={
+                          stageOption.value
+                        }
+                      >
+                        {
+                          stageOption.label
+                        }
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              <TwoLegSeriesForm
+                password={password}
+                season={season}
+                competition={
+                  competitionId
+                }
+                stage={stage}
+                playerIds={
+                  availablePlayerIds
+                }
+                onCreated={() => {
+                  void loadMatches();
+                }}
+              />
+            </div>
+          )}
+
+        {/* REGULAR MATCH */}
+
+        {competitionId &&
+          competitionId !==
+            "associations-cup" &&
+          competitionId !==
+            "iron-coop-cup" &&
+          !usesTwoLegs && (
+            <form
+              onSubmit={createMatch}
+              className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
+            >
+              <div>
+                <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                  Календар
+                </div>
+
+                <h2 className="mt-2 text-3xl font-black">
+                  Створити матч
+                </h2>
+              </div>
+
+              {/* STAGE */}
+
+              <div>
+                <label className="text-sm font-bold">
+                  Стадія
+                </label>
+
                 <select
                   value={stage}
                   onChange={(event) => {
@@ -1276,6 +1325,7 @@ export default function TournamentAdminPage() {
                     );
 
                     setGroupName("");
+
                     setHomeId("");
                     setAwayId("");
                   }}
@@ -1298,266 +1348,119 @@ export default function TournamentAdminPage() {
                     )
                   )}
                 </select>
-              ) : (
-                <div className="mt-2 rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-4 text-yellow-200">
-                  Для цього турніру
-                  стадії ще не
-                  налаштовані.
-                </div>
-              )}
-            </div>
-
-            {/* GROUP */}
-
-            {stage === "group" &&
-              hasGroups && (
-                <div>
-                  <label className="text-sm font-bold">
-                    Група
-                  </label>
-
-                  <select
-                    value={groupName}
-                    onChange={(event) => {
-                      setGroupName(
-                        event.target.value
-                      );
-
-                      setHomeId("");
-                      setAwayId("");
-                    }}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
-                  >
-                    <option value="">
-                      Оберіть групу
-                    </option>
-
-                    {availableGroups.map(
-                      (group) => (
-                        <option
-                          key={group}
-                          value={group}
-                        >
-                          Група {group}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
-              )}
-
-            {/* ROUND */}
-
-            <div>
-              <label className="text-sm font-bold">
-                Тур
-              </label>
-
-              <input
-                type="number"
-                min="1"
-                value={round}
-                onChange={(event) =>
-                  setRound(
-                    event.target.value
-                  )
-                }
-                placeholder="Не обов'язково"
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
-              />
-            </div>
-
-            {/* LEG */}
-
-            {usesTwoLegs && (
-              <div>
-                <label className="text-sm font-bold">
-                  Матч протистояння
-                </label>
-
-                <select
-                  value={leg}
-                  onChange={(event) =>
-                    setLeg(
-                      Number(
-                        event.target.value
-                      ) as 1 | 2
-                    )
-                  }
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
-                >
-                  <option value={1}>
-                    Перший матч
-                  </option>
-
-                  <option value={2}>
-                    Матч-відповідь
-                  </option>
-                </select>
               </div>
-            )}
 
-            {/* PLAYERS */}
+              {/* GROUP */}
 
-            {participantType ===
-              "player" && (
-              <>
-                {stage === "group" &&
-                hasGroups &&
-                !groupName ? (
-                  <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
-                    Спочатку оберіть
-                    групу.
-                  </div>
-                ) : availablePlayerIds.length ===
-                  0 ? (
-                  <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
-                    Для цієї стадії
-                    немає доступних
-                    гравців.
-                  </div>
-                ) : (
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm font-bold">
-                        Господар
-                      </label>
+              {stage === "group" &&
+                hasGroups && (
+                  <div>
+                    <label className="text-sm font-bold">
+                      Група
+                    </label>
 
-                      <select
-                        value={homeId}
-                        onChange={(
-                          event
-                        ) =>
-                          setHomeId(
-                            event.target
-                              .value
-                          )
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
-                      >
-                        <option value="">
-                          Оберіть гравця
-                        </option>
+                    <select
+                      value={
+                        groupName
+                      }
+                      onChange={(event) => {
+                        setGroupName(
+                          event.target.value
+                        );
 
-                        {availablePlayerIds.map(
-                          (
-                            playerId
-                          ) => (
-                            <option
-                              key={
-                                playerId
-                              }
-                              value={
-                                playerId
-                              }
-                            >
-                              {getParticipantName(
-                                playerId
-                              )}
-                            </option>
-                          )
-                        )}
-                      </select>
-                    </div>
+                        setHomeId("");
+                        setAwayId("");
+                      }}
+                      className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                    >
+                      <option value="">
+                        Оберіть групу
+                      </option>
 
-                    <div>
-                      <label className="text-sm font-bold">
-                        Гість
-                      </label>
-
-                      <select
-                        value={awayId}
-                        onChange={(
-                          event
-                        ) =>
-                          setAwayId(
-                            event.target
-                              .value
-                          )
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
-                      >
-                        <option value="">
-                          Оберіть гравця
-                        </option>
-
-                        {availablePlayerIds.map(
-                          (
-                            playerId
-                          ) => (
-                            <option
-                              key={
-                                playerId
-                              }
-                              value={
-                                playerId
-                              }
-                            >
-                              {getParticipantName(
-                                playerId
-                              )}
-                            </option>
-                          )
-                        )}
-                      </select>
-                    </div>
+                      {availableGroups.map(
+                        (group) => (
+                          <option
+                            key={group}
+                            value={group}
+                          >
+                            Група {group}
+                          </option>
+                        )
+                      )}
+                    </select>
                   </div>
                 )}
-              </>
-            )}
 
-            {/* ASSOCIATIONS CUP */}
+              {/* ROUND */}
 
-            {competitionId ===
-              "associations-cup" && (
-              <div className="space-y-5">
-                <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-5 text-sm leading-6 text-blue-100">
-                  Кубок асоціацій:
-                  одна пара складається
-                  з 6 окремих матчів
-                  гравців.
+              <div>
+                <label className="text-sm font-bold">
+                  Тур
+                </label>
 
-                  Пари 6×6 будуть
-                  розставлятися вручну.
+                <input
+                  type="number"
+                  min="1"
+                  value={round}
+                  onChange={(event) =>
+                    setRound(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Не обов'язково"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                />
+              </div>
+
+              {/* PLAYERS */}
+
+              {stage === "group" &&
+              hasGroups &&
+              !groupName ? (
+                <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
+                  Спочатку оберіть
+                  групу.
                 </div>
-
+              ) : availablePlayerIds.length ===
+                0 ? (
+                <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
+                  Для цієї стадії
+                  немає доступних
+                  гравців.
+                </div>
+              ) : (
                 <div className="grid gap-5 md:grid-cols-2">
                   <div>
                     <label className="text-sm font-bold">
-                      Асоціація 1
+                      Господар
                     </label>
 
                     <select
                       value={homeId}
-                      onChange={(
-                        event
-                      ) =>
+                      onChange={(event) =>
                         setHomeId(
-                          event.target
-                            .value
+                          event.target.value
                         )
                       }
                       className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                     >
                       <option value="">
-                        Оберіть асоціацію
+                        Оберіть гравця
                       </option>
 
-                      {availableAssociations.map(
-                        (
-                          association
-                        ) => (
+                      {availablePlayerIds.map(
+                        (playerId) => (
                           <option
                             key={
-                              association.id
+                              playerId
                             }
                             value={
-                              association.id
+                              playerId
                             }
                           >
-                            {
-                              association.name
-                            }
+                            {getPlayerName(
+                              playerId
+                            )}
                           </option>
                         )
                       )}
@@ -1566,164 +1469,61 @@ export default function TournamentAdminPage() {
 
                   <div>
                     <label className="text-sm font-bold">
-                      Асоціація 2
+                      Гість
                     </label>
 
                     <select
                       value={awayId}
-                      onChange={(
-                        event
-                      ) =>
+                      onChange={(event) =>
                         setAwayId(
-                          event.target
-                            .value
+                          event.target.value
                         )
                       }
                       className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                     >
                       <option value="">
-                        Оберіть асоціацію
+                        Оберіть гравця
                       </option>
 
-                      {availableAssociations.map(
-                        (
-                          association
-                        ) => (
+                      {availablePlayerIds.map(
+                        (playerId) => (
                           <option
                             key={
-                              association.id
+                              playerId
                             }
                             value={
-                              association.id
+                              playerId
                             }
                           >
-                            {
-                              association.name
-                            }
+                            {getPlayerName(
+                              playerId
+                            )}
                           </option>
                         )
                       )}
                     </select>
                   </div>
                 </div>
+              )}
 
-                {(homeId ||
-                  awayId) && (
-                  <div className="grid gap-5 md:grid-cols-2">
-                    {homeId && (
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-                        <div className="font-black">
-                          {getParticipantName(
-                            homeId,
-                            "association"
-                          )}
-                        </div>
+              <button
+                type="submit"
+                disabled={
+                  loading ||
+                  !stage ||
+                  !homeId ||
+                  !awayId
+                }
+                className="w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {loading
+                  ? "Створення..."
+                  : "Створити матч"}
+              </button>
+            </form>
+          )}
 
-                        <div className="mt-4 space-y-2 text-sm text-white/50">
-                          {availableAssociations
-                            .find(
-                              (
-                                association
-                              ) =>
-                                association.id ===
-                                homeId
-                            )
-                            ?.players.map(
-                              (
-                                playerId
-                              ) => (
-                                <div
-                                  key={
-                                    playerId
-                                  }
-                                >
-                                  {getParticipantName(
-                                    playerId
-                                  )}
-                                </div>
-                              )
-                            )}
-                        </div>
-                      </div>
-                    )}
-
-                    {awayId && (
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-                        <div className="font-black">
-                          {getParticipantName(
-                            awayId,
-                            "association"
-                          )}
-                        </div>
-
-                        <div className="mt-4 space-y-2 text-sm text-white/50">
-                          {availableAssociations
-                            .find(
-                              (
-                                association
-                              ) =>
-                                association.id ===
-                                awayId
-                            )
-                            ?.players.map(
-                              (
-                                playerId
-                              ) => (
-                                <div
-                                  key={
-                                    playerId
-                                  }
-                                >
-                                  {getParticipantName(
-                                    playerId
-                                  )}
-                                </div>
-                              )
-                            )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* CO-OP */}
-
-            {competitionId ===
-              "iron-coop-cup" && (
-              <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
-                Команди Iron Co-op
-                Cup ще не сформовані.
-
-                Коли будуть готові
-                16 команд, додамо
-                їх сюди.
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={
-                loading ||
-                !stage ||
-                !homeId ||
-                !awayId ||
-                competitionId ===
-                  "associations-cup" ||
-                competitionId ===
-                  "iron-coop-cup"
-              }
-              className="w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {loading
-                ? "Створення..."
-                : "Створити матч"}
-            </button>
-          </form>
-        )}
-
-        {/* MATCHES */}
+        {/* MATCH LIST */}
 
         {competitionId && (
           <div className="mt-8 rounded-3xl border border-white/10 bg-[#07101d] p-7">
@@ -1796,11 +1596,14 @@ export default function TournamentAdminPage() {
                               ` • Група ${match.group_name}`}
 
                             {match.round &&
-                              ` • Тур ${match.round}`}
+                              ` • № ${match.round}`}
 
-                            {usesTwoLegs &&
-                              match.leg &&
-                              ` • Матч ${match.leg}`}
+                            {match.leg === 1 &&
+                              match.series_id &&
+                              " • 1-й матч"}
+
+                            {match.leg === 2 &&
+                              " • Матч-відповідь"}
 
                             {match.is_tiebreak &&
                               " • Тай-брейк"}
@@ -1899,6 +1702,51 @@ export default function TournamentAdminPage() {
             </button>
           </form>
         )}
+
+        {/* ASSOCIATION SUMMARY */}
+
+        {competitionId ===
+          "associations-cup" &&
+          selectedMatch?.series_id && (
+            <div className="mt-8">
+              <AssociationSeriesSummary
+                season={season}
+                seriesId={
+                  selectedMatch.series_id
+                }
+                password={password}
+                refreshKey={
+                  summaryRefreshKey
+                }
+                onTiebreakCreated={() => {
+                  void loadMatches();
+
+                  setSummaryRefreshKey(
+                    (current) =>
+                      current + 1
+                  );
+                }}
+              />
+            </div>
+          )}
+
+          {/* TWO LEG SERIES SUMMARY */}
+
+{isEuropeanCompetition(competitionId) &&
+  selectedMatch?.series_id &&
+  !selectedMatch.is_tiebreak && (
+    <div className="mt-8">
+      <TwoLegSeriesSummary
+        season={season}
+        seriesId={
+          selectedMatch.series_id
+        }
+        refreshKey={
+          summaryRefreshKey
+        }
+      />
+    </div>
+  )}
 
         {/* MESSAGE */}
 

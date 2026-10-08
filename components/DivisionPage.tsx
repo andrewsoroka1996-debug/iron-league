@@ -5,10 +5,7 @@ import { season2 } from "../data/seasons/season-2";
 import { season3 } from "../data/seasons/season-3";
 import { season4 } from "../data/seasons/season-4";
 
-import {
-  calculateStandings,
-  type LeagueMatch,
-} from "../lib/calculateStandings";
+import { buildStandings } from "../lib/standings";
 
 import { supabase } from "../lib/supabase";
 
@@ -24,19 +21,33 @@ type DivisionPageProps = {
 
 type DatabaseMatch = {
   id: string;
+
   round: number | null;
+
   home_id: string;
   away_id: string;
+
   home_goals: number | null;
   away_goals: number | null;
+
   status: string;
 };
+
+/*
+  ========================================
+  УЧАСНИКИ ДИВІЗІОНУ
+  ========================================
+*/
 
 function getDivisionPlayers(
   season: SeasonNumber,
   division: DivisionNumber
 ): readonly string[] {
-  // СЕЗОН 1 — тільки 3 дивізіони
+  /*
+    СЕЗОН 1
+    Було тільки 3 дивізіони.
+  */
+
   if (season === 1) {
     if (division === 1) {
       return season1.division1.players;
@@ -53,7 +64,10 @@ function getDivisionPlayers(
     return [];
   }
 
-  // СЕЗОН 2 — 4 дивізіони
+  /*
+    СЕЗОН 2
+  */
+
   if (season === 2) {
     if (division === 1) {
       return season2.division1.players;
@@ -70,7 +84,10 @@ function getDivisionPlayers(
     return season2.division4.players;
   }
 
-  // СЕЗОН 3
+  /*
+    СЕЗОН 3
+  */
+
   if (season === 3) {
     if (division === 1) {
       return season3.division1.players;
@@ -87,7 +104,10 @@ function getDivisionPlayers(
     return season3.division4.players;
   }
 
-  // СЕЗОН 4
+  /*
+    СЕЗОН 4
+  */
+
   if (division === 1) {
     return season4.division1.players;
   }
@@ -107,14 +127,42 @@ export default async function DivisionPage({
   division,
   season,
 }: DivisionPageProps) {
-  const divisionPlayersIds =
-    getDivisionPlayers(season, division);
-
   /*
-    МАТЧІ З SUPABASE
+    ========================================
+    УЧАСНИКИ
+    ========================================
   */
 
-  const { data, error } = await supabase
+  const divisionPlayersIds =
+    getDivisionPlayers(
+      season,
+      division
+    );
+
+  /*
+    ========================================
+    ID ТУРНІРУ В НОВІЙ СИСТЕМІ
+    ========================================
+
+    division-1
+    division-2
+    division-3
+    division-4
+  */
+
+  const competitionId =
+    `division-${division}`;
+
+  /*
+    ========================================
+    МАТЧІ З SUPABASE
+    ========================================
+  */
+
+  const {
+    data,
+    error,
+  } = await supabase
     .from("matches")
     .select(
       `
@@ -127,87 +175,143 @@ export default async function DivisionPage({
         status
       `
     )
-    .eq("season", season)
-    .eq("competition", "division")
-    .eq("division", division)
-    .order("round", {
-      ascending: true,
-    });
+    .eq(
+      "season",
+      season
+    )
+    .eq(
+      "competition",
+      competitionId
+    )
+    .eq(
+      "division",
+      division
+    )
+    .order(
+      "round",
+      {
+        ascending: true,
+        nullsFirst: false,
+      }
+    );
 
   const databaseMatches =
     (data ?? []) as DatabaseMatch[];
 
   /*
-    Для таблиці враховуємо
-    тільки завершені матчі.
-  */
-
-  const finishedMatches: LeagueMatch[] =
-    databaseMatches
-      .filter(
-        (match) =>
-          match.status === "finished" &&
-          match.home_goals !== null &&
-          match.away_goals !== null
-      )
-      .map((match) => ({
-        id: match.id,
-        round: match.round ?? undefined,
-        home: match.home_id,
-        away: match.away_id,
-        homeGoals: match.home_goals,
-        awayGoals: match.away_goals,
-      }));
-
-  /*
+    ========================================
     АВТОМАТИЧНА ТУРНІРНА ТАБЛИЦЯ
+    ========================================
+
+    Правила дивізіонів:
+
+    1. Очки
+    2. Різниця голів
+    3. Забиті голи
+    4. Особисті зустрічі
+       тільки при рівності 2 гравців
   */
 
   const standings =
-    calculateStandings(
-      divisionPlayersIds,
-      finishedMatches
-    );
+    buildStandings({
+      participantIds:
+        divisionPlayersIds,
 
-  const table = standings
-    .map((row) => {
-      const player = players.find(
-        (player) =>
-          player.id === row.playerId
-      );
+      matches:
+        databaseMatches.map(
+          (match) => ({
+            home_id:
+              match.home_id,
 
-      if (!player) {
-        return null;
-      }
+            away_id:
+              match.away_id,
 
-      return {
-        ...row,
-        player,
-      };
-    })
-    .filter(
-      (
-        row
-      ): row is NonNullable<typeof row> =>
-        row !== null
-    );
+            home_goals:
+              match.home_goals,
 
-  const playedMatches =
-    finishedMatches.length;
+            away_goals:
+              match.away_goals,
+
+            status:
+              match.status,
+          })
+        ),
+
+      format:
+        "division-qualification",
+    });
 
   /*
+    ========================================
+    ДОДАЄМО ДАНІ ГРАВЦІВ
+    ========================================
+  */
+
+  const table =
+    standings
+      .map(
+        (row) => {
+          const player =
+            players.find(
+              (player) =>
+                player.id ===
+                row.playerId
+            );
+
+          if (!player) {
+            return null;
+          }
+
+          return {
+            ...row,
+            player,
+          };
+        }
+      )
+      .filter(
+        (
+          row
+        ): row is NonNullable<
+          typeof row
+        > =>
+          row !== null
+      );
+
+  /*
+    ========================================
+    КІЛЬКІСТЬ ЗІГРАНИХ МАТЧІВ
+    ========================================
+  */
+
+  const playedMatches =
+    databaseMatches.filter(
+      (match) =>
+        match.status ===
+          "finished" &&
+        match.home_goals !==
+          null &&
+        match.away_goals !==
+          null
+    ).length;
+
+  /*
+    ========================================
     СТАТУС СЕЗОНУ
+    ========================================
   */
 
   const seasonStatus =
-    season === 1 || season === 2
+    season === 1 ||
+    season === 2
       ? "Архів"
       : season === 3
         ? "Поточний сезон"
         : "Підготовка";
 
   /*
+    ========================================
     ОСОБЛИВІ ВИПАДКИ
+    ========================================
   */
 
   const divisionDidNotExist =
@@ -242,6 +346,7 @@ export default async function DivisionPage({
   return (
     <main className="min-h-screen bg-[#030711] text-white">
       {/* HEADER */}
+
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <a
@@ -275,6 +380,7 @@ export default async function DivisionPage({
       </header>
 
       {/* HERO */}
+
       <section className="relative overflow-hidden border-b border-white/10">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-30"
@@ -298,29 +404,42 @@ export default async function DivisionPage({
           </h1>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/55">
-            Турнірна таблиця, результати та склад
-            учасників {division} Дивізіону Iron League.
+            Турнірна таблиця,
+            результати та склад
+            учасників {division} Дивізіону
+            Iron League.
           </p>
 
           {/* SEASON SWITCHER */}
+
           <div className="mt-8">
             <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
               Обрати сезон
             </div>
 
             <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d] p-1">
-              {([1, 2, 3, 4] as const).map(
-                (seasonNumber) => (
+              {(
+                [1, 2, 3, 4] as const
+              ).map(
+                (
+                  seasonNumber
+                ) => (
                   <a
-                    key={seasonNumber}
+                    key={
+                      seasonNumber
+                    }
                     href={`/divisions/${division}?season=${seasonNumber}`}
                     className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
-                      season === seasonNumber
+                      season ===
+                      seasonNumber
                         ? "bg-blue-500 text-white"
                         : "text-white/45 hover:text-white"
                     }`}
                   >
-                    Сезон {seasonNumber}
+                    Сезон{" "}
+                    {
+                      seasonNumber
+                    }
                   </a>
                 )
               )}
@@ -328,6 +447,7 @@ export default async function DivisionPage({
           </div>
 
           {/* INFO */}
+
           <div className="mt-8 flex flex-wrap gap-3">
             <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
               <span className="text-sm text-white/40">
@@ -345,7 +465,9 @@ export default async function DivisionPage({
               </span>
 
               <span className="ml-2 font-black">
-                {divisionPlayersIds.length}
+                {
+                  divisionPlayersIds.length
+                }
               </span>
             </div>
 
@@ -372,14 +494,15 @@ export default async function DivisionPage({
 
           {error && (
             <div className="mt-6 rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-sm text-red-200">
-              Не вдалося завантажити результати
-              з бази даних.
+              Не вдалося завантажити
+              результати з бази даних.
             </div>
           )}
         </div>
       </section>
 
       {/* TABLE */}
+
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="mb-8">
           <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -391,7 +514,8 @@ export default async function DivisionPage({
           </h2>
         </div>
 
-        {divisionPlayersIds.length === 0 ? (
+        {divisionPlayersIds.length ===
+        0 ? (
           <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-16 text-center">
             <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[90px]" />
 
@@ -460,20 +584,27 @@ export default async function DivisionPage({
 
                   <tbody>
                     {table.map(
-                      (row, index) => (
+                      (
+                        row,
+                        index
+                      ) => (
                         <tr
-                          key={row.playerId}
+                          key={
+                            row.playerId
+                          }
                           className="border-b border-white/5 transition last:border-b-0 hover:bg-white/[0.04]"
                         >
                           <td className="px-5 py-4 text-center">
                             <div
                               className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg font-black ${
-                                index < 3
+                                index <
+                                3
                                   ? "bg-blue-500/15 text-blue-300"
                                   : "bg-white/[0.05] text-white/60"
                               }`}
                             >
-                              {index + 1}
+                              {index +
+                                1}
                             </div>
                           </td>
 
@@ -483,19 +614,33 @@ export default async function DivisionPage({
                               className="group"
                             >
                               <div className="font-bold transition group-hover:text-blue-300">
-                                {row.player.nickname}
+                                {
+                                  row
+                                    .player
+                                    .nickname
+                                }
                               </div>
 
-                              {row.player.account && (
+                              {row
+                                .player
+                                .account && (
                                 <div className="mt-1 text-xs text-white/35">
-                                  ({row.player.account})
+                                  (
+                                  {
+                                    row
+                                      .player
+                                      .account
+                                  }
+                                  )
                                 </div>
                               )}
                             </a>
                           </td>
 
                           <td className="px-4 py-4 text-center text-white/60">
-                            {row.played}
+                            {
+                              row.played
+                            }
                           </td>
 
                           <td className="px-4 py-4 text-center text-white/60">
@@ -507,33 +652,44 @@ export default async function DivisionPage({
                           </td>
 
                           <td className="px-4 py-4 text-center text-white/60">
-                            {row.losses}
+                            {
+                              row.losses
+                            }
                           </td>
 
                           <td className="px-4 py-4 text-center text-white/60">
-                            {row.goalsFor}
+                            {
+                              row.goalsFor
+                            }
                           </td>
 
                           <td className="px-4 py-4 text-center text-white/60">
-                            {row.goalsAgainst}
+                            {
+                              row.goalsAgainst
+                            }
                           </td>
 
                           <td
                             className={`px-4 py-4 text-center font-semibold ${
-                              row.goalDifference > 0
+                              row.goalDifference >
+                              0
                                 ? "text-green-400"
-                                : row.goalDifference < 0
+                                : row.goalDifference <
+                                    0
                                   ? "text-red-400"
                                   : "text-white/50"
                             }`}
                           >
-                            {row.goalDifference > 0
+                            {row.goalDifference >
+                            0
                               ? `+${row.goalDifference}`
                               : row.goalDifference}
                           </td>
 
                           <td className="px-5 py-4 text-center text-xl font-black">
-                            {row.points}
+                            {
+                              row.points
+                            }
                           </td>
                         </tr>
                       )
@@ -545,35 +701,59 @@ export default async function DivisionPage({
 
             <div className="mt-6 flex flex-wrap gap-6 text-xs text-white/35">
               <span>
-                <b className="text-white/60">І</b> — ігри
+                <b className="text-white/60">
+                  І
+                </b>{" "}
+                — ігри
               </span>
 
               <span>
-                <b className="text-white/60">В</b> — перемоги
+                <b className="text-white/60">
+                  В
+                </b>{" "}
+                — перемоги
               </span>
 
               <span>
-                <b className="text-white/60">Н</b> — нічиї
+                <b className="text-white/60">
+                  Н
+                </b>{" "}
+                — нічиї
               </span>
 
               <span>
-                <b className="text-white/60">П</b> — поразки
+                <b className="text-white/60">
+                  П
+                </b>{" "}
+                — поразки
               </span>
 
               <span>
-                <b className="text-white/60">ЗМ</b> — забиті м&apos;ячі
+                <b className="text-white/60">
+                  ЗМ
+                </b>{" "}
+                — забиті м&apos;ячі
               </span>
 
               <span>
-                <b className="text-white/60">ПМ</b> — пропущені м&apos;ячі
+                <b className="text-white/60">
+                  ПМ
+                </b>{" "}
+                — пропущені м&apos;ячі
               </span>
 
               <span>
-                <b className="text-white/60">РМ</b> — різниця м&apos;ячів
+                <b className="text-white/60">
+                  РМ
+                </b>{" "}
+                — різниця м&apos;ячів
               </span>
 
               <span>
-                <b className="text-white/60">О</b> — очки
+                <b className="text-white/60">
+                  О
+                </b>{" "}
+                — очки
               </span>
             </div>
           </>
@@ -581,6 +761,7 @@ export default async function DivisionPage({
       </section>
 
       {/* CALENDAR */}
+
       {!divisionDidNotExist && (
         <DivisionSchedule
           season={season}
