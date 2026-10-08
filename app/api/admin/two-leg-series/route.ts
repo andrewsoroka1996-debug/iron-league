@@ -10,14 +10,66 @@ import { getCompetitionPlayers } from "../../../../data/competitions/get-competi
 
 import type { SeasonNumber } from "../../../../data/competitions/season-competitions";
 
+type EuropeanCompetition =
+  | "champions-league"
+  | "europa-league"
+  | "conference-league";
+
+type CreateSeriesBody = {
+  password?: string;
+
+  season?: number;
+
+  competition?: string;
+
+  stage?: string;
+
+  home_id?: string;
+  away_id?: string;
+
+  bracket_slot?: number;
+};
+
+const allowedCompetitions: EuropeanCompetition[] = [
+  "champions-league",
+  "europa-league",
+  "conference-league",
+];
+
+const allowedStages = [
+  "round-of-16",
+  "quarterfinal",
+  "semifinal",
+];
+
+/*
+  ========================================
+  КІЛЬКІСТЬ ПАР У СТАДІЇ
+  ========================================
+*/
+
+function getExpectedSeriesCount(
+  stage: string
+) {
+  if (stage === "round-of-16") {
+    return 8;
+  }
+
+  if (stage === "quarterfinal") {
+    return 4;
+  }
+
+  if (stage === "semifinal") {
+    return 2;
+  }
+
+  return 0;
+}
+
 /*
   ==========================================
   GET
   ==========================================
-
-  Отримує двоматчеве протистояння
-  через series_id і автоматично
-  рахує загальний рахунок.
 */
 
 export async function GET(
@@ -34,12 +86,6 @@ export async function GET(
     const seriesId =
       searchParams.get("series_id");
 
-    /*
-      ==========================
-      СЕЗОН
-      ==========================
-    */
-
     if (
       !Number.isInteger(season) ||
       season < 1 ||
@@ -55,12 +101,6 @@ export async function GET(
       );
     }
 
-    /*
-      ==========================
-      SERIES ID
-      ==========================
-    */
-
     if (!seriesId) {
       return NextResponse.json(
         {
@@ -72,12 +112,6 @@ export async function GET(
         }
       );
     }
-
-    /*
-      ==========================
-      ЗАВАНТАЖУЄМО МАТЧІ
-      ==========================
-    */
 
     const {
       data,
@@ -150,12 +184,6 @@ export async function GET(
       );
     }
 
-    /*
-      ==========================
-      ПЕРШИЙ МАТЧ
-      ==========================
-    */
-
     const firstMatch =
       matches[0];
 
@@ -179,12 +207,6 @@ export async function GET(
         }
       );
     }
-
-    /*
-      ==========================
-      РОЗРАХУНОК
-      ==========================
-    */
 
     const summary =
       calculateTwoLegSeries({
@@ -218,12 +240,6 @@ export async function GET(
           ),
       });
 
-    /*
-      ==========================
-      RESPONSE
-      ==========================
-    */
-
     return NextResponse.json({
       success: true,
 
@@ -238,6 +254,9 @@ export async function GET(
 
         stage:
           firstMatch.stage,
+
+        bracket_slot:
+          firstMatch.round,
 
         home_id:
           seriesHomeId,
@@ -273,15 +292,9 @@ export async function GET(
   POST
   ==========================================
 
-  Створює:
-
-  Матч 1:
-  A — B
-
-  Матч 2:
-  B — A
-
-  Обидва мають один series_id.
+  Створює дві гри
+  та автоматично визначає
+  номер пари в сітці.
 */
 
 export async function POST(
@@ -289,23 +302,27 @@ export async function POST(
 ) {
   try {
     const body =
-      await request.json();
+      (await request.json()) as CreateSeriesBody;
 
     const {
-      password,
+  password,
 
-      season,
-      competition,
-      stage,
+  season,
 
-      home_id,
-      away_id,
-    } = body;
+  competition,
+
+  stage,
+
+  home_id,
+  away_id,
+
+  bracket_slot,
+} = body;
 
     /*
-      ==========================
+      ========================================
       ПАРОЛЬ
-      ==========================
+      ========================================
     */
 
     if (
@@ -325,19 +342,21 @@ export async function POST(
     }
 
     /*
-      ==========================
+      ========================================
       СЕЗОН
-      ==========================
+      ========================================
     */
 
     if (
+      season === undefined ||
       !Number.isInteger(season) ||
       season < 1 ||
       season > 4
     ) {
       return NextResponse.json(
         {
-          error: "Невірний сезон",
+          error:
+            "Невірний сезон",
         },
         {
           status: 400,
@@ -349,27 +368,21 @@ export async function POST(
       season as SeasonNumber;
 
     /*
-      ==========================
+      ========================================
       ТУРНІР
-      ==========================
+      ========================================
     */
-
-    const allowedCompetitions = [
-      "champions-league",
-      "europa-league",
-      "conference-league",
-    ];
 
     if (
       !competition ||
       !allowedCompetitions.includes(
-        competition
+        competition as EuropeanCompetition
       )
     ) {
       return NextResponse.json(
         {
           error:
-            "Цей турнір не підтримує двоматчеву серію через цей API",
+            "Невірний єврокубок",
         },
         {
           status: 400,
@@ -377,26 +390,14 @@ export async function POST(
       );
     }
 
+    const europeanCompetition =
+      competition as EuropeanCompetition;
+
     /*
-      ==========================
+      ========================================
       СТАДІЯ
-      ==========================
-
-      Поки:
-      1/8
-      1/4
-      1/2
-
-      Фінал налаштуємо окремо,
-      коли остаточно зафіксуємо
-      його формат.
+      ========================================
     */
-
-    const allowedStages = [
-      "round-of-16",
-      "quarterfinal",
-      "semifinal",
-    ];
 
     if (
       !stage ||
@@ -415,17 +416,20 @@ export async function POST(
       );
     }
 
+    const expectedSeries =
+      getExpectedSeriesCount(
+        stage
+      );
+
     /*
-      ==========================
+      ========================================
       ГРАВЦІ
-      ==========================
+      ========================================
     */
 
     if (
       !home_id ||
-      !away_id ||
-      typeof home_id !== "string" ||
-      typeof away_id !== "string"
+      !away_id
     ) {
       return NextResponse.json(
         {
@@ -453,30 +457,101 @@ export async function POST(
     }
 
     /*
-      ==========================
-      УЧАСНИКИ ТУРНІРУ
-      ==========================
+      ========================================
+      ДОПУСТИМИЙ ПУЛ ГРАВЦІВ
+      ========================================
     */
 
-    const competitionPlayers =
+    const allowedPlayerIds =
+      new Set<string>();
+
+    const basePlayers =
       getCompetitionPlayers({
         season:
           seasonNumber,
 
-        competition,
+        competition:
+          europeanCompetition,
 
-        groupName: null,
+        groupName:
+          null,
       });
 
+    for (
+      const playerId of basePlayers
+    ) {
+      allowedPlayerIds.add(
+        playerId
+      );
+    }
+
+    /*
+      ЛЧ → ЛЄ
+    */
+
     if (
-      !competitionPlayers.includes(
+      europeanCompetition ===
+      "europa-league"
+    ) {
+      const championsPlayers =
+        getCompetitionPlayers({
+          season:
+            seasonNumber,
+
+          competition:
+            "champions-league",
+
+          groupName:
+            null,
+        });
+
+      for (
+        const playerId of championsPlayers
+      ) {
+        allowedPlayerIds.add(
+          playerId
+        );
+      }
+    }
+
+    /*
+      ЛЄ → ЛК
+    */
+
+    if (
+      europeanCompetition ===
+      "conference-league"
+    ) {
+      const europaPlayers =
+        getCompetitionPlayers({
+          season:
+            seasonNumber,
+
+          competition:
+            "europa-league",
+
+          groupName:
+            null,
+        });
+
+      for (
+        const playerId of europaPlayers
+      ) {
+        allowedPlayerIds.add(
+          playerId
+        );
+      }
+    }
+
+    if (
+      !allowedPlayerIds.has(
         home_id
       )
     ) {
       return NextResponse.json(
         {
           error:
-            `${home_id} не є учасником цього турніру`,
+            `${home_id} не може брати участь у цьому турнірі`,
         },
         {
           status: 400,
@@ -485,14 +560,14 @@ export async function POST(
     }
 
     if (
-      !competitionPlayers.includes(
+      !allowedPlayerIds.has(
         away_id
       )
     ) {
       return NextResponse.json(
         {
           error:
-            `${away_id} не є учасником цього турніру`,
+            `${away_id} не може брати участь у цьому турнірі`,
         },
         {
           status: 400,
@@ -501,9 +576,9 @@ export async function POST(
     }
 
     /*
-      ==========================
-      ДУБЛІКАТ — ПРЯМИЙ ПОРЯДОК
-      ==========================
+      ========================================
+      ДУБЛІКАТ ПАРИ
+      ========================================
     */
 
     const {
@@ -518,7 +593,7 @@ export async function POST(
       )
       .eq(
         "competition",
-        competition
+        europeanCompetition
       )
       .eq(
         "stage",
@@ -546,12 +621,6 @@ export async function POST(
       );
     }
 
-    /*
-      ==========================
-      ДУБЛІКАТ — ЗВОРОТНИЙ ПОРЯДОК
-      ==========================
-    */
-
     const {
       data: reverseSeries,
       error: reverseError,
@@ -564,7 +633,7 @@ export async function POST(
       )
       .eq(
         "competition",
-        competition
+        europeanCompetition
       )
       .eq(
         "stage",
@@ -593,10 +662,10 @@ export async function POST(
     }
 
     if (
-      (directSeries?.length ?? 0) >
-        0 ||
-      (reverseSeries?.length ?? 0) >
-        0
+      (directSeries?.length ??
+        0) > 0 ||
+      (reverseSeries?.length ??
+        0) > 0
     ) {
       return NextResponse.json(
         {
@@ -610,41 +679,249 @@ export async function POST(
     }
 
     /*
-      ==========================
+      ========================================
+      ВЖЕ СТВОРЕНІ СЕРІЇ СТАДІЇ
+      ========================================
+    */
+
+    const {
+      data: existingMatches,
+      error: existingError,
+    } = await supabaseAdmin
+      .from("matches")
+      .select(
+        `
+          series_id,
+          round
+        `
+      )
+      .eq(
+        "season",
+        season
+      )
+      .eq(
+        "competition",
+        europeanCompetition
+      )
+      .eq(
+        "stage",
+        stage
+      );
+
+    if (existingError) {
+      return NextResponse.json(
+        {
+          error:
+            existingError.message,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    /*
+      ========================================
+      ЗАЙНЯТІ СЛОТИ
+      ========================================
+    */
+
+    const existingSeriesIds =
+      new Set<string>();
+
+    const occupiedSlots =
+      new Set<number>();
+
+    for (
+      const match of
+        existingMatches ?? []
+    ) {
+      if (
+        match.series_id
+      ) {
+        existingSeriesIds.add(
+          match.series_id
+        );
+      }
+
+      if (
+        Number.isInteger(
+          match.round
+        ) &&
+        match.round !== null &&
+        match.round >= 1 &&
+        match.round <=
+          expectedSeries
+      ) {
+        occupiedSlots.add(
+          match.round
+        );
+      }
+    }
+
+    /*
+      Усі пари стадії
+      вже створені.
+    */
+
+    if (
+      existingSeriesIds.size >=
+      expectedSeries
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Усі пари цієї стадії вже створені",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    /*
+      ========================================
+      НАСТУПНИЙ ВІЛЬНИЙ СЛОТ
+      ========================================
+
+      1/8:
+      1 ... 8
+
+      1/4:
+      1 ... 4
+
+      1/2:
+      1 ... 2
+    */
+
+    let bracketSlot:
+  | number
+  | null = null;
+
+/*
+  Якщо форма передала
+  конкретний слот —
+  використовуємо саме його.
+*/
+
+if (
+  bracket_slot !== undefined
+) {
+  if (
+    !Number.isInteger(
+      bracket_slot
+    ) ||
+    bracket_slot < 1 ||
+    bracket_slot >
+      expectedSeries
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Невірний номер пари в сітці",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  if (
+    occupiedSlots.has(
+      bracket_slot
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          `Пара №${bracket_slot} вже створена`,
+      },
+      {
+        status: 409,
+      }
+    );
+  }
+
+  bracketSlot =
+    bracket_slot;
+} else {
+  /*
+    Для 1/8 або старого режиму
+    беремо перший вільний слот.
+  */
+
+  for (
+    let slot = 1;
+    slot <= expectedSeries;
+    slot += 1
+  ) {
+    if (
+      !occupiedSlots.has(
+        slot
+      )
+    ) {
+      bracketSlot =
+        slot;
+
+      break;
+    }
+  }
+}
+
+    if (
+      bracketSlot === null
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Не знайдено вільного місця в турнірній сітці",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    /*
+      ========================================
       SERIES ID
-      ==========================
+      ========================================
     */
 
     const seriesId =
-      `s${season}-${competition}-${stage}-${randomUUID()}`;
+      `s${season}-${europeanCompetition}-${stage}-slot-${bracketSlot}-${randomUUID()}`;
 
     /*
-      ==========================
-      ОБИДВА МАТЧІ
-      ==========================
+      ========================================
+      ДВА МАТЧІ
+
+      ВАЖЛИВО:
+
+      round = номер пари
+      в турнірній сітці.
+      ========================================
     */
 
     const rows = [
-      /*
-        МАТЧ 1
-
-        A — B
-      */
-
       {
         season,
 
-        competition,
+        competition:
+          europeanCompetition,
 
-        division: null,
+        division:
+          null,
 
         stage,
 
-        group_name: null,
+        group_name:
+          null,
 
-        round: null,
+        round:
+          bracketSlot,
 
-        leg: 1,
+        leg:
+          1,
 
         participant_type:
           "player",
@@ -653,13 +930,17 @@ export async function POST(
 
         away_id,
 
-        home_goals: null,
-        away_goals: null,
+        home_goals:
+          null,
+
+        away_goals:
+          null,
 
         status:
           "scheduled",
 
-        played_at: null,
+        played_at:
+          null,
 
         series_id:
           seriesId,
@@ -674,26 +955,25 @@ export async function POST(
           false,
       },
 
-      /*
-        МАТЧ 2
-
-        B — A
-      */
-
       {
         season,
 
-        competition,
+        competition:
+          europeanCompetition,
 
-        division: null,
+        division:
+          null,
 
         stage,
 
-        group_name: null,
+        group_name:
+          null,
 
-        round: null,
+        round:
+          bracketSlot,
 
-        leg: 2,
+        leg:
+          2,
 
         participant_type:
           "player",
@@ -704,13 +984,17 @@ export async function POST(
         away_id:
           home_id,
 
-        home_goals: null,
-        away_goals: null,
+        home_goals:
+          null,
+
+        away_goals:
+          null,
 
         status:
           "scheduled",
 
-        played_at: null,
+        played_at:
+          null,
 
         series_id:
           seriesId,
@@ -727,9 +1011,9 @@ export async function POST(
     ];
 
     /*
-      ==========================
+      ========================================
       INSERT
-      ==========================
+      ========================================
     */
 
     const {
@@ -763,7 +1047,8 @@ export async function POST(
     if (error) {
       return NextResponse.json(
         {
-          error: error.message,
+          error:
+            error.message,
         },
         {
           status: 500,
@@ -779,6 +1064,9 @@ export async function POST(
 
       series_id:
         seriesId,
+
+      bracket_slot:
+        bracketSlot,
 
       series_home_id:
         home_id,

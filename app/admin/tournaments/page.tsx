@@ -24,6 +24,7 @@ import AssociationSeriesForm from "./AssociationSeriesForm";
 import AssociationSeriesSummary from "./AssociationSeriesSummary";
 import TwoLegSeriesForm from "./TwoLegSeriesForm";
 import TwoLegSeriesSummary from "./TwoLegSeriesSummary";
+import EuropeanFinalForm from "./EuropeanFinalForm";
 
 type TournamentMatch = {
   id: string;
@@ -348,6 +349,12 @@ export default function TournamentAdminPage() {
       competitionId,
       stage
     );
+
+    const isEuropeanFinal =
+  isEuropeanCompetition(
+    competitionId
+  ) &&
+  stage === "final";
 
   /*
     ========================================
@@ -1222,11 +1229,12 @@ export default function TournamentAdminPage() {
         {/* EUROPEAN TWO LEG SERIES */}
 
         {competitionId &&
-          competitionId !==
-            "associations-cup" &&
-          competitionId !==
-            "iron-coop-cup" &&
-          usesTwoLegs && (
+  competitionId !==
+    "associations-cup" &&
+  competitionId !==
+    "iron-coop-cup" &&
+  usesTwoLegs &&
+  !isEuropeanFinal && (
             <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
               <div>
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -1288,14 +1296,42 @@ export default function TournamentAdminPage() {
             </div>
           )}
 
+          {/* EUROPEAN FINAL */}
+
+{isEuropeanFinal && (
+  <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+    <div>
+      <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+        Фінал
+      </div>
+
+      <h2 className="mt-2 text-3xl font-black">
+        Створити фінальний матч
+      </h2>
+    </div>
+
+    <EuropeanFinalForm
+      password={password}
+      season={season}
+      competition={
+        competitionId
+      }
+      onCreated={() => {
+        void loadMatches();
+      }}
+    />
+  </div>
+)}
+
         {/* REGULAR MATCH */}
 
         {competitionId &&
-          competitionId !==
-            "associations-cup" &&
-          competitionId !==
-            "iron-coop-cup" &&
-          !usesTwoLegs && (
+  competitionId !==
+    "associations-cup" &&
+  competitionId !==
+    "iron-coop-cup" &&
+  !usesTwoLegs &&
+  !isEuropeanFinal && (
             <form
               onSubmit={createMatch}
               className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
