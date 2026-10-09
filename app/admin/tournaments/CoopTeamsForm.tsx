@@ -16,9 +16,7 @@ type Props = {
 
 type CoopTeam = {
   id: string;
-
   season: number;
-
   name: string;
 
   player_1_id: string | null;
@@ -34,34 +32,14 @@ type TeamDraft = {
 
 type TeamsResponse = {
   success?: boolean;
-
   teams?: CoopTeam[];
-
   count?: number;
-
   error?: string;
 };
 
-function getPlayerName(
-  playerId: string | null
-) {
-  if (!playerId) {
-    return "Ще не визначено";
-  }
-
-  return (
-    players.find(
-      (player) =>
-        player.id === playerId
-    )?.nickname ?? playerId
-  );
-}
-
 function notifyTeamsChanged() {
   window.dispatchEvent(
-    new Event(
-      "coop-teams-changed"
-    )
+    new Event("coop-teams-changed")
   );
 }
 
@@ -69,48 +47,27 @@ export default function CoopTeamsForm({
   password,
   season,
 }: Props) {
-  const [
-    teams,
-    setTeams,
-  ] =
+  const [teams, setTeams] =
     useState<CoopTeam[]>([]);
+
+  const [drafts, setDrafts] =
+    useState<
+      Record<string, TeamDraft>
+    >({});
 
   const [
     teamName,
     setTeamName,
-  ] =
-    useState("");
+  ] = useState("");
 
-  const [
-    drafts,
-    setDrafts,
-  ] =
-    useState<
-      Record<
-        string,
-        TeamDraft
-      >
-    >({});
-
-  const [
-    loading,
-    setLoading,
-  ] =
+  const [loading, setLoading] =
     useState(true);
 
-  const [
-    creating,
-    setCreating,
-  ] =
+  const [creating, setCreating] =
     useState(false);
 
-  const [
-    savingTeamId,
-    setSavingTeamId,
-  ] =
-    useState<string | null>(
-      null
-    );
+  const [savingAll, setSavingAll] =
+    useState(false);
 
   const [
     deletingTeamId,
@@ -120,15 +77,29 @@ export default function CoopTeamsForm({
       null
     );
 
-  const [
-    message,
-    setMessage,
-  ] =
+  const [message, setMessage] =
     useState("");
 
   /*
     ========================================
-    ЗАВАНТАЖЕННЯ КОМАНД
+    ГРАВЦІ
+    ========================================
+  */
+
+  const sortedPlayers =
+    useMemo(() => {
+      return [...players].sort(
+        (a, b) =>
+          a.nickname.localeCompare(
+            b.nickname,
+            "uk"
+          )
+      );
+    }, []);
+
+  /*
+    ========================================
+    ЗАВАНТАЖЕННЯ
     ========================================
   */
 
@@ -173,11 +144,6 @@ export default function CoopTeamsForm({
           loadedTeams
         );
 
-        /*
-          Формуємо локальні
-          чернетки складів.
-        */
-
         const nextDrafts:
           Record<
             string,
@@ -211,31 +177,16 @@ export default function CoopTeamsForm({
       } finally {
         setLoading(false);
       }
-    }, [
-      season,
-    ]);
+    }, [season]);
 
   useEffect(() => {
     void loadTeams();
-  }, [
-    loadTeams,
-  ]);
-
-  /*
-    ========================================
-    ЗМІНА СЕЗОНУ
-    ========================================
-  */
+  }, [loadTeams]);
 
   useEffect(() => {
     setTeamName("");
-
     setMessage("");
-
-    setDrafts({});
-  }, [
-    season,
-  ]);
+  }, [season]);
 
   /*
     ========================================
@@ -254,9 +205,31 @@ export default function CoopTeamsForm({
             team.player_2_id
           )
       ).length;
-    }, [
-      teams,
-    ]);
+    }, [teams]);
+
+  const assignedPlayers =
+    useMemo(() => {
+      let count = 0;
+
+      for (
+        const team of
+          teams
+      ) {
+        if (
+          team.player_1_id
+        ) {
+          count += 1;
+        }
+
+        if (
+          team.player_2_id
+        ) {
+          count += 1;
+        }
+      }
+
+      return count;
+    }, [teams]);
 
   const teamsReady =
     teams.length === 16;
@@ -267,31 +240,121 @@ export default function CoopTeamsForm({
 
   /*
     ========================================
-    ЧИ ВИКОРИСТОВУЄТЬСЯ ГРАВЕЦЬ
-    ІНШОЮ КОМАНДОЮ
+    НЕЗБЕРЕЖЕНІ ЗМІНИ
     ========================================
   */
 
-  function isPlayerUsedByOtherTeam(
+  const changedTeamIds =
+    useMemo(() => {
+      const result: string[] =
+        [];
+
+      for (
+        const team of
+          teams
+      ) {
+        const draft =
+          drafts[team.id];
+
+        if (!draft) {
+          continue;
+        }
+
+        const original1 =
+          team.player_1_id ??
+          "";
+
+        const original2 =
+          team.player_2_id ??
+          "";
+
+        if (
+          draft.player1Id !==
+            original1 ||
+          draft.player2Id !==
+            original2
+        ) {
+          result.push(
+            team.id
+          );
+        }
+      }
+
+      return result;
+    }, [
+      teams,
+      drafts,
+    ]);
+
+  const hasChanges =
+    changedTeamIds.length >
+    0;
+
+  /*
+    ========================================
+    ВИКОРИСТАННЯ ГРАВЦІВ
+    У ЧЕРНЕТКАХ
+
+    Це важливо:
+    дублікати блокуємо ще ДО
+    натискання "Зберегти".
+    ========================================
+  */
+
+  function isPlayerSelectedElsewhere(
     playerId: string,
-    currentTeamId: string
+    currentTeamId: string,
+    currentField:
+      | "player1Id"
+      | "player2Id"
   ) {
-    return teams.some(
-      (team) =>
-        team.id !==
-          currentTeamId &&
-        (
-          team.player_1_id ===
-            playerId ||
-          team.player_2_id ===
-            playerId
-        )
-    );
+    for (
+      const team of
+        teams
+    ) {
+      const draft =
+        drafts[team.id];
+
+      if (!draft) {
+        continue;
+      }
+
+      if (
+        team.id ===
+        currentTeamId
+      ) {
+        const otherValue =
+          currentField ===
+          "player1Id"
+            ? draft.player2Id
+            : draft.player1Id;
+
+        if (
+          otherValue ===
+          playerId
+        ) {
+          return true;
+        }
+
+        continue;
+      }
+
+      if (
+        draft.player1Id ===
+          playerId ||
+        draft.player2Id ===
+          playerId
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /*
     ========================================
-    ЗМІНА ЧЕРНЕТКИ СКЛАДУ
+    ЗМІНА СКЛАДУ
     ========================================
   */
 
@@ -324,13 +387,276 @@ export default function CoopTeamsForm({
         },
       })
     );
+
+    setMessage("");
+  }
+
+  /*
+    ========================================
+    ОЧИСТИТИ ЧЕРНЕТКУ ОДНІЄЇ КОМАНДИ
+    ========================================
+  */
+
+  function clearDraft(
+    teamId: string
+  ) {
+    setDrafts(
+      (current) => ({
+        ...current,
+
+        [teamId]: {
+          player1Id: "",
+          player2Id: "",
+        },
+      })
+    );
+
+    setMessage("");
+  }
+
+  /*
+    ========================================
+    СКАСУВАТИ ВСІ НЕЗБЕРЕЖЕНІ ЗМІНИ
+    ========================================
+  */
+
+  function resetChanges() {
+    const nextDrafts:
+      Record<
+        string,
+        TeamDraft
+      > = {};
+
+    for (
+      const team of
+        teams
+    ) {
+      nextDrafts[
+        team.id
+      ] = {
+        player1Id:
+          team.player_1_id ??
+          "",
+
+        player2Id:
+          team.player_2_id ??
+          "",
+      };
+    }
+
+    setDrafts(
+      nextDrafts
+    );
+
+    setMessage(
+      "Незбережені зміни скасовано"
+    );
+  }
+
+  /*
+    ========================================
+    ПЕРЕВІРКА ВСІХ ЧЕРНЕТок
+    ========================================
+  */
+
+  function validateDrafts() {
+    const used =
+      new Map<
+        string,
+        string
+      >();
+
+    for (
+      const team of
+        teams
+    ) {
+      const draft =
+        drafts[team.id];
+
+      if (!draft) {
+        continue;
+      }
+
+      const ids = [
+        draft.player1Id,
+        draft.player2Id,
+      ].filter(Boolean);
+
+      if (
+        ids.length === 2 &&
+        ids[0] === ids[1]
+      ) {
+        return `У команді «${team.name}» обрано одного гравця двічі`;
+      }
+
+      for (
+        const playerId of
+          ids
+      ) {
+        const previousTeam =
+          used.get(
+            playerId
+          );
+
+        if (
+          previousTeam
+        ) {
+          return `Гравець уже використаний у двох командах: «${previousTeam}» та «${team.name}»`;
+        }
+
+        used.set(
+          playerId,
+          team.name
+        );
+      }
+    }
+
+    return null;
+  }
+
+  /*
+    ========================================
+    ЗБЕРЕГТИ ВСІ ЗМІНИ
+    ========================================
+  */
+
+  async function saveAll() {
+    if (!password) {
+      setMessage(
+        "Введіть пароль адміністратора"
+      );
+
+      return;
+    }
+
+    if (!hasChanges) {
+      setMessage(
+        "Немає змін для збереження"
+      );
+
+      return;
+    }
+
+    const validationError =
+      validateDrafts();
+
+    if (
+      validationError
+    ) {
+      setMessage(
+        validationError
+      );
+
+      return;
+    }
+
+    setSavingAll(true);
+    setMessage("");
+
+    try {
+      /*
+        Зберігаємо послідовно,
+        а не паралельно.
+
+        Так серверна перевірка
+        унікальності гравців
+        залишається надійною.
+      */
+
+      for (
+        const teamId of
+          changedTeamIds
+      ) {
+        const draft =
+          drafts[teamId];
+
+        const team =
+          teams.find(
+            (item) =>
+              item.id ===
+              teamId
+          );
+
+        if (
+          !draft ||
+          !team
+        ) {
+          continue;
+        }
+
+        const response =
+          await fetch(
+            "/api/admin/coop-teams",
+            {
+              method:
+                "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  password,
+
+                  season,
+
+                  team_id:
+                    teamId,
+
+                  player_1_id:
+                    draft.player1Id ||
+                    null,
+
+                  player_2_id:
+                    draft.player2Id ||
+                    null,
+                }),
+            }
+          );
+
+        const result =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ??
+              `Не вдалося зберегти склад «${team.name}»`
+          );
+        }
+      }
+
+      await loadTeams();
+
+      notifyTeamsChanged();
+
+      setMessage(
+        `✅ Збережено змін: ${changedTeamIds.length}`
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof
+          Error
+          ? error.message
+          : "Помилка збереження складів"
+      );
+
+      /*
+        Після часткового
+        збереження перечитуємо
+        реальний стан БД.
+      */
+
+      await loadTeams();
+    } finally {
+      setSavingAll(false);
+    }
   }
 
   /*
     ========================================
     СТВОРЕННЯ КОМАНДИ
-
-    ТІЛЬКИ НАЗВА.
     ========================================
   */
 
@@ -343,7 +669,9 @@ export default function CoopTeamsForm({
       return;
     }
 
-    if (!teamName.trim()) {
+    if (
+      !teamName.trim()
+    ) {
       setMessage(
         "Введіть назву команди"
       );
@@ -352,7 +680,6 @@ export default function CoopTeamsForm({
     }
 
     setCreating(true);
-
     setMessage("");
 
     try {
@@ -371,7 +698,6 @@ export default function CoopTeamsForm({
             body:
               JSON.stringify({
                 password,
-
                 season,
 
                 name:
@@ -394,13 +720,13 @@ export default function CoopTeamsForm({
 
       setTeamName("");
 
-      setMessage(
-        "✅ Команду створено"
-      );
-
       await loadTeams();
 
       notifyTeamsChanged();
+
+      setMessage(
+        "✅ Команду створено"
+      );
     } catch {
       setMessage(
         "Помилка з'єднання із сервером"
@@ -412,210 +738,7 @@ export default function CoopTeamsForm({
 
   /*
     ========================================
-    ЗБЕРЕЖЕННЯ СКЛАДУ
-    ========================================
-  */
-
-  async function saveRoster(
-    team: CoopTeam
-  ) {
-    if (!password) {
-      setMessage(
-        "Введіть пароль адміністратора"
-      );
-
-      return;
-    }
-
-    const draft =
-      drafts[team.id];
-
-    const player1Id =
-      draft?.player1Id ??
-      "";
-
-    const player2Id =
-      draft?.player2Id ??
-      "";
-
-    if (
-      player1Id &&
-      player2Id &&
-      player1Id ===
-        player2Id
-    ) {
-      setMessage(
-        "У команді мають бути два різні гравці"
-      );
-
-      return;
-    }
-
-    setSavingTeamId(
-      team.id
-    );
-
-    setMessage("");
-
-    try {
-      const response =
-        await fetch(
-          "/api/admin/coop-teams",
-          {
-            method:
-              "PATCH",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-                password,
-
-                season,
-
-                team_id:
-                  team.id,
-
-                player_1_id:
-                  player1Id ||
-                  null,
-
-                player_2_id:
-                  player2Id ||
-                  null,
-              }),
-          }
-        );
-
-      const result =
-        await response.json();
-
-      if (!response.ok) {
-        setMessage(
-          result.error ??
-            "Не вдалося зберегти склад"
-        );
-
-        return;
-      }
-
-      setMessage(
-        `✅ Склад «${team.name}» збережено`
-      );
-
-      await loadTeams();
-
-      notifyTeamsChanged();
-    } catch {
-      setMessage(
-        "Помилка з'єднання із сервером"
-      );
-    } finally {
-      setSavingTeamId(
-        null
-      );
-    }
-  }
-
-  /*
-    ========================================
-    ОЧИЩЕННЯ СКЛАДУ
-    ========================================
-  */
-
-  async function clearRoster(
-    team: CoopTeam
-  ) {
-    if (!password) {
-      setMessage(
-        "Введіть пароль адміністратора"
-      );
-
-      return;
-    }
-
-    const confirmed =
-      window.confirm(
-        `Очистити склад команди «${team.name}»?`
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setSavingTeamId(
-      team.id
-    );
-
-    setMessage("");
-
-    try {
-      const response =
-        await fetch(
-          "/api/admin/coop-teams",
-          {
-            method:
-              "PATCH",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-                password,
-
-                season,
-
-                team_id:
-                  team.id,
-
-                player_1_id:
-                  null,
-
-                player_2_id:
-                  null,
-              }),
-          }
-        );
-
-      const result =
-        await response.json();
-
-      if (!response.ok) {
-        setMessage(
-          result.error ??
-            "Не вдалося очистити склад"
-        );
-
-        return;
-      }
-
-      setMessage(
-        `✅ Склад «${team.name}» очищено`
-      );
-
-      await loadTeams();
-
-      notifyTeamsChanged();
-    } catch {
-      setMessage(
-        "Помилка з'єднання із сервером"
-      );
-    } finally {
-      setSavingTeamId(
-        null
-      );
-    }
-  }
-
-  /*
-    ========================================
-    ВИДАЛЕННЯ КОМАНДИ
+    ВИДАЛЕННЯ
     ========================================
   */
 
@@ -661,7 +784,6 @@ export default function CoopTeamsForm({
             body:
               JSON.stringify({
                 password,
-
                 season,
 
                 team_id:
@@ -682,13 +804,13 @@ export default function CoopTeamsForm({
         return;
       }
 
-      setMessage(
-        "✅ Команду видалено"
-      );
-
       await loadTeams();
 
       notifyTeamsChanged();
+
+      setMessage(
+        "✅ Команду видалено"
+      );
     } catch {
       setMessage(
         "Помилка з'єднання із сервером"
@@ -701,456 +823,471 @@ export default function CoopTeamsForm({
   }
 
   return (
-    <div className="space-y-8">
-      {/* STATUS */}
+    <div className="space-y-7">
+      {/* SUMMARY */}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-blue-400">
+          <div className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">
             Команди
           </div>
 
-          <div className="mt-3 text-3xl font-black">
+          <div className="mt-2 text-3xl font-black">
             {teams.length}
-            <span className="text-white/25">
-              {" "}
-              / 16
+            <span className="text-white/20">
+              /16
             </span>
           </div>
 
           <div
-            className={`mt-3 text-sm font-bold ${
+            className={`mt-2 text-xs font-bold ${
               teamsReady
                 ? "text-green-300"
                 : "text-yellow-300"
             }`}
           >
             {teamsReady
-              ? "✓ Усі 16 команд створені"
-              : `Ще потрібно створити ${16 - teams.length} команд`}
+              ? "✓ Список клубів готовий"
+              : "Формування клубів"}
           </div>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-blue-400">
+          <div className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">
             Склади
           </div>
 
-          <div className="mt-3 text-3xl font-black">
+          <div className="mt-2 text-3xl font-black">
             {completeTeams}
-            <span className="text-white/25">
-              {" "}
-              / 16
+            <span className="text-white/20">
+              /16
             </span>
           </div>
 
           <div
-            className={`mt-3 text-sm font-bold ${
+            className={`mt-2 text-xs font-bold ${
               rostersReady
                 ? "text-green-300"
                 : "text-yellow-300"
             }`}
           >
             {rostersReady
-              ? "✓ Усі склади визначені"
-              : "Гравців можна призначити пізніше"}
+              ? "✓ Усі склади готові"
+              : "Призначення учасників"}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <div className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">
+            Гравці
+          </div>
+
+          <div className="mt-2 text-3xl font-black">
+            {assignedPlayers}
+            <span className="text-white/20">
+              /32
+            </span>
+          </div>
+
+          <div className="mt-2 text-xs font-bold text-white/35">
+            Закріплено за командами
           </div>
         </div>
       </div>
+
+      {/* GLOBAL ACTIONS */}
+
+      <div className="sticky top-4 z-20 rounded-2xl border border-blue-400/20 bg-[#07101d]/95 p-4 shadow-2xl backdrop-blur-xl">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="font-black">
+              Керування складами
+            </div>
+
+            <div className="mt-1 text-xs text-white/35">
+              {hasChanges
+                ? `Незбережених команд: ${changedTeamIds.length}`
+                : "Усі зміни збережені"}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            {hasChanges && (
+              <button
+                type="button"
+                onClick={
+                  resetChanges
+                }
+                disabled={
+                  savingAll
+                }
+                className="rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-white/50 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-40"
+              >
+                Скасувати
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() =>
+                void saveAll()
+              }
+              disabled={
+                !hasChanges ||
+                savingAll
+              }
+              className="rounded-xl bg-blue-500 px-6 py-3 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              {savingAll
+                ? "Збереження..."
+                : hasChanges
+                  ? `Зберегти всі (${changedTeamIds.length})`
+                  : "Все збережено"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* LIST */}
+
+      {loading ? (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-8 text-center text-white/35">
+          Завантаження...
+        </div>
+      ) : teams.length ===
+        0 ? (
+        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-white/35">
+          Команд ще немає.
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-white/10">
+          {teams.map(
+            (
+              team,
+              index
+            ) => {
+              const draft =
+                drafts[
+                  team.id
+                ] ?? {
+                  player1Id:
+                    "",
+                  player2Id:
+                    "",
+                };
+
+              const original1 =
+                team.player_1_id ??
+                "";
+
+              const original2 =
+                team.player_2_id ??
+                "";
+
+              const changed =
+                draft.player1Id !==
+                  original1 ||
+                draft.player2Id !==
+                  original2;
+
+              const draftComplete =
+                Boolean(
+                  draft.player1Id
+                ) &&
+                Boolean(
+                  draft.player2Id
+                );
+
+              return (
+                <div
+                  key={
+                    team.id
+                  }
+                  className={`grid gap-4 border-b border-white/10 p-5 last:border-b-0 lg:grid-cols-[60px_1.1fr_1fr_1fr_auto] lg:items-center ${
+                    changed
+                      ? "bg-blue-500/[0.05]"
+                      : "bg-[#030711]"
+                  }`}
+                >
+                  {/* NUMBER */}
+
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] font-black text-white/35">
+                    {String(
+                      index + 1
+                    ).padStart(
+                      2,
+                      "0"
+                    )}
+                  </div>
+
+                  {/* CLUB */}
+
+                  <div>
+                    <div className="text-lg font-black">
+                      {
+                        team.name
+                      }
+                    </div>
+
+                    <div
+                      className={`mt-1 text-xs font-bold ${
+                        draftComplete
+                          ? "text-green-300"
+                          : "text-yellow-300"
+                      }`}
+                    >
+                      {draftComplete
+                        ? "✓ Склад визначений"
+                        : "Склад не повний"}
+                    </div>
+
+                    {changed && (
+                      <div className="mt-1 text-[11px] font-bold text-blue-300">
+                        • Незбережені зміни
+                      </div>
+                    )}
+                  </div>
+
+                  {/* PLAYER 1 */}
+
+                  <div>
+                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.15em] text-white/30">
+                      Гравець 1
+                    </label>
+
+                    <select
+                      value={
+                        draft.player1Id
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        updateDraft(
+                          team.id,
+                          "player1Id",
+                          event
+                            .target
+                            .value
+                        )
+                      }
+                      disabled={
+                        savingAll
+                      }
+                      className="w-full rounded-xl border border-white/10 bg-[#07101d] px-3 py-3 text-sm outline-none transition focus:border-blue-400/40 disabled:opacity-40"
+                    >
+                      <option value="">
+                        — Не визначено —
+                      </option>
+
+                      {sortedPlayers.map(
+                        (
+                          player
+                        ) => (
+                          <option
+                            key={
+                              player.id
+                            }
+                            value={
+                              player.id
+                            }
+                            disabled={isPlayerSelectedElsewhere(
+                              player.id,
+                              team.id,
+                              "player1Id"
+                            )}
+                          >
+                            {
+                              player.nickname
+                            }
+                            {player.account
+                              ? ` (${player.account})`
+                              : ""}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  {/* PLAYER 2 */}
+
+                  <div>
+                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.15em] text-white/30">
+                      Гравець 2
+                    </label>
+
+                    <select
+                      value={
+                        draft.player2Id
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        updateDraft(
+                          team.id,
+                          "player2Id",
+                          event
+                            .target
+                            .value
+                        )
+                      }
+                      disabled={
+                        savingAll
+                      }
+                      className="w-full rounded-xl border border-white/10 bg-[#07101d] px-3 py-3 text-sm outline-none transition focus:border-blue-400/40 disabled:opacity-40"
+                    >
+                      <option value="">
+                        — Не визначено —
+                      </option>
+
+                      {sortedPlayers.map(
+                        (
+                          player
+                        ) => (
+                          <option
+                            key={
+                              player.id
+                            }
+                            value={
+                              player.id
+                            }
+                            disabled={isPlayerSelectedElsewhere(
+                              player.id,
+                              team.id,
+                              "player2Id"
+                            )}
+                          >
+                            {
+                              player.nickname
+                            }
+                            {player.account
+                              ? ` (${player.account})`
+                              : ""}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  {/* ACTIONS */}
+
+                  <div className="flex gap-2 lg:justify-end">
+                    {(draft.player1Id ||
+                      draft.player2Id) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          clearDraft(
+                            team.id
+                          )
+                        }
+                        disabled={
+                          savingAll
+                        }
+                        className="rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-white/40 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-40"
+                      >
+                        Очистити
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void deleteTeam(
+                          team
+                        )
+                      }
+                      disabled={
+                        savingAll ||
+                        deletingTeamId !==
+                          null
+                      }
+                      className="rounded-lg border border-red-400/10 px-3 py-2 text-xs font-bold text-red-300/60 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-30"
+                    >
+                      {deletingTeamId ===
+                      team.id
+                        ? "..."
+                        : "×"}
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+          )}
+        </div>
+      )}
 
       {/* CREATE TEAM */}
 
       {teams.length < 16 && (
-        <div className="rounded-2xl border border-white/10 bg-[#030711] p-6">
+        <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
           <div className="text-xs font-bold uppercase tracking-[0.2em] text-blue-400">
-            Нова команда
+            Додати клуб
           </div>
 
-          <h3 className="mt-2 text-xl font-black">
-            Додати клуб
-          </h3>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input
+              value={
+                teamName
+              }
+              onChange={(
+                event
+              ) =>
+                setTeamName(
+                  event
+                    .target
+                    .value
+                )
+              }
+              placeholder="Назва команди"
+              className="flex-1 rounded-xl border border-white/10 bg-[#030711] px-4 py-3 outline-none focus:border-blue-400/40"
+            />
 
-          <p className="mt-2 text-sm leading-6 text-white/40">
-            Зараз достатньо
-            вказати тільки назву.
-            Гравців можна
-            призначити пізніше.
-          </p>
-
-          <input
-            value={
-              teamName
-            }
-            onChange={(
-              event
-            ) =>
-              setTeamName(
-                event.target.value
-              )
-            }
-            placeholder="Назва команди"
-            className="mt-5 w-full rounded-xl border border-white/10 bg-[#07101d] px-4 py-3 outline-none transition focus:border-blue-400/40"
-          />
-
-          <button
-            type="button"
-            onClick={() =>
-              void createTeam()
-            }
-            disabled={
-              creating ||
-              !teamName.trim()
-            }
-            className="mt-4 w-full rounded-xl bg-blue-500 px-6 py-3 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {creating
-              ? "Створення..."
-              : `Створити команду №${teams.length + 1}`}
-          </button>
+            <button
+              type="button"
+              onClick={() =>
+                void createTeam()
+              }
+              disabled={
+                creating ||
+                !teamName.trim()
+              }
+              className="rounded-xl bg-blue-500 px-6 py-3 font-black transition hover:bg-blue-400 disabled:opacity-40"
+            >
+              {creating
+                ? "Створення..."
+                : "Додати команду"}
+            </button>
+          </div>
         </div>
       )}
-
-      {/* TEAMS */}
-
-      <div>
-        <div className="mb-4">
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-blue-400">
-            Iron Co-op Cup
-          </div>
-
-          <h3 className="mt-2 text-2xl font-black">
-            Команди та склади
-          </h3>
-        </div>
-
-        {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6 text-white/40">
-            Завантаження...
-          </div>
-        ) : teams.length ===
-          0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.015] p-8 text-center text-white/35">
-            Команд ще немає.
-          </div>
-        ) : (
-          <div className="grid gap-5 xl:grid-cols-2">
-            {teams.map(
-              (
-                team,
-                index
-              ) => {
-                const draft =
-                  drafts[
-                    team.id
-                  ] ?? {
-                    player1Id:
-                      "",
-                    player2Id:
-                      "",
-                  };
-
-                const rosterComplete =
-                  Boolean(
-                    team.player_1_id
-                  ) &&
-                  Boolean(
-                    team.player_2_id
-                  );
-
-                return (
-                  <div
-                    key={
-                      team.id
-                    }
-                    className="rounded-2xl border border-white/10 bg-[#030711] p-5"
-                  >
-                    {/* HEADER */}
-
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex min-w-0 items-center gap-4">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 font-black text-blue-300">
-                          {index +
-                            1}
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="truncate text-xl font-black">
-                            {
-                              team.name
-                            }
-                          </div>
-
-                          <div
-                            className={`mt-1 text-xs font-bold ${
-                              rosterComplete
-                                ? "text-green-300"
-                                : "text-yellow-300"
-                            }`}
-                          >
-                            {rosterComplete
-                              ? "✓ Склад визначений"
-                              : "Склад ще не визначений"}
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void deleteTeam(
-                            team
-                          )
-                        }
-                        disabled={
-                          deletingTeamId !==
-                            null ||
-                          savingTeamId !==
-                            null
-                        }
-                        className="shrink-0 rounded-lg border border-red-400/15 bg-red-500/5 px-3 py-2 text-xs font-bold text-red-300 transition hover:bg-red-500/10 disabled:opacity-40"
-                      >
-                        {deletingTeamId ===
-                        team.id
-                          ? "..."
-                          : "Видалити"}
-                      </button>
-                    </div>
-
-                    {/* PLAYERS */}
-
-                    <div className="mt-6 grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="text-xs font-bold uppercase tracking-[0.15em] text-white/35">
-                          Гравець 1
-                        </label>
-
-                        <select
-                          value={
-                            draft.player1Id
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            updateDraft(
-                              team.id,
-                              "player1Id",
-                              event
-                                .target
-                                .value
-                            )
-                          }
-                          className="mt-2 w-full rounded-xl border border-white/10 bg-[#07101d] px-4 py-3"
-                        >
-                          <option value="">
-                            Ще не визначено
-                          </option>
-
-                          {players.map(
-                            (
-                              player
-                            ) => (
-                              <option
-                                key={
-                                  player.id
-                                }
-                                value={
-                                  player.id
-                                }
-                                disabled={
-                                  player.id ===
-                                    draft.player2Id ||
-                                  isPlayerUsedByOtherTeam(
-                                    player.id,
-                                    team.id
-                                  )
-                                }
-                              >
-                                {
-                                  player.nickname
-                                }
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold uppercase tracking-[0.15em] text-white/35">
-                          Гравець 2
-                        </label>
-
-                        <select
-                          value={
-                            draft.player2Id
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            updateDraft(
-                              team.id,
-                              "player2Id",
-                              event
-                                .target
-                                .value
-                            )
-                          }
-                          className="mt-2 w-full rounded-xl border border-white/10 bg-[#07101d] px-4 py-3"
-                        >
-                          <option value="">
-                            Ще не визначено
-                          </option>
-
-                          {players.map(
-                            (
-                              player
-                            ) => (
-                              <option
-                                key={
-                                  player.id
-                                }
-                                value={
-                                  player.id
-                                }
-                                disabled={
-                                  player.id ===
-                                    draft.player1Id ||
-                                  isPlayerUsedByOtherTeam(
-                                    player.id,
-                                    team.id
-                                  )
-                                }
-                              >
-                                {
-                                  player.nickname
-                                }
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* CURRENT */}
-
-                    <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-sm">
-                      <div className="text-xs font-bold uppercase tracking-[0.15em] text-white/25">
-                        Поточний склад
-                      </div>
-
-                      <div className="mt-2">
-                        <span className="text-white/35">
-                          1.
-                        </span>{" "}
-                        <b>
-                          {getPlayerName(
-                            team.player_1_id
-                          )}
-                        </b>
-                      </div>
-
-                      <div className="mt-1">
-                        <span className="text-white/35">
-                          2.
-                        </span>{" "}
-                        <b>
-                          {getPlayerName(
-                            team.player_2_id
-                          )}
-                        </b>
-                      </div>
-                    </div>
-
-                    {/* ACTIONS */}
-
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void saveRoster(
-                            team
-                          )
-                        }
-                        disabled={
-                          savingTeamId !==
-                            null ||
-                          deletingTeamId !==
-                            null
-                        }
-                        className="flex-1 rounded-xl bg-blue-500 px-4 py-3 font-black transition hover:bg-blue-400 disabled:opacity-40"
-                      >
-                        {savingTeamId ===
-                        team.id
-                          ? "Збереження..."
-                          : "Зберегти склад"}
-                      </button>
-
-                      {(team.player_1_id ||
-                        team.player_2_id) && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void clearRoster(
-                              team
-                            )
-                          }
-                          disabled={
-                            savingTeamId !==
-                              null ||
-                            deletingTeamId !==
-                              null
-                          }
-                          className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-                        >
-                          Очистити склад
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-            )}
-          </div>
-        )}
-      </div>
 
       {/* READY */}
 
-      {teamsReady && (
-        <div
-          className={`rounded-2xl border p-6 ${
-            rostersReady
-              ? "border-green-400/20 bg-green-500/10"
-              : "border-blue-400/20 bg-blue-500/10"
-          }`}
-        >
-          <div
-            className={`text-xs font-bold uppercase tracking-[0.2em] ${
-              rostersReady
-                ? "text-green-300"
-                : "text-blue-300"
-            }`}
-          >
-            {rostersReady
-              ? "Готово"
-              : "Команди сформовані"}
+      {rostersReady && (
+        <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-6">
+          <div className="text-xs font-bold uppercase tracking-[0.2em] text-green-300">
+            Готово
           </div>
 
           <div className="mt-2 text-2xl font-black">
-            {rostersReady
-              ? "Iron Co-op Cup готовий до жеребкування"
-              : "Усі 16 команд уже створені"}
+            Усі 16 складів сформовані
           </div>
 
-          <p className="mt-3 text-sm leading-6 text-white/50">
-            {rostersReady
-              ? "У кожної команди визначено двох гравців. Можна переходити до формування пар 1/8 фіналу."
-              : "Назви команд уже можна показувати на публічній сторінці. Склади гравців можна додавати поступово."}
+          <p className="mt-3 text-sm text-green-100/60">
+            У 16 командах
+            призначено 32
+            учасники. Iron Co-op
+            Cup готовий до
+            жеребкування 1/8
+            фіналу.
           </p>
         </div>
       )}
 
+      {/* MESSAGE */}
+
       {message && (
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center text-sm font-bold">
           {message}
         </div>
       )}
