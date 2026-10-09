@@ -554,7 +554,7 @@ export default async function Home() {
             </a>
 
             <a
-              href="#matches"
+              href="/matches"
               className="transition hover:text-white"
             >
               Матчі
@@ -641,7 +641,7 @@ export default async function Home() {
 
             <div className="mt-9 flex flex-wrap gap-4">
               <a
-                href="#matches"
+                href="/matches"
                 className="rounded-xl bg-blue-500 px-6 py-3.5 font-bold shadow-[0_0_30px_rgba(59,130,246,0.3)] transition hover:bg-blue-400"
               >
                 Переглянути матчі
@@ -754,8 +754,8 @@ export default async function Home() {
           </div>
 
           <a
-            href="#matches"
-            className="hidden text-sm font-bold text-blue-400 sm:block"
+            href="/matches"
+            className="hidden text-sm font-bold text-blue-400 transition hover:text-blue-300 sm:block"
           >
             Усі матчі →
           </a>
@@ -946,41 +946,44 @@ export default async function Home() {
 
       {/* NEWS */}
 
-<section
-  id="news"
-  className="border-t border-white/10 bg-white/[0.02]"
->
-  <div className="mx-auto max-w-7xl px-6 py-20">
-    <div className="mb-10">
-      <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-        Новини
-      </div>
+      <section
+        id="news"
+        className="border-t border-white/10 bg-white/[0.02]"
+      >
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="mb-10">
+            <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+              Новини
+            </div>
 
-      <h2 className="mt-3 text-4xl font-black">
-        Останні події
-      </h2>
-    </div>
+            <h2 className="mt-3 text-4xl font-black">
+              Останні події
+            </h2>
+          </div>
 
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-14 text-center">
-      <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[90px]" />
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-14 text-center">
+            <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[90px]" />
 
-      <div className="relative">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-2xl font-black text-blue-300">
-          IL
+            <div className="relative">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-2xl font-black text-blue-300">
+                IL
+              </div>
+
+              <h3 className="mt-6 text-2xl font-black">
+                Новин поки немає
+              </h3>
+
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/40">
+                Офіційні новини,
+                анонси та головні
+                події Iron League
+                з&apos;являться тут
+                після публікації.
+              </p>
+            </div>
+          </div>
         </div>
-
-        <h3 className="mt-6 text-2xl font-black">
-          Новин поки немає
-        </h3>
-
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/40">
-          Офіційні новини, анонси та головні події
-          Iron League з&apos;являться тут після публікації.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
+      </section>
 
       {/* FOOTER */}
 
