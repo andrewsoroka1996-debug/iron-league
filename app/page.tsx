@@ -91,7 +91,7 @@ const tournamentCards = [
     id: "european-super-cup",
     name: "Суперкубок Європи",
     short: "СК",
-    href: "#",
+    href: "/tournaments/european-super-cup",
   },
   {
     id: "division-cups",
@@ -100,17 +100,11 @@ const tournamentCards = [
     href: "/tournaments/division-cups",
   },
   {
-    id: "league-of-associations",
-    name: "Ліга асоціацій",
-    short: "LA",
-    href: "/tournaments/associations",
-  },
-  {
-    id: "associations-cup",
-    name: "Кубок асоціацій",
-    short: "КА",
-    href: "#",
-  },
+  id: "associations-cup",
+  name: "Кубок асоціацій",
+  short: "КА",
+  href: "/tournaments/associations",
+},
   {
     id: "iron-coop-cup",
     name: "Iron Co-op Cup",
