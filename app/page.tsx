@@ -1,5 +1,7 @@
 import { seasonCompetitions } from "../data/competitions/season-competitions";
+
 import { players } from "../data/players";
+
 import { season3 } from "../data/seasons/season-3";
 
 import {
@@ -589,7 +591,7 @@ export default async function Home() {
             </a>
 
             <a
-              href="#news"
+              href="/news"
               className="transition hover:text-white"
             >
               Новини
@@ -951,17 +953,36 @@ export default async function Home() {
         className="border-t border-white/10 bg-white/[0.02]"
       >
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <div className="mb-10">
-            <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-              Новини
+          <div className="flex flex-wrap items-end justify-between gap-5">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                Новини
+              </div>
+
+              <h2 className="mt-3 text-4xl font-black">
+                Новини Iron League
+              </h2>
+
+              <p className="mt-3 max-w-2xl leading-7 text-white/40">
+                Офіційні оголошення,
+                результати,
+                жеребкування та
+                головні події ліги.
+              </p>
             </div>
 
-            <h2 className="mt-3 text-4xl font-black">
-              Останні події
-            </h2>
+            <a
+              href="/news"
+              className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-5 py-3 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/15"
+            >
+              Усі новини →
+            </a>
           </div>
 
-          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-14 text-center">
+          <a
+            href="/news"
+            className="group relative mt-10 block overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-14 text-center transition hover:border-blue-400/30"
+          >
             <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[90px]" />
 
             <div className="relative">
@@ -980,8 +1001,13 @@ export default async function Home() {
                 з&apos;являться тут
                 після публікації.
               </p>
+
+              <div className="mt-7 font-black text-blue-300 transition group-hover:text-blue-200">
+                Перейти до розділу
+                новин →
+              </div>
             </div>
-          </div>
+          </a>
         </div>
       </section>
 

@@ -1,13 +1,232 @@
-export default function SeasonTwoPage() {
+import { season2 } from "../../../data/seasons/season-2";
+
+import {
+  seasonCompetitions,
+} from "../../../data/competitions/season-competitions";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+type TournamentCard = {
+  id: string;
+  category: string;
+  name: string;
+  href: string;
+};
+
+const playerIds = Array.from(
+  new Set([
+    ...season2.division1.players,
+    ...season2.division2.players,
+    ...season2.division3.players,
+    ...season2.division4.players,
+  ])
+);
+
+function getTournamentCard(
+  competitionId: string
+): TournamentCard | null {
+  /*
+    Сезон 2:
+
+    Кубок асоціацій був.
+
+    Ліги асоціацій
+    НЕ БУЛО.
+  */
+
+  if (
+    competitionId ===
+    "league-of-associations"
+  ) {
+    return null;
+  }
+
+  if (
+    competitionId ===
+    "season-qualification"
+  ) {
+    return null;
+  }
+
+  if (
+    /^division-[1-4]$/.test(
+      competitionId
+    )
+  ) {
+    return null;
+  }
+
+  if (
+    /^division-[1-4]-cup$/.test(
+      competitionId
+    )
+  ) {
+    return null;
+  }
+
+  if (
+    competitionId ===
+    "champions-league"
+  ) {
+    return {
+      id: competitionId,
+      category: "Єврокубок",
+      name: "Ліга чемпіонів",
+      href:
+        "/tournaments/champions-league?season=2",
+    };
+  }
+
+  if (
+    competitionId ===
+    "europa-league"
+  ) {
+    return {
+      id: competitionId,
+      category: "Єврокубок",
+      name: "Ліга Європи",
+      href:
+        "/tournaments/europa-league?season=2",
+    };
+  }
+
+  if (
+    competitionId ===
+    "conference-league"
+  ) {
+    return {
+      id: competitionId,
+      category: "Єврокубок",
+      name: "Ліга конференцій",
+      href:
+        "/tournaments/conference-league?season=2",
+    };
+  }
+
+  if (
+    competitionId ===
+    "european-super-cup"
+  ) {
+    return {
+      id: competitionId,
+      category: "Суперкубок",
+      name: "Суперкубок Європи",
+      href:
+        "/tournaments/european-super-cup?season=2",
+    };
+  }
+
+  if (
+    competitionId ===
+    "associations-cup"
+  ) {
+    return {
+      id: competitionId,
+      category:
+        "Командний турнір",
+      name:
+        "Кубок асоціацій",
+      href:
+        "/tournaments/associations?season=2",
+    };
+  }
+
+  /*
+    Iron Co-op Cup
+    у перших двох сезонах
+    не проводився.
+  */
+
+  if (
+    competitionId ===
+    "iron-coop-cup"
+  ) {
+    return null;
+  }
+
+  return null;
+}
+
+const competitions =
+  seasonCompetitions[2] ?? [];
+
+const hasDivisionCups =
+  competitions.some(
+    (competition) =>
+      /^division-[1-4]-cup$/.test(
+        competition.id
+      )
+  );
+
+const tournaments: TournamentCard[] = [
+  {
+    id: "division-1",
+    category: "Чемпіонат",
+    name: "1 Дивізіон",
+    href: "/divisions/1?season=2",
+  },
+
+  {
+    id: "division-2",
+    category: "Чемпіонат",
+    name: "2 Дивізіон",
+    href: "/divisions/2?season=2",
+  },
+
+  {
+    id: "division-3",
+    category: "Чемпіонат",
+    name: "3 Дивізіон",
+    href: "/divisions/3?season=2",
+  },
+
+  {
+    id: "division-4",
+    category: "Чемпіонат",
+    name: "4 Дивізіон",
+    href: "/divisions/4?season=2",
+  },
+
+  ...competitions
+    .map((competition) =>
+      getTournamentCard(
+        competition.id
+      )
+    )
+    .filter(
+      (
+        card
+      ): card is TournamentCard =>
+        card !== null
+    ),
+
+  ...(hasDivisionCups
+    ? [
+        {
+          id: "division-cups",
+          category: "Кубки",
+          name: "Кубки дивізіонів",
+          href:
+            "/tournaments/division-cups?season=2",
+        },
+      ]
+    : []),
+];
+
+export default function Season2HistoryPage() {
   return (
     <main className="min-h-screen bg-[#030711] text-white">
-      <header className="border-b border-white/10 bg-[#030711]">
+      <header className="border-b border-white/10 bg-[#030711]/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a href="/" className="flex items-center gap-4">
+          <a
+            href="/"
+            className="flex items-center gap-4"
+          >
             <img
               src="/iron-league-logo.jpg"
               alt="Iron League"
-              className="h-14 w-auto"
+              className="h-14 w-auto object-contain"
             />
 
             <div>
@@ -15,7 +234,7 @@ export default function SeasonTwoPage() {
                 IRON LEAGUE
               </div>
 
-              <div className="text-xs text-white/40">
+              <div className="text-xs text-white/35">
                 Історія • Сезон 2
               </div>
             </div>
@@ -23,31 +242,151 @@ export default function SeasonTwoPage() {
 
           <a
             href="/history"
-            className="font-bold text-blue-300"
+            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300"
           >
             ← Усі сезони
           </a>
         </div>
       </header>
 
-      <section className="mx-auto max-w-7xl px-6 py-20">
+      <section className="relative overflow-hidden border-b border-white/10">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-20"
+          style={{
+            backgroundImage:
+              "url('/stadium-bg.jpg')",
+          }}
+        />
+
+        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/70" />
+
+        <div className="relative mx-auto max-w-7xl px-6 py-20">
+          <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
+            Архів Iron League
+          </div>
+
+          <h1 className="mt-4 text-5xl font-black sm:text-6xl">
+            Сезон 2
+          </h1>
+
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/45">
+            Другий сезон Iron League.
+            У цьому сезоні вже
+            проводився Кубок
+            асоціацій.
+          </p>
+
+          <div className="mt-9 flex flex-wrap gap-3">
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Дивізіонів
+              </span>
+
+              <span className="ml-2 font-black">
+                4
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Гравців
+              </span>
+
+              <span className="ml-2 font-black">
+                {playerIds.length}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Турнірів
+              </span>
+
+              <span className="ml-2 font-black">
+                {tournaments.length}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3">
+              <span className="text-sm text-white/40">
+                Статус
+              </span>
+
+              <span className="ml-2 font-black text-blue-300">
+                Архів
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-          Архів Iron League
+          Турніри
         </div>
 
-        <h1 className="mt-4 text-5xl font-black">
+        <h2 className="mt-3 text-4xl font-black">
           Сезон 2
-        </h1>
+        </h2>
 
-        <div className="mt-12 rounded-3xl border border-white/10 bg-[#07101d] p-10">
-          <h2 className="text-3xl font-black">
-            Дані буде додано
+        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {tournaments.map(
+            (tournament) => (
+              <a
+                key={tournament.id}
+                href={tournament.href}
+                className="group rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/30"
+              >
+                <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-400">
+                  {
+                    tournament.category
+                  }
+                </div>
+
+                <h3 className="mt-5 text-2xl font-black">
+                  {
+                    tournament.name
+                  }
+                </h3>
+
+                <div className="mt-7 flex items-center justify-between border-t border-white/10 pt-5">
+                  <span className="text-sm text-white/30">
+                    Відкрити
+                  </span>
+
+                  <span className="text-blue-400">
+                    →
+                  </span>
+                </div>
+              </a>
+            )
+          )}
+        </div>
+      </section>
+
+      <section className="border-t border-white/10 bg-white/[0.02]">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
+            Hall of Fame
+          </div>
+
+          <h2 className="mt-3 text-3xl font-black">
+            Переможці сезону
           </h2>
 
-          <p className="mt-4 text-white/45">
-            Склади, результати, таблиці, турніри та переможці
-            другого сезону Iron League будуть внесені пізніше.
-          </p>
+          <div className="mt-8 rounded-3xl border border-white/10 bg-[#07101d] p-8">
+            <div className="text-xl font-black">
+              Дані буде додано
+            </div>
+
+            <p className="mt-3 leading-7 text-white/40">
+              Чемпіони та переможці
+              турнірів Сезону 2
+              будуть внесені разом
+              з історичними
+              результатами.
+            </p>
+          </div>
         </div>
       </section>
     </main>
