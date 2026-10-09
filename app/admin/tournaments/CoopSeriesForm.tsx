@@ -24,8 +24,8 @@ type CoopTeam = {
 
   name: string;
 
-  player_1_id: string;
-  player_2_id: string;
+  player_1_id: string | null;
+  player_2_id: string | null;
 
   created_at: string;
 };
@@ -176,8 +176,14 @@ function getPreviousStage(
 }
 
 function getPlayerName(
-  playerId: string
+  playerId:
+    | string
+    | null
 ) {
+  if (!playerId) {
+    return "Ще не визначено";
+  }
+
   return (
     players.find(
       (player) =>
@@ -372,21 +378,17 @@ export default function CoopSeriesForm({
 
   /*
     ========================================
-    ЗАВАНТАЖЕННЯ ВСЬОГО
+    ЗАВАНТАЖЕННЯ
     ========================================
   */
 
   const loadData =
     useCallback(async () => {
       setLoading(true);
+
       setMessage("");
 
       try {
-        /*
-          Команди завжди
-          завантажуємо першими.
-        */
-
         const loadedTeams =
           await loadTeams();
 
@@ -402,6 +404,7 @@ export default function CoopSeriesForm({
 
         if (!stage) {
           setCurrentSeries([]);
+
           setNextRoundSlots([]);
 
           setPreviousCompleted(
@@ -486,9 +489,7 @@ export default function CoopSeriesForm({
               false
           );
         }
-      } catch (
-        error
-      ) {
+      } catch (error) {
         setMessage(
           error instanceof
             Error
@@ -505,12 +506,6 @@ export default function CoopSeriesForm({
       loadPlayoffStage,
     ]);
 
-  /*
-    ========================================
-    ПЕРШЕ ЗАВАНТАЖЕННЯ
-    ========================================
-  */
-
   useEffect(() => {
     void loadData();
   }, [
@@ -519,11 +514,7 @@ export default function CoopSeriesForm({
 
   /*
     ========================================
-    АВТОМАТИЧНА СИНХРОНІЗАЦІЯ
-
-    Якщо CoopTeamsForm створив
-    або видалив команду —
-    перезавантажуємо сітку.
+    СИНХРОНІЗАЦІЯ ЗІ СКЛАДАМИ
     ========================================
   */
 
@@ -555,12 +546,42 @@ export default function CoopSeriesForm({
 
   useEffect(() => {
     setHomeId("");
+
     setAwayId("");
+
     setMessage("");
   }, [
     season,
     stage,
   ]);
+
+  /*
+    ========================================
+    ГОТОВНІСТЬ КОМАНД
+    ========================================
+  */
+
+  const completeRosters =
+    useMemo(() => {
+      return teams.filter(
+        (team) =>
+          Boolean(
+            team.player_1_id
+          ) &&
+          Boolean(
+            team.player_2_id
+          )
+      ).length;
+    }, [
+      teams,
+    ]);
+
+  const teamsReady =
+    teams.length === 16;
+
+  const tournamentReady =
+    teamsReady &&
+    completeRosters === 16;
 
   /*
     ========================================
@@ -624,9 +645,6 @@ export default function CoopSeriesForm({
       currentSeries,
     ]);
 
-  const tournamentReady =
-    teams.length === 16;
-
   /*
     ========================================
     КОМАНДА
@@ -653,7 +671,7 @@ export default function CoopSeriesForm({
 
   /*
     ========================================
-    ВІДОБРАЖЕННЯ КОМАНДИ
+    КАРТКА КОМАНДИ
     ========================================
   */
 
@@ -683,7 +701,9 @@ export default function CoopSeriesForm({
           {getPlayerName(
             team.player_1_id
           )}
+
           {" + "}
+
           {getPlayerName(
             team.player_2_id
           )}
@@ -708,10 +728,21 @@ export default function CoopSeriesForm({
     }
 
     if (
-      !tournamentReady
+      !teamsReady
     ) {
       setMessage(
-        "Спочатку потрібно сформувати всі 16 команд"
+        "Спочатку потрібно створити всі 16 команд"
+      );
+
+      return;
+    }
+
+    if (
+      completeRosters !==
+      16
+    ) {
+      setMessage(
+        `Спочатку потрібно визначити склади всіх команд. Готово: ${completeRosters}/16`
       );
 
       return;
@@ -740,6 +771,7 @@ export default function CoopSeriesForm({
     }
 
     setCreating(true);
+
     setMessage("");
 
     try {
@@ -790,6 +822,7 @@ export default function CoopSeriesForm({
       );
 
       setHomeId("");
+
       setAwayId("");
 
       await loadData();
@@ -921,7 +954,7 @@ export default function CoopSeriesForm({
 
   /*
     ========================================
-    1/8 ФІНАЛУ
+    1/8
     ========================================
   */
 
@@ -943,21 +976,38 @@ export default function CoopSeriesForm({
           </div>
         </div>
 
+        {/* STATUS */}
+
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <div className="text-xs font-bold uppercase tracking-[0.2em] text-blue-400">
-            Учасники
+            Готовність турніру
           </div>
 
           <div className="mt-3">
-            Сформовано команд:{" "}
+            Створено команд:{" "}
             <b
               className={
-                tournamentReady
+                teamsReady
                   ? "text-green-300"
                   : "text-yellow-300"
               }
             >
               {teams.length}
+              /16
+            </b>
+          </div>
+
+          <div className="mt-2">
+            Визначено складів:{" "}
+            <b
+              className={
+                completeRosters ===
+                16
+                  ? "text-green-300"
+                  : "text-yellow-300"
+              }
+            >
+              {completeRosters}
               /16
             </b>
           </div>
@@ -972,13 +1022,17 @@ export default function CoopSeriesForm({
         </div>
 
         {!tournamentReady && (
-          <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-100">
+          <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-sm leading-6 text-yellow-100">
             Жеребкування стане
-            доступним після
-            формування всіх 16
-            команд.
+            доступним після того,
+            як будуть створені всі
+            16 команд і в кожної
+            будуть визначені
+            обидва гравці.
           </div>
         )}
+
+        {/* DRAW */}
 
         {tournamentReady && (
           <>
@@ -1109,8 +1163,10 @@ export default function CoopSeriesForm({
                           homeId
                         )?.name
                       }
-                    </b>{" "}
-                    —{" "}
+                    </b>
+
+                    {" — "}
+
                     <b className="text-white">
                       {
                         getTeam(
@@ -1127,8 +1183,10 @@ export default function CoopSeriesForm({
                             awayId
                           )?.name
                         }
-                      </b>{" "}
-                      —{" "}
+                      </b>
+
+                      {" — "}
+
                       <b className="text-white">
                         {
                           getTeam(
@@ -1162,6 +1220,8 @@ export default function CoopSeriesForm({
           </>
         )}
 
+        {/* CREATED */}
+
         {currentSeries.length >
           0 && (
           <div className="space-y-3">
@@ -1188,7 +1248,9 @@ export default function CoopSeriesForm({
                     {
                       series.home_name
                     }
+
                     {" — "}
+
                     {
                       series.away_name
                     }
@@ -1210,7 +1272,7 @@ export default function CoopSeriesForm({
 
   /*
     ========================================
-    1/4, 1/2, ФІНАЛ
+    1/4 / 1/2 / ФІНАЛ
     ========================================
   */
 
@@ -1321,7 +1383,8 @@ export default function CoopSeriesForm({
                   ) : (
                     <>
                       <div className="text-xs font-bold text-yellow-300">
-                        Переможець ще визначається
+                        Переможець ще
+                        визначається
                       </div>
 
                       <div className="mt-2 font-bold">
@@ -1347,7 +1410,8 @@ export default function CoopSeriesForm({
                   ) : (
                     <>
                       <div className="text-xs font-bold text-yellow-300">
-                        Переможець ще визначається
+                        Переможець ще
+                        визначається
                       </div>
 
                       <div className="mt-2 font-bold">

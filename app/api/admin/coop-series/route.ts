@@ -29,19 +29,31 @@ const allowedStages = [
 function getExpectedSeriesCount(
   stage: string
 ) {
-  if (stage === "round-of-16") {
+  if (
+    stage ===
+    "round-of-16"
+  ) {
     return 8;
   }
 
-  if (stage === "quarterfinal") {
+  if (
+    stage ===
+    "quarterfinal"
+  ) {
     return 4;
   }
 
-  if (stage === "semifinal") {
+  if (
+    stage ===
+    "semifinal"
+  ) {
     return 2;
   }
 
-  if (stage === "final") {
+  if (
+    stage ===
+    "final"
+  ) {
     return 1;
   }
 
@@ -51,9 +63,6 @@ function getExpectedSeriesCount(
 /*
   ==========================================
   GET
-
-  Отримує одне двоматчеве
-  протистояння Iron Co-op Cup.
   ==========================================
 */
 
@@ -233,10 +242,6 @@ export async function GET(
           ),
       });
 
-    /*
-      Назви команд.
-    */
-
     const {
       data: teams,
       error: teamsError,
@@ -319,7 +324,7 @@ export async function GET(
               ? [
                   homeTeam.player_1_id,
                   homeTeam.player_2_id,
-                ]
+                ].filter(Boolean)
               : [],
         },
 
@@ -336,7 +341,7 @@ export async function GET(
               ? [
                   awayTeam.player_1_id,
                   awayTeam.player_2_id,
-                ]
+                ].filter(Boolean)
               : [],
         },
       },
@@ -367,13 +372,7 @@ export async function GET(
   ==========================================
   POST
 
-  Створює 2 матчі:
-
-  матч 1:
-  команда A — команда B
-
-  матч 2:
-  команда B — команда A
+  Створює два матчі.
   ==========================================
 */
 
@@ -492,7 +491,8 @@ export async function POST(
     }
 
     if (
-      home_id === away_id
+      home_id ===
+      away_id
     ) {
       return NextResponse.json(
         {
@@ -513,13 +513,16 @@ export async function POST(
 
     const {
       data: coopTeams,
-      error: coopTeamsError,
+      error:
+        coopTeamsError,
     } = await supabaseAdmin
       .from("coop_teams")
       .select(
         `
           id,
-          name
+          name,
+          player_1_id,
+          player_2_id
         `
       )
       .eq(
@@ -540,24 +543,59 @@ export async function POST(
     }
 
     /*
-      1/8 дозволяємо тільки
-      після формування 16 команд.
+      ========================================
+      1/8
+
+      Потрібно:
+      - 16 команд
+      - 16 повних складів
+      ========================================
     */
 
     if (
       stage ===
-        "round-of-16" &&
-      coopTeams?.length !== 16
+      "round-of-16"
     ) {
-      return NextResponse.json(
-        {
-          error:
-            `Для жеребкування 1/8 потрібно 16 команд. Зараз: ${coopTeams?.length ?? 0}`,
-        },
-        {
-          status: 400,
-        }
-      );
+      if (
+        coopTeams?.length !==
+        16
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              `Для жеребкування 1/8 потрібно 16 команд. Зараз: ${coopTeams?.length ?? 0}`,
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      const completeTeams =
+        coopTeams.filter(
+          (team) =>
+            Boolean(
+              team.player_1_id
+            ) &&
+            Boolean(
+              team.player_2_id
+            )
+        );
+
+      if (
+        completeTeams.length !==
+        16
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              `Для жеребкування потрібно визначити склади всіх 16 команд. Готово: ${completeTeams.length}/16`,
+          },
+          {
+            status: 400,
+          }
+        );
+      }
     }
 
     const homeTeam =
@@ -591,13 +629,38 @@ export async function POST(
 
     /*
       ========================================
-      ДУБЛІКАТ ПАРИ
+      ЗАХИСТ ВІД НЕПОВНОГО СКЛАДУ
+      ========================================
+    */
+
+    if (
+      !homeTeam.player_1_id ||
+      !homeTeam.player_2_id ||
+      !awayTeam.player_1_id ||
+      !awayTeam.player_2_id
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "У однієї з команд ще не визначено повний склад",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+      ========================================
+      ПОТОЧНІ МАТЧІ СТАДІЇ
       ========================================
     */
 
     const {
-      data: existingStageMatches,
-      error: existingStageError,
+      data:
+        existingStageMatches,
+      error:
+        existingStageError,
     } = await supabaseAdmin
       .from("matches")
       .select(
@@ -644,9 +707,12 @@ export async function POST(
 
     for (
       const match of
-        existingStageMatches ?? []
+        existingStageMatches ??
+        []
     ) {
-      if (match.series_id) {
+      if (
+        match.series_id
+      ) {
         existingSeriesIds.add(
           match.series_id
         );
@@ -672,7 +738,8 @@ export async function POST(
         Number.isInteger(
           match.round
         ) &&
-        match.round !== null &&
+        match.round !==
+          null &&
         match.round >= 1 &&
         match.round <=
           expectedSeries
@@ -684,13 +751,19 @@ export async function POST(
     }
 
     /*
-      На одній стадії команда
-      може бути тільки в одній парі.
+      ========================================
+      ОДНА КОМАНДА —
+      ОДНА ПАРА НА СТАДІЇ
+      ========================================
     */
 
     if (
-      usedTeams.has(home_id) ||
-      usedTeams.has(away_id)
+      usedTeams.has(
+        home_id
+      ) ||
+      usedTeams.has(
+        away_id
+      )
     ) {
       return NextResponse.json(
         {
@@ -720,7 +793,7 @@ export async function POST(
 
     /*
       ========================================
-      BRACKET SLOT
+      НОМЕР ПАРИ
       ========================================
     */
 
@@ -772,7 +845,8 @@ export async function POST(
     } else {
       for (
         let slot = 1;
-        slot <= expectedSeries;
+        slot <=
+        expectedSeries;
         slot += 1
       ) {
         if (
