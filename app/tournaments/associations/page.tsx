@@ -7,6 +7,8 @@ import { players } from "../../../data/players";
 import { season2AssociationsCup } from "../../../data/seasons/season-2-associations-cup";
 import { season3 } from "../../../data/seasons/season-3";
 
+import AssociationCupPlayoffBracket from "../../../components/AssociationCupPlayoffBracket";
+
 type SeasonNumber = 2 | 3;
 
 type Association = {
@@ -308,30 +310,31 @@ export default function AssociationsPage() {
         </div>
       </section>
 
-      {/* CURRENT STATUS */}
+      {/* PLAYOFF BRACKET */}
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
-        <div className="rounded-3xl border border-white/10 bg-[#07101d] p-8">
-          <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-            Кубок асоціацій
-          </div>
+<section className="mx-auto max-w-7xl px-6 py-16">
+  <div className="mb-8">
+    <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+      Кубок асоціацій
+    </div>
 
-          <h2 className="mt-3 text-3xl font-black">
-            Сезон {season}
-          </h2>
+    <h2 className="mt-3 text-4xl font-black">
+      Турнірна сітка
+    </h2>
 
-          <p className="mt-4 max-w-2xl leading-7 text-white/40">
-            Пари гравців у
-            протистояннях 6×6 та
-            результати матчів
-            будуть підключені до
-            Supabase і
-            відображатимуться тут
-            після внесення через
-            адмін-панель.
-          </p>
-        </div>
-      </section>
+    <p className="mt-3 max-w-2xl leading-7 text-white/40">
+      Шлях асоціацій від
+      чвертьфіналу до фіналу.
+      Сітка оновлюється
+      автоматично після
+      внесення результатів.
+    </p>
+  </div>
+
+  <AssociationCupPlayoffBracket
+    season={season}
+  />
+</section>
 
       {/* FOOTER */}
 

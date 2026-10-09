@@ -28,7 +28,85 @@ type CreateSeriesBody = {
   association_away_id?: string;
 
   pairings?: Pairing[];
+
+  /*
+    Номер протистояння
+    у турнірній сітці.
+  */
+
+  bracket_slot?: number;
 };
+
+/*
+  ========================================
+  КІЛЬКІСТЬ ПРОТИСТОЯНЬ НА СТАДІЇ
+  ========================================
+*/
+
+function getExpectedSeriesCount(
+  stage: string
+) {
+  if (stage === "quarterfinal") {
+    return 4;
+  }
+
+  if (stage === "semifinal") {
+    return 2;
+  }
+
+  if (
+    stage === "final" ||
+    stage === "third-place"
+  ) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/*
+  ========================================
+  НОМЕР ПАРИ ІЗ SERIES ID
+  ========================================
+
+  Наприклад:
+
+  s3-associations-cup-quarterfinal-slot-2-UUID
+
+  → slot = 2
+
+  round НЕ використовуємо
+  для номера пари сітки,
+  тому що round уже означає
+  номер матчу всередині
+  протистояння 1...6 / 7.
+*/
+
+function getBracketSlotFromSeriesId(
+  seriesId: string | null
+) {
+  if (!seriesId) {
+    return null;
+  }
+
+  const match =
+    seriesId.match(
+      /-slot-(\d+)-/
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const slot =
+    Number(match[1]);
+
+  if (!Number.isInteger(slot)) {
+    return null;
+  }
+
+  return slot;
+}
 
 /*
   ==========================================
@@ -38,14 +116,15 @@ type CreateSeriesBody = {
   Отримує конкретне протистояння
   Кубка асоціацій через series_id.
 
-  Одразу повертає:
+  Повертає:
 
-  - всі матчі серії
-  - очки
-  - забиті / пропущені
-  - різницю голів
-  - переможця
-  - чи потрібен 7-й матч
+  - всі матчі серії;
+  - очки;
+  - голи;
+  - різницю;
+  - переможця;
+  - статус тай-брейку;
+  - номер пари в сітці.
 */
 
 export async function GET(
@@ -60,12 +139,14 @@ export async function GET(
     );
 
     const seriesId =
-      searchParams.get("series_id");
+      searchParams.get(
+        "series_id"
+      );
 
     /*
-      ==========================
+      ========================================
       СЕЗОН
-      ==========================
+      ========================================
     */
 
     if (
@@ -85,9 +166,9 @@ export async function GET(
     }
 
     /*
-      ==========================
+      ========================================
       SERIES ID
-      ==========================
+      ========================================
     */
 
     if (!seriesId) {
@@ -103,9 +184,9 @@ export async function GET(
     }
 
     /*
-      ==========================
+      ========================================
       МАТЧІ СЕРІЇ
-      ==========================
+      ========================================
     */
 
     const {
@@ -190,9 +271,9 @@ export async function GET(
     }
 
     /*
-      ==========================
+      ========================================
       АСОЦІАЦІЇ
-      ==========================
+      ========================================
     */
 
     const firstMatch =
@@ -243,9 +324,9 @@ export async function GET(
       );
 
     /*
-      ==========================
-      РОЗРАХУНОК
-      ==========================
+      ========================================
+      РОЗРАХУНОК СЕРІЇ
+      ========================================
     */
 
     const summary =
@@ -277,9 +358,9 @@ export async function GET(
       );
 
     /*
-      ==========================
-      ВІДПОВІДЬ
-      ==========================
+      ========================================
+      RESPONSE
+      ========================================
     */
 
     return NextResponse.json({
@@ -288,6 +369,11 @@ export async function GET(
       series: {
         id:
           seriesId,
+
+        bracket_slot:
+          getBracketSlotFromSeriesId(
+            seriesId
+          ),
 
         season,
 
@@ -344,9 +430,9 @@ export async function GET(
   Кубка асоціацій.
 
   Одне протистояння =
-  6 окремих матчів гравців.
+  6 окремих матчів.
 
-  Усі 6 матчів отримують
+  Всі 6 матчів мають
   однаковий series_id.
 */
 
@@ -368,12 +454,14 @@ export async function POST(
       association_away_id,
 
       pairings,
+
+      bracket_slot,
     } = body;
 
     /*
-      ==========================
+      ========================================
       ПАРОЛЬ
-      ==========================
+      ========================================
     */
 
     if (
@@ -393,9 +481,9 @@ export async function POST(
     }
 
     /*
-      ==========================
+      ========================================
       СЕЗОН
-      ==========================
+      ========================================
     */
 
     if (
@@ -419,9 +507,9 @@ export async function POST(
       season as SeasonNumber;
 
     /*
-      ==========================
+      ========================================
       СТАДІЯ
-      ==========================
+      ========================================
     */
 
     if (!stage) {
@@ -463,10 +551,27 @@ export async function POST(
       );
     }
 
+    const expectedSeries =
+      getExpectedSeriesCount(
+        stage
+      );
+
+    if (expectedSeries === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Для цієї стадії не визначено структуру сітки",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
     /*
-      ==========================
+      ========================================
       АСОЦІАЦІЇ
-      ==========================
+      ========================================
     */
 
     if (
@@ -500,9 +605,9 @@ export async function POST(
     }
 
     /*
-      ==========================
+      ========================================
       СКЛАДИ АСОЦІАЦІЙ
-      ==========================
+      ========================================
     */
 
     const associations =
@@ -544,9 +649,9 @@ export async function POST(
     }
 
     /*
-      ==========================
+      ========================================
       6 ПАР
-      ==========================
+      ========================================
     */
 
     if (
@@ -635,9 +740,9 @@ export async function POST(
     }
 
     /*
-      ==========================
-      БЕЗ ПОВТОРІВ
-      ==========================
+      ========================================
+      БЕЗ ПОВТОРІВ ГРАВЦІВ
+      ========================================
     */
 
     const homePlayers =
@@ -685,9 +790,9 @@ export async function POST(
     }
 
     /*
-      ==========================
-      ПЕРЕВІРКА ДУБЛІКАТА СЕРІЇ
-      ==========================
+      ========================================
+      ПЕРЕВІРКА ДУБЛІКАТА ПРОТИСТОЯННЯ
+      ========================================
     */
 
     const {
@@ -731,8 +836,7 @@ export async function POST(
     }
 
     /*
-      Перевіряємо також
-      зворотний порядок асоціацій.
+      Зворотний порядок.
     */
 
     const {
@@ -776,8 +880,10 @@ export async function POST(
     }
 
     if (
-      directSeries.length > 0 ||
-      reverseSeries.length > 0
+      (directSeries?.length ??
+        0) > 0 ||
+      (reverseSeries?.length ??
+        0) > 0
     ) {
       return NextResponse.json(
         {
@@ -791,18 +897,213 @@ export async function POST(
     }
 
     /*
-      ==========================
+      ========================================
+      ІСНУЮЧІ ПРОТИСТОЯННЯ СТАДІЇ
+      ========================================
+
+      Потрібні для визначення
+      вільного bracket slot.
+    */
+
+    const {
+      data: existingStageMatches,
+      error: existingStageError,
+    } = await supabaseAdmin
+      .from("matches")
+      .select(
+        `
+          series_id
+        `
+      )
+      .eq(
+        "season",
+        season
+      )
+      .eq(
+        "competition",
+        "associations-cup"
+      )
+      .eq(
+        "stage",
+        stage
+      );
+
+    if (existingStageError) {
+      return NextResponse.json(
+        {
+          error:
+            existingStageError.message,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    const existingSeriesIds =
+      new Set<string>();
+
+    const occupiedSlots =
+      new Set<number>();
+
+    for (
+      const match of
+        existingStageMatches ?? []
+    ) {
+      if (!match.series_id) {
+        continue;
+      }
+
+      existingSeriesIds.add(
+        match.series_id
+      );
+
+      const slot =
+        getBracketSlotFromSeriesId(
+          match.series_id
+        );
+
+      if (slot !== null) {
+        occupiedSlots.add(
+          slot
+        );
+      }
+    }
+
+    /*
+      Якщо кількість серій уже
+      дорівнює максимуму стадії,
+      більше створювати не можна.
+    */
+
+    if (
+      existingSeriesIds.size >=
+      expectedSeries
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Усі протистояння цієї стадії вже створені",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    /*
+      ========================================
+      BRACKET SLOT
+      ========================================
+    */
+
+    let bracketSlot:
+      | number
+      | null = null;
+
+    /*
+      Якщо форма передала
+      конкретний слот —
+      використовуємо його.
+    */
+
+    if (
+      bracket_slot !== undefined
+    ) {
+      if (
+        !Number.isInteger(
+          bracket_slot
+        ) ||
+        bracket_slot < 1 ||
+        bracket_slot >
+          expectedSeries
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Невірний номер пари в сітці",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      if (
+        occupiedSlots.has(
+          bracket_slot
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              `Пара №${bracket_slot} вже створена`,
+          },
+          {
+            status: 409,
+          }
+        );
+      }
+
+      bracketSlot =
+        bracket_slot;
+    } else {
+      /*
+        Для ручного жеребкування
+        беремо перший вільний слот.
+      */
+
+      for (
+        let slot = 1;
+        slot <= expectedSeries;
+        slot += 1
+      ) {
+        if (
+          !occupiedSlots.has(
+            slot
+          )
+        ) {
+          bracketSlot =
+            slot;
+
+          break;
+        }
+      }
+    }
+
+    if (
+      bracketSlot === null
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Не знайдено вільного місця в турнірній сітці",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    /*
+      ========================================
       SERIES ID
-      ==========================
+      ========================================
+
+      Тут зберігаємо номер
+      протистояння у сітці.
+
+      round залишаємо для
+      матчів 1...6.
     */
 
     const seriesId =
-      `s${season}-associations-cup-${stage}-${randomUUID()}`;
+      `s${season}-associations-cup-${stage}-slot-${bracketSlot}-${randomUUID()}`;
 
     /*
-      ==========================
+      ========================================
       ГОТУЄМО 6 МАТЧІВ
-      ==========================
+      ========================================
     */
 
     const rows =
@@ -816,24 +1117,24 @@ export async function POST(
           competition:
             "associations-cup",
 
-          division: null,
+          division:
+            null,
 
           stage,
 
-          group_name: null,
+          group_name:
+            null,
 
           /*
-            Тут round використовується
-            як номер матчу всередині
-            протистояння:
-
-            1..6
+            Номер матчу
+            всередині серії.
           */
 
           round:
             index + 1,
 
-          leg: 1,
+          leg:
+            1,
 
           participant_type:
             "player",
@@ -844,13 +1145,17 @@ export async function POST(
           away_id:
             pairing.away_id,
 
-          home_goals: null,
-          away_goals: null,
+          home_goals:
+            null,
+
+          away_goals:
+            null,
 
           status:
             "scheduled",
 
-          played_at: null,
+          played_at:
+            null,
 
           series_id:
             seriesId,
@@ -867,9 +1172,9 @@ export async function POST(
       );
 
     /*
-      ==========================
-      INSERT УСІХ 6 МАТЧІВ
-      ==========================
+      ========================================
+      INSERT 6 МАТЧІВ
+      ========================================
     */
 
     const {
@@ -921,6 +1226,9 @@ export async function POST(
       series_id:
         seriesId,
 
+      bracket_slot:
+        bracketSlot,
+
       association_home: {
         id:
           association_home_id,
@@ -957,20 +1265,20 @@ export async function POST(
     );
   }
 }
+
 /*
   ==========================================
   PUT
   ==========================================
 
-  Створює 7-й вирішальний матч
-  Кубка асоціацій.
+  Створює 7-й вирішальний матч.
 
   Дозволено тільки якщо:
 
-  - зіграні всі 6 матчів
-  - очки рівні
-  - різниця голів рівна
-  - 7-го матчу ще немає
+  - завершені всі 6 матчів;
+  - очки рівні;
+  - різниця голів рівна;
+  - 7-го матчу ще немає.
 */
 
 export async function PUT(
@@ -1043,7 +1351,8 @@ export async function PUT(
 
     if (
       !series_id ||
-      typeof series_id !== "string"
+      typeof series_id !==
+        "string"
     ) {
       return NextResponse.json(
         {
@@ -1065,8 +1374,10 @@ export async function PUT(
     if (
       !home_id ||
       !away_id ||
-      typeof home_id !== "string" ||
-      typeof away_id !== "string"
+      typeof home_id !==
+        "string" ||
+      typeof away_id !==
+        "string"
     ) {
       return NextResponse.json(
         {
@@ -1186,8 +1497,8 @@ export async function PUT(
       );
 
     /*
-      7-й матч дозволений тільки
-      після повної рівності.
+      7-й матч дозволений
+      лише при повній рівності.
     */
 
     if (
@@ -1328,30 +1639,43 @@ export async function PUT(
         competition:
           "associations-cup",
 
-        division: null,
+        division:
+          null,
 
         stage:
           firstMatch.stage,
 
-        group_name: null,
+        group_name:
+          null,
 
-        round: 7,
+        /*
+          7-й вирішальний матч.
+        */
 
-        leg: 1,
+        round:
+          7,
+
+        leg:
+          1,
 
         participant_type:
           "player",
 
         home_id,
+
         away_id,
 
-        home_goals: null,
-        away_goals: null,
+        home_goals:
+          null,
+
+        away_goals:
+          null,
 
         status:
           "scheduled",
 
-        played_at: null,
+        played_at:
+          null,
 
         series_id,
 
@@ -1361,7 +1685,8 @@ export async function PUT(
         series_away_id:
           awayAssociationId,
 
-        is_tiebreak: true,
+        is_tiebreak:
+          true,
       })
       .select(
         `
@@ -1404,7 +1729,13 @@ export async function PUT(
       message:
         "7-й вирішальний матч створено",
 
-      match: data,
+      bracket_slot:
+        getBracketSlotFromSeriesId(
+          series_id
+        ),
+
+      match:
+        data,
     });
   } catch (error) {
     console.error(
