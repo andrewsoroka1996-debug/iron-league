@@ -25,7 +25,9 @@ import AssociationSeriesSummary from "./AssociationSeriesSummary";
 import TwoLegSeriesForm from "./TwoLegSeriesForm";
 import TwoLegSeriesSummary from "./TwoLegSeriesSummary";
 import EuropeanFinalForm from "./EuropeanFinalForm";
+import CoopTeamsForm from "./CoopTeamsForm";
 import DivisionCupBracketForm from "./DivisionCupBracketForm";
+import CoopSeriesForm from "./CoopSeriesForm";
 
 type TournamentMatch = {
   id: string;
@@ -1213,25 +1215,102 @@ export default function TournamentAdminPage() {
 
         {/* IRON CO-OP */}
 
-        {competitionId ===
-          "iron-coop-cup" && (
-          <div className="mt-8 rounded-3xl border border-white/10 bg-[#07101d] p-7">
-            <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-              Iron Co-op Cup
-            </div>
+{competitionId ===
+  "iron-coop-cup" && (
+  <div className="mt-8 space-y-8">
+    {/* TEAMS */}
 
-            <h2 className="mt-2 text-3xl font-black">
-              Команди ще не сформовані
-            </h2>
+    <div className="space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+      <div>
+        <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+          Iron Co-op Cup
+        </div>
 
-            <p className="mt-4 leading-7 text-white/40">
-              Формат уже визначений:
-              16 команд, по 2 гравці,
-              двоматчевий плей-оф
-              включно з фіналом.
-            </p>
-          </div>
-        )}
+        <h2 className="mt-2 text-3xl font-black">
+          Формування команд
+        </h2>
+
+        <p className="mt-4 max-w-2xl leading-7 text-white/40">
+          Сформуй 16 команд по два
+          гравці. Один гравець може
+          входити лише до однієї
+          команди цього сезону.
+        </p>
+      </div>
+
+      <CoopTeamsForm
+        password={password}
+        season={season}
+      />
+    </div>
+
+    {/* PLAYOFF */}
+
+    <div className="space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+      <div>
+        <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+          Iron Co-op Cup
+        </div>
+
+        <h2 className="mt-2 text-3xl font-black">
+          Турнірна сітка
+        </h2>
+
+        <p className="mt-4 max-w-2xl leading-7 text-white/40">
+          1/8 фіналу формується
+          вручну. Наступні стадії
+          отримують переможців
+          автоматично відповідно
+          до турнірної сітки.
+        </p>
+      </div>
+
+      {/* STAGE */}
+
+      <div>
+        <label className="text-sm font-bold">
+          Стадія
+        </label>
+
+        <select
+          value={stage}
+          onChange={(event) =>
+            setStage(
+              event.target.value
+            )
+          }
+          className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+        >
+          {availableStages.map(
+            (stageOption) => (
+              <option
+                key={
+                  stageOption.value
+                }
+                value={
+                  stageOption.value
+                }
+              >
+                {
+                  stageOption.label
+                }
+              </option>
+            )
+          )}
+        </select>
+      </div>
+
+      <CoopSeriesForm
+        password={password}
+        season={season}
+        stage={stage}
+        onCreated={() => {
+          void loadMatches();
+        }}
+      />
+    </div>
+  </div>
+)}
 
         {/* DIVISION CUP */}
 
