@@ -2,299 +2,52 @@ import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
-type SlotNumber = 1 | 2 | 3;
-
-type SaveBody = {
+type FeaturedMatchBody = {
   password?: string;
 
-  action?: "set" | "clear";
-
-  season?: number;
+  match_id?: string;
 
   feature_date?: string;
 
-  slot?: number;
+  position?: number;
 
-  match_id?: string;
+  id?: string;
 };
 
-function validSeason(
-  season: number
+function isValidPassword(
+  password: string | null | undefined
 ) {
   return (
-    Number.isInteger(season) &&
-    season >= 1 &&
-    season <= 4
-  );
-}
-
-function validSlot(
-  slot: number
-): slot is SlotNumber {
-  return (
-    Number.isInteger(slot) &&
-    slot >= 1 &&
-    slot <= 3
-  );
-}
-
-function validDate(
-  value: string
-) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(
-    value
+    Boolean(process.env.ADMIN_PASSWORD) &&
+    password === process.env.ADMIN_PASSWORD
   );
 }
 
 /*
   ========================================
   GET
-  ========================================
 
-  Повертає:
-
-  - 1–3 Матчі дня на вибрану дату
+  Завантажує:
   - усі матчі вибраного сезону
-  - команди Co-op Cup
+  - призначені матчі дня на вибрану дату
+  ========================================
 */
 
 export async function GET(
   request: Request
 ) {
   try {
-    const { searchParams } =
-      new URL(request.url);
-
-    const season = Number(
-      searchParams.get("season")
-    );
-
-    const featureDate =
-      searchParams.get("date") ?? "";
-
-    if (!validSeason(season)) {
-      return NextResponse.json(
-        {
-          error: "Невірний сезон",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    if (!validDate(featureDate)) {
-      return NextResponse.json(
-        {
-          error:
-            "Невірна дата",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const [
-      featuredResult,
-      matchesResult,
-      coopTeamsResult,
-    ] = await Promise.all([
-      supabaseAdmin
-        .from("featured_matches")
-        .select(
-          `
-            id,
-            season,
-            feature_date,
-            slot,
-            match_id,
-            updated_at
-          `
-        )
-        .eq("season", season)
-        .eq(
-          "feature_date",
-          featureDate
-        )
-        .order(
-          "slot",
-          {
-            ascending: true,
-          }
-        ),
-
-      supabaseAdmin
-        .from("matches")
-        .select(
-          `
-            id,
-            season,
-            competition,
-            division,
-            stage,
-            group_name,
-            round,
-            leg,
-            participant_type,
-            home_id,
-            away_id,
-            home_goals,
-            away_goals,
-            status,
-            played_at
-          `
-        )
-        .eq("season", season)
-        .order(
-          "competition",
-          {
-            ascending: true,
-          }
-        )
-        .order(
-          "round",
-          {
-            ascending: true,
-            nullsFirst: true,
-          }
-        )
-        .order(
-          "leg",
-          {
-            ascending: true,
-            nullsFirst: true,
-          }
-        ),
-
-      supabaseAdmin
-        .from("coop_teams")
-        .select(
-          `
-            id,
-            name
-          `
-        )
-        .eq("season", season)
-        .order(
-          "name",
-          {
-            ascending: true,
-          }
-        ),
-    ]);
-
-    if (
-      featuredResult.error
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            featuredResult.error
-              .message,
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    if (matchesResult.error) {
-      return NextResponse.json(
-        {
-          error:
-            matchesResult.error
-              .message,
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    if (coopTeamsResult.error) {
-      console.error(
-        "FEATURED MATCHES COOP ERROR:",
-        coopTeamsResult.error
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-
-      season,
-
-      feature_date:
-        featureDate,
-
-      featured_matches:
-        featuredResult.data ??
-        [],
-
-      matches:
-        matchesResult.data ??
-        [],
-
-      coop_teams:
-        coopTeamsResult.data ??
-        [],
-    });
-  } catch (error) {
-    console.error(
-      "FEATURED MATCHES GET ERROR:",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Помилка завантаження Матчів дня",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
-}
-
-/*
-  ========================================
-  POST
-  ========================================
-
-  action = set
-    призначає матч у слот 1–3
-
-  action = clear
-    очищає конкретний слот
-*/
-
-export async function POST(
-  request: Request
-) {
-  try {
-    const body =
-      (await request.json()) as SaveBody;
-
     const {
-      password,
-      action,
-      season,
-      feature_date,
-      slot,
-      match_id,
-    } = body;
+      searchParams,
+    } = new URL(request.url);
 
-    /*
-      ========================================
-      ПАРОЛЬ
-      ========================================
-    */
+    const password =
+      request.headers.get(
+        "x-admin-password"
+      );
 
     if (
-      !process.env.ADMIN_PASSWORD ||
-      password !==
-        process.env.ADMIN_PASSWORD
+      !isValidPassword(password)
     ) {
       return NextResponse.json(
         {
@@ -307,108 +60,224 @@ export async function POST(
       );
     }
 
-    /*
-      ========================================
-      ПЕРЕВІРКА
-      ========================================
-    */
-
-    if (
-      season === undefined ||
-      !validSeason(season)
-    ) {
-      return NextResponse.json(
-        {
-          error: "Невірний сезон",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    if (
-      !feature_date ||
-      !validDate(feature_date)
-    ) {
-      return NextResponse.json(
-        {
-          error: "Невірна дата",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    if (
-      slot === undefined ||
-      !validSlot(slot)
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Невірний слот",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /*
-      ========================================
-      CLEAR
-      ========================================
-    */
-
-    if (action === "clear") {
-      const {
-        error,
-      } = await supabaseAdmin
-        .from("featured_matches")
-        .delete()
-        .eq("season", season)
-        .eq(
-          "feature_date",
-          feature_date
+    const season =
+      Number(
+        searchParams.get(
+          "season"
         )
-        .eq("slot", slot);
+      );
 
-      if (error) {
-        return NextResponse.json(
-          {
-            error:
-              error.message,
-          },
-          {
-            status: 500,
-          }
-        );
-      }
+    const featureDate =
+      searchParams.get(
+        "feature_date"
+      );
 
-      return NextResponse.json({
-        success: true,
+    if (
+      !Number.isInteger(
+        season
+      ) ||
+      season < 1 ||
+      season > 4
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Невірний сезон",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
-        message:
-          `Слот ${slot} очищено`,
-      });
+    if (!featureDate) {
+      return NextResponse.json(
+        {
+          error:
+            "Не вказано дату",
+        },
+        {
+          status: 400,
+        }
+      );
     }
 
     /*
       ========================================
-      SET
+      МАТЧІ СЕЗОНУ
       ========================================
     */
 
-    if (action !== "set") {
+    const {
+      data: matches,
+      error: matchesError,
+    } = await supabaseAdmin
+      .from("matches")
+      .select(
+        `
+          id,
+          season,
+          competition,
+          division,
+          stage,
+          group_name,
+          round,
+          leg,
+          participant_type,
+          home_id,
+          away_id,
+          home_goals,
+          away_goals,
+          status,
+          played_at
+        `
+      )
+      .eq(
+        "season",
+        season
+      )
+      .order(
+        "competition",
+        {
+          ascending: true,
+        }
+      )
+      .order(
+        "round",
+        {
+          ascending: true,
+          nullsFirst: false,
+        }
+      );
+
+    if (matchesError) {
+      console.error(
+        "FEATURED MATCHES LIST ERROR:",
+        matchesError
+      );
+
       return NextResponse.json(
         {
           error:
-            "Невідома дія",
+            matchesError.message,
         },
         {
-          status: 400,
+          status: 500,
+        }
+      );
+    }
+
+    /*
+      ========================================
+      ПОТОЧНІ МАТЧІ ДНЯ
+      ========================================
+    */
+
+    const {
+      data: featured,
+      error: featuredError,
+    } = await supabaseAdmin
+      .from(
+        "featured_matches"
+      )
+      .select(
+        `
+          id,
+          match_id,
+          feature_date,
+          position,
+          created_at
+        `
+      )
+      .eq(
+        "feature_date",
+        featureDate
+      )
+      .order(
+        "position",
+        {
+          ascending: true,
+        }
+      );
+
+    if (featuredError) {
+      console.error(
+        "FEATURED MATCHES GET ERROR:",
+        featuredError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            featuredError.message,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+
+      matches:
+        matches ?? [],
+
+      featured:
+        featured ?? [],
+    });
+  } catch (error) {
+    console.error(
+      "FEATURED MATCHES GET ERROR:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Помилка завантаження матчів дня",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
+/*
+  ========================================
+  POST
+
+  Призначає матч на позицію 1, 2 або 3.
+  Якщо позиція вже зайнята —
+  попередній матч замінюється.
+  ========================================
+*/
+
+export async function POST(
+  request: Request
+) {
+  try {
+    const body =
+      (await request.json()) as FeaturedMatchBody;
+
+    const {
+      password,
+      match_id,
+      feature_date,
+      position,
+    } = body;
+
+    if (
+      !isValidPassword(password)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Невірний пароль адміністратора",
+        },
+        {
+          status: 401,
         }
       );
     }
@@ -425,10 +294,40 @@ export async function POST(
       );
     }
 
+    if (!feature_date) {
+      return NextResponse.json(
+        {
+          error:
+            "Не вказано дату",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      !Number.isInteger(
+        position
+      ) ||
+      !position ||
+      position < 1 ||
+      position > 3
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Позиція повинна бути від 1 до 3",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
     /*
-      ========================================
-      ПЕРЕВІРЯЄМО МАТЧ
-      ========================================
+      Перевіряємо,
+      що матч існує.
     */
 
     const {
@@ -439,33 +338,23 @@ export async function POST(
       .select(
         `
           id,
-          season,
-          competition,
-          home_id,
-          away_id
+          season
         `
       )
-      .eq("id", match_id)
-      .eq("season", season)
+      .eq(
+        "id",
+        match_id
+      )
       .maybeSingle();
 
-    if (matchError) {
+    if (
+      matchError ||
+      !match
+    ) {
       return NextResponse.json(
         {
           error:
-            matchError.message,
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    if (!match) {
-      return NextResponse.json(
-        {
-          error:
-            "Матч не знайдено в цьому сезоні",
+            "Матч не знайдено",
         },
         {
           status: 404,
@@ -474,37 +363,33 @@ export async function POST(
     }
 
     /*
-      ========================================
-      НЕ ДОЗВОЛЯЄМО ОДИН МАТЧ
-      У ДВОХ СЛОТАХ ОДНОГО ДНЯ
-      ========================================
+      Якщо цей матч уже стоїть
+      у цю дату на іншій позиції —
+      прибираємо старий запис.
     */
 
     const {
-      data: duplicate,
-      error: duplicateError,
+      error:
+        oldMatchError,
     } = await supabaseAdmin
-      .from("featured_matches")
-      .select(
-        `
-          id,
-          slot
-        `
+      .from(
+        "featured_matches"
       )
-      .eq("season", season)
+      .delete()
       .eq(
         "feature_date",
         feature_date
       )
-      .eq("match_id", match_id)
-      .neq("slot", slot)
-      .maybeSingle();
+      .eq(
+        "match_id",
+        match_id
+      );
 
-    if (duplicateError) {
+    if (oldMatchError) {
       return NextResponse.json(
         {
           error:
-            duplicateError.message,
+            oldMatchError.message,
         },
         {
           status: 500,
@@ -512,63 +397,81 @@ export async function POST(
       );
     }
 
-    if (duplicate) {
+    /*
+      Звільняємо позицію,
+      якщо вона вже зайнята.
+    */
+
+    const {
+      error:
+        oldPositionError,
+    } = await supabaseAdmin
+      .from(
+        "featured_matches"
+      )
+      .delete()
+      .eq(
+        "feature_date",
+        feature_date
+      )
+      .eq(
+        "position",
+        position
+      );
+
+    if (
+      oldPositionError
+    ) {
       return NextResponse.json(
         {
           error:
-            `Цей матч уже стоїть у слоті ${duplicate.slot}`,
+            oldPositionError.message,
         },
         {
-          status: 409,
+          status: 500,
         }
       );
     }
 
     /*
-      ========================================
-      UPSERT
-      ========================================
+      Додаємо матч.
     */
 
     const {
       data,
       error,
     } = await supabaseAdmin
-      .from("featured_matches")
-      .upsert(
-        {
-          season,
-
-          feature_date,
-
-          slot,
-
-          match_id,
-
-          updated_at:
-            new Date().toISOString(),
-        },
-        {
-          onConflict:
-            "season,feature_date,slot",
-        }
+      .from(
+        "featured_matches"
       )
+      .insert({
+        match_id,
+
+        feature_date,
+
+        position,
+      })
       .select(
         `
           id,
-          season,
-          feature_date,
-          slot,
           match_id,
-          updated_at
+          feature_date,
+          position,
+          created_at
         `
       )
       .single();
 
     if (error) {
+      console.error(
+        "FEATURED MATCH POST ERROR:",
+        error
+      );
+
       return NextResponse.json(
         {
-          error: error.message,
+          error:
+            error.message,
         },
         {
           status: 500,
@@ -580,22 +483,121 @@ export async function POST(
       success: true,
 
       message:
-        `Матч призначено у слот ${slot}`,
+        `Матч призначено на позицію ${position}`,
 
-      featured_match: data,
-
-      match,
+      featured:
+        data,
     });
   } catch (error) {
     console.error(
-      "FEATURED MATCHES POST ERROR:",
+      "FEATURED MATCH POST ERROR:",
       error
     );
 
     return NextResponse.json(
       {
         error:
-          "Помилка збереження Матчу дня",
+          "Помилка призначення матчу дня",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
+/*
+  ========================================
+  DELETE
+
+  Прибирає матч із блоку
+  «Матч дня».
+  ========================================
+*/
+
+export async function DELETE(
+  request: Request
+) {
+  try {
+    const body =
+      (await request.json()) as FeaturedMatchBody;
+
+    const {
+      password,
+      id,
+    } = body;
+
+    if (
+      !isValidPassword(password)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Невірний пароль адміністратора",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          error:
+            "Не вказано ID",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const {
+      error,
+    } = await supabaseAdmin
+      .from(
+        "featured_matches"
+      )
+      .delete()
+      .eq(
+        "id",
+        id
+      );
+
+    if (error) {
+      console.error(
+        "FEATURED MATCH DELETE ERROR:",
+        error
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            error.message,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+
+      message:
+        "Матч прибрано з головної",
+    });
+  } catch (error) {
+    console.error(
+      "FEATURED MATCH DELETE ERROR:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Помилка видалення матчу дня",
       },
       {
         status: 500,

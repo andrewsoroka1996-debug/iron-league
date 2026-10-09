@@ -7,9 +7,12 @@ import { season4 } from "../data/seasons/season-4";
 
 import { buildStandings } from "../lib/standings";
 
-import { supabase } from "../lib/supabase";
+import { supabaseAdmin } from "../lib/supabase-admin";
 
 import DivisionSchedule from "./DivisionSchedule";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type DivisionNumber = 1 | 2 | 3 | 4;
 type SeasonNumber = 1 | 2 | 3 | 4;
@@ -141,20 +144,6 @@ export default async function DivisionPage({
 
   /*
     ========================================
-    ID ТУРНІРУ В НОВІЙ СИСТЕМІ
-    ========================================
-
-    division-1
-    division-2
-    division-3
-    division-4
-  */
-
-  const competitionId =
-    `division-${division}`;
-
-  /*
-    ========================================
     МАТЧІ З SUPABASE
     ========================================
   */
@@ -162,7 +151,7 @@ export default async function DivisionPage({
   const {
     data,
     error,
-  } = await supabase
+  } = await supabaseAdmin
     .from("matches")
     .select(
       `
@@ -181,7 +170,7 @@ export default async function DivisionPage({
     )
     .eq(
       "competition",
-      competitionId
+      "division"
     )
     .eq(
       "division",
@@ -194,6 +183,13 @@ export default async function DivisionPage({
         nullsFirst: false,
       }
     );
+
+  if (error) {
+    console.error(
+      "DIVISION MATCHES ERROR:",
+      error
+    );
+  }
 
   const databaseMatches =
     (data ?? []) as DatabaseMatch[];
