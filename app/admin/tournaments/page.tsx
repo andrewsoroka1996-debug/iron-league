@@ -25,6 +25,7 @@ import AssociationSeriesSummary from "./AssociationSeriesSummary";
 import TwoLegSeriesForm from "./TwoLegSeriesForm";
 import TwoLegSeriesSummary from "./TwoLegSeriesSummary";
 import EuropeanFinalForm from "./EuropeanFinalForm";
+import DivisionCupBracketForm from "./DivisionCupBracketForm";
 
 type TournamentMatch = {
   id: string;
@@ -355,6 +356,12 @@ export default function TournamentAdminPage() {
     competitionId
   ) &&
   stage === "final";
+
+  const isDivisionCup =
+  competitionId === "division-1-cup" ||
+  competitionId === "division-2-cup" ||
+  competitionId === "division-3-cup" ||
+  competitionId === "division-4-cup";
 
   /*
     ========================================
@@ -1226,6 +1233,63 @@ export default function TournamentAdminPage() {
           </div>
         )}
 
+        {/* DIVISION CUP */}
+
+{isDivisionCup && (
+  <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+    <div>
+      <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+        Кубок дивізіону
+      </div>
+
+      <h2 className="mt-2 text-3xl font-black">
+        Турнірна сітка
+      </h2>
+    </div>
+
+    <div>
+      <label className="text-sm font-bold">
+        Стадія
+      </label>
+
+      <select
+        value={stage}
+        onChange={(event) => {
+          setStage(
+            event.target.value
+          );
+
+          setSelectedMatchId("");
+          setMessage("");
+        }}
+        className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+      >
+        {availableStages.map(
+          (stageOption) => (
+            <option
+              key={stageOption.value}
+              value={stageOption.value}
+            >
+              {stageOption.label}
+            </option>
+          )
+        )}
+      </select>
+    </div>
+
+    <DivisionCupBracketForm
+      password={password}
+      season={season}
+      competition={competitionId}
+      stage={stage}
+      playerIds={availablePlayerIds}
+      onCreated={() => {
+        void loadMatches();
+      }}
+    />
+  </div>
+)}
+
         {/* EUROPEAN TWO LEG SERIES */}
 
         {competitionId &&
@@ -1233,8 +1297,9 @@ export default function TournamentAdminPage() {
     "associations-cup" &&
   competitionId !==
     "iron-coop-cup" &&
-  usesTwoLegs &&
-  !isEuropeanFinal && (
+  !usesTwoLegs &&
+  !isEuropeanFinal &&
+  !isDivisionCup && (
             <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
               <div>
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -1331,7 +1396,8 @@ export default function TournamentAdminPage() {
   competitionId !==
     "iron-coop-cup" &&
   !usesTwoLegs &&
-  !isEuropeanFinal && (
+  !isEuropeanFinal &&
+  !isDivisionCup && (
             <form
               onSubmit={createMatch}
               className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
