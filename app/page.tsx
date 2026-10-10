@@ -1019,6 +1019,13 @@ export default async function Home() {
             </a>
 
             <a
+  href="/coefficients"
+  className="transition hover:text-white"
+>
+  Коефіцієнти
+</a>
+
+            <a
               href="/history"
               className="transition hover:text-white"
             >
