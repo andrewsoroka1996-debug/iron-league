@@ -597,14 +597,31 @@ export async function getPlayerHonours(
         continue;
       }
 
-      const allFinished =
-        divisionMatches.every(
-          isFinished
-        );
+      /*
+  Для архівних Сезонів 1–2
+  допускаємо історично
+  незіграні матчі.
 
-      if (!allFinished) {
-        continue;
-      }
+  Для Сезонів 3–4 чемпіон
+  визначається тільки після
+  завершення всього календаря.
+*/
+
+const isArchiveSeason =
+  season === 1 ||
+  season === 2;
+
+const allFinished =
+  divisionMatches.every(
+    isFinished
+  );
+
+if (
+  !isArchiveSeason &&
+  !allFinished
+) {
+  continue;
+}
 
       const standings =
         buildStandings({
