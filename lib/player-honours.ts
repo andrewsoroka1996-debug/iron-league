@@ -1,20 +1,17 @@
-import { supabase } from "./supabase";
-
-import {
-  calculateStandings,
-  type LeagueMatch,
-} from "./calculateStandings";
-
-import { calculateAssociationSeries } from "./association-series";
+import "server-only";
 
 import { season1 } from "../data/seasons/season-1";
 import { season2 } from "../data/seasons/season-2";
 import { season3 } from "../data/seasons/season-3";
 import { season4 } from "../data/seasons/season-4";
 
+import type { SeasonNumber } from "../data/competitions/season-competitions";
+
 import { getCompetitionAssociations } from "../data/competitions/get-competition-associations";
 
-import type { SeasonNumber } from "../data/competitions/season-competitions";
+import { supabaseAdmin } from "./supabase-admin";
+import { buildStandings } from "./standings";
+import { calculateAssociationSeries } from "./association-series";
 
 type DivisionNumber =
   | 1
@@ -22,7 +19,26 @@ type DivisionNumber =
   | 3
   | 4;
 
-type TrophyMatch = {
+export type PlayerHonourCategory =
+  | "division"
+  | "cup"
+  | "europe"
+  | "super-cup"
+  | "association"
+  | "coop";
+
+export type PlayerHonour = {
+  key: string;
+
+  season: SeasonNumber;
+
+  category:
+    PlayerHonourCategory;
+
+  title: string;
+};
+
+type MatchRow = {
   id: string;
 
   season: number;
@@ -55,63 +71,27 @@ type TrophyMatch = {
   is_tiebreak: boolean;
 };
 
-type CoopTeam = {
+type CoopTeamRow = {
   id: string;
 
-  season: number;
-
   name: string;
+
+  season: number;
 
   player_1_id: string;
   player_2_id: string;
 };
 
-export type PlayerHonour = {
-  key: string;
-
-  season: number;
-
-  competition: string;
-
-  title: string;
-
-  category:
-    | "division"
-    | "cup"
-    | "europe"
-    | "super-cup"
-    | "association"
-    | "coop";
-};
+const seasons: SeasonNumber[] = [
+  1,
+  2,
+  3,
+  4,
+];
 
 /*
   ========================================
-  ДИВІЗІОНИ СЕЗОНУ
-  ========================================
-*/
-
-function getAvailableDivisions(
-  season: SeasonNumber
-): DivisionNumber[] {
-  if (season === 1) {
-    return [
-      1,
-      2,
-      3,
-    ];
-  }
-
-  return [
-    1,
-    2,
-    3,
-    4,
-  ];
-}
-
-/*
-  ========================================
-  СКЛАД ДИВІЗІОНУ
+  УЧАСНИКИ ДИВІЗІОНІВ
   ========================================
 */
 
@@ -119,6 +99,11 @@ function getDivisionPlayers(
   season: SeasonNumber,
   division: DivisionNumber
 ): readonly string[] {
+  /*
+    СЕЗОН 1
+    Було 3 дивізіони.
+  */
+
   if (season === 1) {
     if (division === 1) {
       return season1.division1.players;
@@ -134,6 +119,10 @@ function getDivisionPlayers(
 
     return [];
   }
+
+  /*
+    СЕЗОН 2
+  */
 
   if (season === 2) {
     if (division === 1) {
@@ -151,6 +140,10 @@ function getDivisionPlayers(
     return season2.division4.players;
   }
 
+  /*
+    СЕЗОН 3
+  */
+
   if (season === 3) {
     if (division === 1) {
       return season3.division1.players;
@@ -166,6 +159,10 @@ function getDivisionPlayers(
 
     return season3.division4.players;
   }
+
+  /*
+    СЕЗОН 4
+  */
 
   if (division === 1) {
     return season4.division1.players;
@@ -184,140 +181,52 @@ function getDivisionPlayers(
 
 /*
   ========================================
-  НАЗВА ТУРНІРУ
-  ========================================
-*/
-
-function getCompetitionTitle(
-  competition: string
-) {
-  if (
-    competition ===
-    "champions-league"
-  ) {
-    return "Ліга чемпіонів";
-  }
-
-  if (
-    competition ===
-    "europa-league"
-  ) {
-    return "Ліга Європи";
-  }
-
-  if (
-    competition ===
-    "conference-league"
-  ) {
-    return "Ліга конференцій";
-  }
-
-  if (
-    competition ===
-    "european-super-cup"
-  ) {
-    return "Суперкубок Європи";
-  }
-
-  if (
-    competition ===
-    "iron-coop-cup"
-  ) {
-    return "Iron Co-op Cup";
-  }
-
-  if (
-    competition ===
-    "associations-cup"
-  ) {
-    return "Кубок асоціацій";
-  }
-
-  const divisionCup =
-    competition.match(
-      /^division-(\d)-cup$/
-    );
-
-  if (divisionCup) {
-    return `Кубок ${divisionCup[1]} Дивізіону`;
-  }
-
-  return competition;
-}
-
-/*
-  ========================================
-  КАТЕГОРІЯ ТРОФЕЮ
-  ========================================
-*/
-
-function getCategory(
-  competition: string
-): PlayerHonour["category"] {
-  if (
-    competition ===
-    "european-super-cup"
-  ) {
-    return "super-cup";
-  }
-
-  if (
-    competition ===
-      "champions-league" ||
-    competition ===
-      "europa-league" ||
-    competition ===
-      "conference-league"
-  ) {
-    return "europe";
-  }
-
-  if (
-    competition ===
-    "iron-coop-cup"
-  ) {
-    return "coop";
-  }
-
-  if (
-    competition ===
-    "associations-cup"
-  ) {
-    return "association";
-  }
-
-  return "cup";
-}
-
-/*
-  ========================================
-  ЧИ МАТЧ ЗАВЕРШЕНИЙ
+  ЧИ МАТЧ ЗАВЕРШЕНО
   ========================================
 */
 
 function isFinished(
-  match: TrophyMatch
+  match: MatchRow
 ) {
   return (
-    match.status ===
-      "finished" &&
-    match.home_goals !==
-      null &&
-    match.away_goals !==
-      null
+    match.status === "finished" &&
+    match.home_goals !== null &&
+    match.away_goals !== null
   );
 }
 
 /*
   ========================================
-  ПЕРЕМОЖЕЦЬ ОДНОГО МАТЧУ
+  ДОДАВАННЯ ТРОФЕЮ
+  ========================================
+
+  Захищаємося від випадкового
+  дублювання одного трофею.
+*/
+
+function addHonour(
+  honours: PlayerHonour[],
+  honour: PlayerHonour
+) {
+  const alreadyExists =
+    honours.some(
+      (item) =>
+        item.key === honour.key
+    );
+
+  if (!alreadyExists) {
+    honours.push(honour);
+  }
+}
+
+/*
+  ========================================
+  ПЕРЕМОЖЕЦЬ ОДНОМАТЧЕВОГО ФІНАЛУ
   ========================================
 */
 
 function getSingleMatchWinner(
-  match:
-    | TrophyMatch
-    | undefined
+  match: MatchRow | undefined
 ) {
   if (
     !match ||
@@ -340,53 +249,40 @@ function getSingleMatchWinner(
     return match.away_id;
   }
 
-  /*
-    Якщо рахунок нічийний,
-    автоматично трофей
-    не присвоюємо.
-  */
-
   return null;
 }
 
 /*
   ========================================
-  ДВОМАТЧЕВИЙ ФІНАЛ
+  ПЕРЕМОЖЕЦЬ СЕРІЇ
   ========================================
+
+  Використовується для турнірів,
+  де фінал може складатися
+  з кількох матчів.
 */
 
-function getTwoLegWinner(
-  matches: TrophyMatch[]
+function getSeriesWinner(
+  matches: MatchRow[]
 ) {
-  const finished =
-    matches
-      .filter(isFinished)
-      .sort(
-        (a, b) =>
-          (a.leg ?? 0) -
-          (b.leg ?? 0)
-      );
-
-  if (
-    finished.length < 2
-  ) {
+  if (matches.length === 0) {
     return null;
   }
 
   const first =
-    finished[0];
+    matches[0];
 
-  const teamA =
+  const participantA =
     first.series_home_id ??
     first.home_id;
 
-  const teamB =
+  const participantB =
     first.series_away_id ??
     first.away_id;
 
   if (
-    !teamA ||
-    !teamB
+    !participantA ||
+    !participantB
   ) {
     return null;
   }
@@ -394,50 +290,64 @@ function getTwoLegWinner(
   let goalsA = 0;
   let goalsB = 0;
 
-  for (
-    const match of finished
-  ) {
+  let finishedMatches = 0;
+
+  for (const match of matches) {
+    if (!isFinished(match)) {
+      continue;
+    }
+
+    /*
+      A вдома
+    */
+
     if (
       match.home_id ===
-        teamA &&
+        participantA &&
       match.away_id ===
-        teamB
+        participantB
     ) {
       goalsA +=
         match.home_goals!;
 
       goalsB +=
         match.away_goals!;
+
+      finishedMatches += 1;
 
       continue;
     }
 
+    /*
+      B вдома
+    */
+
     if (
       match.home_id ===
-        teamB &&
+        participantB &&
       match.away_id ===
-        teamA
+        participantA
     ) {
       goalsA +=
         match.away_goals!;
 
       goalsB +=
         match.home_goals!;
+
+      finishedMatches += 1;
     }
   }
 
-  if (
-    goalsA >
-    goalsB
-  ) {
-    return teamA;
+  if (finishedMatches === 0) {
+    return null;
   }
 
-  if (
-    goalsB >
-    goalsA
-  ) {
-    return teamB;
+  if (goalsA > goalsB) {
+    return participantA;
+  }
+
+  if (goalsB > goalsA) {
+    return participantB;
   }
 
   return null;
@@ -445,7 +355,146 @@ function getTwoLegWinner(
 
 /*
   ========================================
-  ТРОФЕЇ ГРАВЦЯ
+  ПЕРЕМОЖЕЦЬ ФІНАЛУ
+  ========================================
+
+  Один матч:
+  переможець за рахунком.
+
+  Декілька матчів:
+  переможець за сумою.
+*/
+
+function getFinalWinner(
+  matches: MatchRow[]
+) {
+  const finished =
+    matches.filter(
+      isFinished
+    );
+
+  if (finished.length === 0) {
+    return null;
+  }
+
+  if (finished.length === 1) {
+    return getSingleMatchWinner(
+      finished[0]
+    );
+  }
+
+  return getSeriesWinner(
+    finished
+  );
+}
+
+/*
+  ========================================
+  ЗАВАНТАЖЕННЯ ВСІХ МАТЧІВ
+  ========================================
+
+  ВАЖЛИВО:
+
+  Supabase може обмежувати кількість
+  рядків одного запиту.
+
+  Тому не робимо один запит на всю
+  таблицю matches, а читаємо її
+  сторінками по 1000 рядків.
+
+  Це потрібно, щоб старі матчі
+  та старі трофеї не зникали,
+  коли база росте.
+*/
+
+async function getAllMatches(): Promise<
+  MatchRow[]
+> {
+  const PAGE_SIZE = 1000;
+
+  const allMatches:
+    MatchRow[] = [];
+
+  let from = 0;
+
+  while (true) {
+    const {
+      data,
+      error,
+    } = await supabaseAdmin
+      .from("matches")
+      .select(
+        `
+          id,
+          season,
+          competition,
+          division,
+          stage,
+          round,
+          leg,
+          participant_type,
+          home_id,
+          away_id,
+          home_goals,
+          away_goals,
+          status,
+          series_id,
+          series_home_id,
+          series_away_id,
+          is_tiebreak
+        `
+      )
+      .in(
+        "season",
+        [1, 2, 3, 4]
+      )
+      .order(
+        "id",
+        {
+          ascending: true,
+        }
+      )
+      .range(
+        from,
+        from +
+          PAGE_SIZE -
+          1
+      );
+
+    if (error) {
+      throw error;
+    }
+
+    const batch =
+      (data ??
+        []) as MatchRow[];
+
+    allMatches.push(
+      ...batch
+    );
+
+    /*
+      Якщо повернулося менше
+      ніж PAGE_SIZE —
+      це остання сторінка.
+    */
+
+    if (
+      batch.length <
+      PAGE_SIZE
+    ) {
+      break;
+    }
+
+    from += PAGE_SIZE;
+  }
+
+  return allMatches;
+}
+
+/*
+  ========================================
+  ОСНОВНА ФУНКЦІЯ
   ========================================
 */
 
@@ -461,138 +510,63 @@ export async function getPlayerHonours(
     ========================================
   */
 
-  const {
-    data: matchesData,
-    error: matchesError,
-  } = await supabase
-    .from("matches")
-    .select(
-      `
-        id,
-        season,
-        competition,
-        division,
-        stage,
-        round,
-        leg,
-        participant_type,
-        home_id,
-        away_id,
-        home_goals,
-        away_goals,
-        status,
-        series_id,
-        series_home_id,
-        series_away_id,
-        is_tiebreak
-      `
-    );
+  let matches:
+    MatchRow[] = [];
 
-  if (matchesError) {
+  try {
+    matches =
+      await getAllMatches();
+  } catch (error) {
     console.error(
       "PLAYER HONOURS MATCHES ERROR:",
-      matchesError
+      error
     );
 
     return [];
   }
 
-  const matches =
-    (
-      matchesData ??
-      []
-    ) as TrophyMatch[];
-
-  /*
-    ========================================
-    CO-OP КОМАНДИ
-    ========================================
-  */
-
-  const {
-    data: coopTeamsData,
-    error: coopTeamsError,
-  } = await supabase
-    .from("coop_teams")
-    .select(
-      `
-        id,
-        season,
-        name,
-        player_1_id,
-        player_2_id
-      `
-    );
-
-  if (coopTeamsError) {
-    console.error(
-      "PLAYER HONOURS COOP ERROR:",
-      coopTeamsError
-    );
-  }
-
-  const coopTeams =
-    (
-      coopTeamsData ??
-      []
-    ) as CoopTeam[];
-
   /*
     ========================================
     1. ЧЕМПІОНИ ДИВІЗІОНІВ
-
-    Трофей присвоюється тільки тоді,
-    коли в базі є повний календар
-    і всі матчі завершені.
     ========================================
+
+    Чемпіон визначається автоматично
+    з турнірної таблиці.
+
+    Трофей присвоюємо тільки після
+    завершення всього дивізіону.
+
+    Для двоколового чемпіонату:
+
+    N * (N - 1)
+
+    16 учасників:
+    16 * 15 = 240 матчів.
   */
 
-  const seasons:
-    SeasonNumber[] = [
-      1,
-      2,
-      3,
-      4,
-    ];
-
-  for (
-    const season of seasons
-  ) {
-    const divisions =
-      getAvailableDivisions(
-        season
-      );
+  for (const season of seasons) {
+    const divisions:
+      DivisionNumber[] =
+      season === 1
+        ? [1, 2, 3]
+        : [1, 2, 3, 4];
 
     for (
-      const division of divisions
+      const division of
+        divisions
     ) {
-      const playerIds =
+      const participantIds =
         getDivisionPlayers(
           season,
           division
         );
 
       if (
-        !playerIds.includes(
-          playerId
-        )
+        participantIds.length <
+        2
       ) {
         continue;
       }
-
-      /*
-        Один круг:
-        кожен грає з кожним один раз.
-      */
-
-      const expectedMatches =
-        (
-          playerIds.length *
-          (
-            playerIds.length -
-            1
-          )
-        ) / 2;
 
       const divisionMatches =
         matches.filter(
@@ -605,203 +579,322 @@ export async function getPlayerHonours(
               division
         );
 
+      const expectedMatches =
+        participantIds.length *
+        (
+          participantIds.length -
+          1
+        );
+
+      /*
+        Сезон ще не завершено.
+      */
+
       if (
-        divisionMatches.length !==
+        divisionMatches.length <
         expectedMatches
       ) {
         continue;
       }
 
-      if (
-        !divisionMatches.every(
+      const allFinished =
+        divisionMatches.every(
           isFinished
-        )
-      ) {
+        );
+
+      if (!allFinished) {
         continue;
       }
 
-      const leagueMatches:
-        LeagueMatch[] =
-        divisionMatches.map(
-          (match) => ({
-            id: match.id,
-
-            round:
-              match.round ??
-              undefined,
-
-            home:
-              match.home_id,
-
-            away:
-              match.away_id,
-
-            homeGoals:
-              match.home_goals!,
-
-            awayGoals:
-              match.away_goals!,
-          })
-        );
-
       const standings =
-        calculateStandings(
-          playerIds,
-          leagueMatches
-        );
+        buildStandings({
+          participantIds,
 
-      const champion =
-        standings[0];
+          matches:
+            divisionMatches.map(
+              (match) => ({
+                home_id:
+                  match.home_id,
+
+                away_id:
+                  match.away_id,
+
+                home_goals:
+                  match.home_goals,
+
+                away_goals:
+                  match.away_goals,
+
+                status:
+                  match.status,
+              })
+            ),
+
+          format:
+            "division-qualification",
+        });
+
+      const championId =
+        standings[0]?.playerId;
 
       if (
-        champion?.playerId ===
+        championId ===
         playerId
       ) {
-        honours.push({
-          key:
-            `s${season}-division-${division}`,
+        addHonour(
+          honours,
+          {
+            key:
+              `season-${season}-division-${division}`,
 
-          season,
+            season,
 
-          competition:
-            `division-${division}`,
+            category:
+              "division",
 
-          title:
-            `Чемпіон ${division} Дивізіону`,
-
-          category:
-            "division",
-        });
+            title:
+              `${division} Дивізіон`,
+          }
+        );
       }
     }
   }
 
   /*
     ========================================
-    2. ОДНОМАТЧЕВІ ФІНАЛИ
-
-    - Кубки дивізіонів
-    - ЛЧ
-    - ЛЄ
-    - ЛК
-    - Суперкубок
+    2. КУБКИ ДИВІЗІОНІВ
     ========================================
   */
 
-  const singleFinalCompetitions =
-    [
-      "champions-league",
-      "europa-league",
-      "conference-league",
-      "european-super-cup",
-      "division-1-cup",
-      "division-2-cup",
-      "division-3-cup",
-      "division-4-cup",
-    ];
+  const divisionCups = [
+    {
+      competition:
+        "division-1-cup",
 
-  for (
-    const season of seasons
-  ) {
+      title:
+        "Кубок 1 Дивізіону",
+    },
+
+    {
+      competition:
+        "division-2-cup",
+
+      title:
+        "Кубок 2 Дивізіону",
+    },
+
+    {
+      competition:
+        "division-3-cup",
+
+      title:
+        "Кубок 3 Дивізіону",
+    },
+
+    {
+      competition:
+        "division-4-cup",
+
+      title:
+        "Кубок 4 Дивізіону",
+    },
+  ];
+
+  for (const season of seasons) {
     for (
-      const competition of
-        singleFinalCompetitions
+      const cup of
+        divisionCups
     ) {
-      let finalMatches =
+      const finalMatches =
         matches.filter(
           (match) =>
             match.season ===
               season &&
             match.competition ===
-              competition &&
+              cup.competition &&
             match.stage ===
               "final"
         );
 
-      /*
-        Суперкубок може бути
-        просто одним матчем
-        без stage=final.
-      */
-
-      if (
-        competition ===
-          "european-super-cup" &&
-        finalMatches.length ===
-          0
-      ) {
-        finalMatches =
-          matches.filter(
-            (match) =>
-              match.season ===
-                season &&
-              match.competition ===
-                competition
-          );
-      }
-
-      if (
-        finalMatches.length !==
-        1
-      ) {
-        continue;
-      }
-
-      const winner =
-        getSingleMatchWinner(
-          finalMatches[0]
+      const winnerId =
+        getFinalWinner(
+          finalMatches
         );
 
       if (
-        winner !==
+        winnerId !==
         playerId
       ) {
         continue;
       }
 
-      honours.push({
-        key:
-          `s${season}-${competition}`,
+      addHonour(
+        honours,
+        {
+          key:
+            `season-${season}-${cup.competition}`,
 
-        season,
+          season,
 
-        competition,
+          category:
+            "cup",
 
-        title:
-          getCompetitionTitle(
-            competition
-          ),
-
-        category:
-          getCategory(
-            competition
-          ),
-      });
+          title:
+            cup.title,
+        }
+      );
     }
   }
 
   /*
     ========================================
-    3. IRON CO-OP CUP
-
-    Фінал двоматчевий.
-    Трофей отримують обидва
-    гравці команди-переможця.
+    3. ЄВРОКУБКИ
     ========================================
   */
 
-  for (
-    const season of seasons
-  ) {
+  const europeanCups = [
+    {
+      competition:
+        "champions-league",
+
+      title:
+        "Ліга чемпіонів",
+    },
+
+    {
+      competition:
+        "europa-league",
+
+      title:
+        "Ліга Європи",
+    },
+
+    {
+      competition:
+        "conference-league",
+
+      title:
+        "Ліга конференцій",
+    },
+  ];
+
+  for (const season of seasons) {
+    for (
+      const cup of
+        europeanCups
+    ) {
+      const finalMatches =
+        matches.filter(
+          (match) =>
+            match.season ===
+              season &&
+            match.competition ===
+              cup.competition &&
+            match.stage ===
+              "final"
+        );
+
+      const winnerId =
+        getFinalWinner(
+          finalMatches
+        );
+
+      if (
+        winnerId !==
+        playerId
+      ) {
+        continue;
+      }
+
+      addHonour(
+        honours,
+        {
+          key:
+            `season-${season}-${cup.competition}`,
+
+          season,
+
+          category:
+            "europe",
+
+          title:
+            cup.title,
+        }
+      );
+    }
+  }
+
+  /*
+    ========================================
+    4. СУПЕРКУБОК ЄВРОПИ
+    ========================================
+  */
+
+  for (const season of seasons) {
     const finalMatches =
       matches.filter(
         (match) =>
           match.season ===
             season &&
           match.competition ===
-            "iron-coop-cup" &&
+            "european-super-cup" &&
           match.stage ===
             "final"
+      );
+
+    const winnerId =
+      getFinalWinner(
+        finalMatches
+      );
+
+    if (
+      winnerId !==
+      playerId
+    ) {
+      continue;
+    }
+
+    addHonour(
+      honours,
+      {
+        key:
+          `season-${season}-european-super-cup`,
+
+        season,
+
+        category:
+          "super-cup",
+
+        title:
+          "Суперкубок Європи",
+      }
+    );
+  }
+
+  /*
+    ========================================
+    5. КУБОК АСОЦІАЦІЙ
+    ========================================
+
+    Переможцем є асоціація.
+
+    Трофей отримує кожен гравець,
+    який входить до складу
+    асоціації-переможця.
+  */
+
+  for (const season of seasons) {
+    const finalMatches =
+      matches.filter(
+        (match) =>
+          match.season ===
+            season &&
+          match.competition ===
+            "associations-cup" &&
+          match.stage ===
+            "final" &&
+          match.series_id !==
+            null
       );
 
     if (
@@ -811,141 +904,22 @@ export async function getPlayerHonours(
       continue;
     }
 
-    const seriesGroups =
-      new Map<
-        string,
-        TrophyMatch[]
-      >();
-
-    for (
-      const match of finalMatches
-    ) {
-      const key =
-        match.series_id ??
-        "final";
-
-      const current =
-        seriesGroups.get(
-          key
-        ) ?? [];
-
-      current.push(
-        match
-      );
-
-      seriesGroups.set(
-        key,
-        current
-      );
-    }
-
-    for (
-      const seriesMatches of
-        seriesGroups.values()
-    ) {
-      const winnerTeamId =
-        getTwoLegWinner(
-          seriesMatches
-        );
-
-      if (
-        !winnerTeamId
-      ) {
-        continue;
-      }
-
-      const winningTeam =
-        coopTeams.find(
-          (team) =>
-            team.season ===
-              season &&
-            (
-              team.id ===
-                winnerTeamId ||
-              team.name ===
-                winnerTeamId
-            )
-        );
-
-      if (!winningTeam) {
-        continue;
-      }
-
-      const playerWon =
-        winningTeam.player_1_id ===
-          playerId ||
-        winningTeam.player_2_id ===
-          playerId;
-
-      if (!playerWon) {
-        continue;
-      }
-
-      honours.push({
-        key:
-          `s${season}-iron-coop-cup`,
-
-        season,
-
-        competition:
-          "iron-coop-cup",
-
-        title:
-          "Iron Co-op Cup",
-
-        category:
-          "coop",
-      });
-    }
-  }
-
-  /*
-    ========================================
-    4. КУБОК АСОЦІАЦІЙ
-
-    Визначаємо переможця фінальної
-    серії тією ж логікою, яка вже
-    використовується турніром.
-    ========================================
-  */
-
-  for (
-    const season of seasons
-  ) {
-    const associationFinals =
-      matches.filter(
-        (match) =>
-          match.season ===
-            season &&
-          match.competition ===
-            "associations-cup" &&
-          match.stage ===
-            "final" &&
-          Boolean(
-            match.series_id
-          )
-      );
-
-    if (
-      associationFinals.length ===
-      0
-    ) {
-      continue;
-    }
+    /*
+      Групуємо матчі фіналу
+      по series_id.
+    */
 
     const seriesMap =
       new Map<
         string,
-        TrophyMatch[]
+        MatchRow[]
       >();
 
     for (
       const match of
-        associationFinals
+        finalMatches
     ) {
-      if (
-        !match.series_id
-      ) {
+      if (!match.series_id) {
         continue;
       }
 
@@ -965,17 +939,21 @@ export async function getPlayerHonours(
     }
 
     for (
-      const seriesMatches of
-        seriesMap.values()
+      const [
+        seriesId,
+        seriesMatches,
+      ] of seriesMap
     ) {
       const first =
         seriesMatches[0];
 
       const homeAssociationId =
-        first.series_home_id;
+        first
+          ?.series_home_id;
 
       const awayAssociationId =
-        first.series_away_id;
+        first
+          ?.series_away_id;
 
       if (
         !homeAssociationId ||
@@ -1013,8 +991,7 @@ export async function getPlayerHonours(
         );
 
       let winnerAssociationId:
-        | string
-        | null = null;
+        string | null = null;
 
       if (
         summary.winner ===
@@ -1040,14 +1017,12 @@ export async function getPlayerHonours(
 
       try {
         const associations =
-          getCompetitionAssociations(
-            {
-              season,
+          getCompetitionAssociations({
+            season,
 
-              competition:
-                "associations-cup",
-            }
-          );
+            competition:
+              "associations-cup",
+          });
 
         const championAssociation =
           associations.find(
@@ -1057,36 +1032,41 @@ export async function getPlayerHonours(
           );
 
         if (
-          !championAssociation ||
-          !Array.isArray(
-            championAssociation.players
-          ) ||
-          !championAssociation.players.includes(
-            playerId
-          )
+          !championAssociation
         ) {
           continue;
         }
 
-        honours.push({
-          key:
-            `s${season}-associations-cup`,
+        if (
+          !championAssociation
+            .players
+            .includes(
+              playerId
+            )
+        ) {
+          continue;
+        }
 
-          season,
+        addHonour(
+          honours,
+          {
+            key:
+              `season-${season}-associations-cup-${seriesId}`,
 
-          competition:
-            "associations-cup",
+            season,
 
-          title:
-            "Кубок асоціацій",
+            category:
+              "association",
 
-          category:
-            "association",
-        });
+            title:
+              "Кубок асоціацій",
+          }
+        );
       } catch {
         /*
-          У сезоні немає
-          коректних даних асоціацій.
+          У цьому сезоні
+          Кубка асоціацій
+          може не бути.
         */
       }
     }
@@ -1094,22 +1074,150 @@ export async function getPlayerHonours(
 
   /*
     ========================================
-    БЕЗ ДУБЛІВ
+    6. IRON CO-OP CUP
     ========================================
+
+    Переможцем є команда з 2 гравців.
+
+    Трофей отримують обидва
+    члени команди-переможця.
   */
 
-  return Array.from(
-    new Map(
-      honours.map(
-        (honour) => [
-          honour.key,
-          honour,
-        ]
-      )
-    ).values()
-  ).sort(
-    (a, b) =>
-      a.season -
-      b.season
+  const {
+    data: coopTeamsData,
+    error: coopTeamsError,
+  } = await supabaseAdmin
+    .from("coop_teams")
+    .select(
+      `
+        id,
+        name,
+        season,
+        player_1_id,
+        player_2_id
+      `
+    );
+
+  if (coopTeamsError) {
+    console.error(
+      "PLAYER HONOURS COOP TEAMS ERROR:",
+      coopTeamsError
+    );
+  }
+
+  const coopTeams =
+    (coopTeamsData ??
+      []) as CoopTeamRow[];
+
+  for (const season of seasons) {
+    const finalMatches =
+      matches.filter(
+        (match) =>
+          match.season ===
+            season &&
+          match.competition ===
+            "iron-coop-cup" &&
+          match.stage ===
+            "final"
+      );
+
+    if (
+      finalMatches.length ===
+      0
+    ) {
+      continue;
+    }
+
+    const winnerTeamRef =
+      getFinalWinner(
+        finalMatches
+      );
+
+    if (!winnerTeamRef) {
+      continue;
+    }
+
+    /*
+      У matches команда може
+      зберігатися як через ID,
+      так і через name.
+
+      Підтримуємо обидва варіанти.
+    */
+
+    const winnerTeam =
+      coopTeams.find(
+        (team) =>
+          team.season ===
+            season &&
+          (
+            team.id ===
+              winnerTeamRef ||
+            team.name ===
+              winnerTeamRef
+          )
+      );
+
+    if (!winnerTeam) {
+      continue;
+    }
+
+    const playerWon =
+      winnerTeam.player_1_id ===
+        playerId ||
+      winnerTeam.player_2_id ===
+        playerId;
+
+    if (!playerWon) {
+      continue;
+    }
+
+    addHonour(
+      honours,
+      {
+        key:
+          `season-${season}-iron-coop-cup`,
+
+        season,
+
+        category:
+          "coop",
+
+        title:
+          "Iron Co-op Cup",
+      }
+    );
+  }
+
+  /*
+    ========================================
+    СОРТУВАННЯ
+    ========================================
+
+    Нові сезони зверху.
+
+    Усередині сезону —
+    за назвою трофею.
+  */
+
+  honours.sort(
+    (a, b) => {
+      if (
+        a.season !==
+        b.season
+      ) {
+        return (
+          b.season -
+          a.season
+        );
+      }
+
+      return a.title.localeCompare(
+        b.title,
+        "uk"
+      );
+    }
   );
+
+  return honours;
 }
