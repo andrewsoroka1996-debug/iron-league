@@ -1,4 +1,5 @@
 import GroupStagePage from "../../../components/GroupStagePage";
+import EuropeanCupCalendar from "../../../components/EuropeanCupCalendar";
 
 type PageProps = {
   searchParams: Promise<{
@@ -9,19 +10,33 @@ type PageProps = {
 export default async function Page({
   searchParams,
 }: PageProps) {
-  const params = await searchParams;
+  const params =
+    await searchParams;
 
-  const requestedSeason = Number(params.season);
+  const requestedSeason =
+    Number(params.season);
 
   const season =
-    requestedSeason >= 1 && requestedSeason <= 4
-      ? (requestedSeason as 1 | 2 | 3 | 4)
+    requestedSeason >= 1 &&
+    requestedSeason <= 4
+      ? (requestedSeason as
+          | 1
+          | 2
+          | 3
+          | 4)
       : 3;
 
   return (
-    <GroupStagePage
-      competition="championsLeague"
-      season={season}
-    />
+    <>
+      <GroupStagePage
+        competition="championsLeague"
+        season={season}
+      />
+
+      <EuropeanCupCalendar
+        season={season}
+        competition="champions-league"
+      />
+    </>
   );
 }
