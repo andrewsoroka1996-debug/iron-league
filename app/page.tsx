@@ -30,6 +30,12 @@ const currentSeason = 3 as const;
 
 const tournamentCards = [
   {
+  id: "season-qualification",
+  name: "Кваліфікація",
+  short: "КВ",
+  href: "/tournaments/qualification",
+},
+  {
     id: "champions-league",
     name: "Ліга чемпіонів",
     short: "ЛЧ",
