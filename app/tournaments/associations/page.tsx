@@ -8,6 +8,7 @@ import { season2AssociationsCup } from "../../../data/seasons/season-2-associati
 import { season3 } from "../../../data/seasons/season-3";
 
 import AssociationCupPlayoffBracket from "../../../components/AssociationCupPlayoffBracket";
+import AssociationCupCalendar from "../../../components/AssociationCupCalendar";
 
 type SeasonNumber = 2 | 3;
 
@@ -310,9 +311,13 @@ export default function AssociationsPage() {
         </div>
       </section>
 
+      <AssociationCupCalendar
+        season={season}
+      />
+
       {/* PLAYOFF BRACKET */}
 
-<section className="mx-auto max-w-7xl px-6 py-16">
+      <section className="mx-auto max-w-7xl px-6 py-16">
   <div className="mb-8">
     <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
       Кубок асоціацій

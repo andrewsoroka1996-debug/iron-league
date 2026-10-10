@@ -3,34 +3,34 @@ export const season2EuropaLeague = {
   competition: "europa-league",
 
   groups: {
-    "1": [
-      "canb14",
-      "kol3nbka",
-      "antidemon39",
-      "arthurchamp07",
-    ],
+  A: [
+    "canb14",
+    "kol3nbka",
+    "antidemon39",
+    "arthurchamp07",
+  ],
 
-    "2": [
-      "awp-fun",
-      "vovamonte",
-      "4ydeca",
-      "ruslanuapes",
-    ],
+  B: [
+    "awp-fun",
+    "vovamonte",
+    "4ydeca",
+    "ruslanuapes",
+  ],
 
-    "3": [
-      "no-stress23",
-      "vladiken7",
-      "olejose11",
-      "as0910",
-    ],
+  C: [
+    "no-stress23",
+    "vladiken7",
+    "olejose11",
+    "as0910",
+  ],
 
-    "4": [
-      "soga",
-      "zidane4423",
-      "verhor28",
-      "v0id-ex",
-    ],
-  },
+  D: [
+    "soga",
+    "zidane4423",
+    "verhor28",
+    "v0id-ex",
+  ],
+},
 
   playoffs: {
     roundOf16: [
