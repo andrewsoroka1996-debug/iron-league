@@ -1,21 +1,7 @@
 import { players } from "../../../data/players";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
 
-import { season3 } from "../../../data/seasons/season-3";
-import { season4 } from "../../../data/seasons/season-4";
-
-import DivisionCupPlayoffBracket from "../../../components/DivisionCupPlayoffBracket";
-
-type SeasonNumber =
-  | 1
-  | 2
-  | 3
-  | 4;
-
-type DivisionCupCompetition =
-  | "division-1-cup"
-  | "division-2-cup"
-  | "division-3-cup"
-  | "division-4-cup";
+type SeasonNumber = 1 | 2 | 3 | 4;
 
 type PageProps = {
   searchParams: Promise<{
@@ -23,17 +9,356 @@ type PageProps = {
   }>;
 };
 
-type CupData = {
-  number: 1 | 2 | 3 | 4;
+type CupMatch = {
+  id: string;
 
-  name: string;
+  competition: string;
+  division: number | null;
 
-  competition:
-    DivisionCupCompetition;
+  stage: string | null;
+  round: number | null;
+  leg: number | null;
 
-  playerIds:
-    readonly string[];
+  home_id: string;
+  away_id: string;
+
+  home_goals: number | null;
+  away_goals: number | null;
+
+  status: string;
 };
+
+/*
+  ========================================
+  PLAYER NAME
+  ========================================
+*/
+
+function getPlayerName(
+  playerId: string
+) {
+  return (
+    players.find(
+      (player) =>
+        player.id === playerId
+    )?.nickname ?? playerId
+  );
+}
+
+/*
+  ========================================
+  STAGE TITLE
+  ========================================
+*/
+
+function getStageTitle(
+  stage: string
+) {
+  if (
+    stage === "round-of-16"
+  ) {
+    return "1/8 фіналу";
+  }
+
+  if (
+    stage === "quarterfinal"
+  ) {
+    return "1/4 фіналу";
+  }
+
+  if (
+    stage === "semifinal"
+  ) {
+    return "1/2 фіналу";
+  }
+
+  if (
+    stage === "final"
+  ) {
+    return "Фінал";
+  }
+
+  return stage;
+}
+
+/*
+  ========================================
+  STAGE ORDER
+  ========================================
+*/
+
+function getStageOrder(
+  stage: string | null
+) {
+  if (
+    stage === "round-of-16"
+  ) {
+    return 1;
+  }
+
+  if (
+    stage === "quarterfinal"
+  ) {
+    return 2;
+  }
+
+  if (
+    stage === "semifinal"
+  ) {
+    return 3;
+  }
+
+  if (
+    stage === "final"
+  ) {
+    return 4;
+  }
+
+  return 99;
+}
+
+/*
+  ========================================
+  MATCH CARD
+  ========================================
+*/
+
+function MatchCard({
+  match,
+  season,
+}: {
+  match: CupMatch;
+  season: SeasonNumber;
+}) {
+  const finished =
+    match.status ===
+      "finished" &&
+    match.home_goals !==
+      null &&
+    match.away_goals !==
+      null;
+
+  const homeWinner =
+    finished &&
+    match.home_goals! >
+      match.away_goals!;
+
+  const awayWinner =
+    finished &&
+    match.away_goals! >
+      match.home_goals!;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-[#081321]">
+      {/* HOME */}
+
+      <div
+        className={`flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 ${
+          homeWinner
+            ? "bg-blue-500/15"
+            : ""
+        }`}
+      >
+        <div
+          className={`h-5 w-1 shrink-0 rounded-full ${
+            homeWinner
+              ? "bg-blue-400"
+              : "bg-transparent"
+          }`}
+        />
+
+        <a
+          href={`/players/${match.home_id}?season=${season}`}
+          className={`min-w-0 flex-1 truncate font-bold transition hover:text-blue-300 ${
+            homeWinner
+              ? "text-white"
+              : "text-white/80"
+          }`}
+        >
+          {getPlayerName(
+            match.home_id
+          )}
+        </a>
+
+        <div
+          className={`w-8 text-right text-lg font-black ${
+            homeWinner
+              ? "text-blue-300"
+              : "text-white"
+          }`}
+        >
+          {finished
+            ? match.home_goals
+            : "—"}
+        </div>
+      </div>
+
+      {/* AWAY */}
+
+      <div
+        className={`flex items-center gap-3 px-4 py-3 ${
+          awayWinner
+            ? "bg-blue-500/15"
+            : ""
+        }`}
+      >
+        <div
+          className={`h-5 w-1 shrink-0 rounded-full ${
+            awayWinner
+              ? "bg-blue-400"
+              : "bg-transparent"
+          }`}
+        />
+
+        <a
+          href={`/players/${match.away_id}?season=${season}`}
+          className={`min-w-0 flex-1 truncate font-bold transition hover:text-blue-300 ${
+            awayWinner
+              ? "text-white"
+              : "text-white/80"
+          }`}
+        >
+          {getPlayerName(
+            match.away_id
+          )}
+        </a>
+
+        <div
+          className={`w-8 text-right text-lg font-black ${
+            awayWinner
+              ? "text-blue-300"
+              : "text-white"
+          }`}
+        >
+          {finished
+            ? match.away_goals
+            : "—"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/*
+  ========================================
+  BRACKET
+  ========================================
+*/
+
+function CupBracket({
+  matches,
+  season,
+}: {
+  matches: CupMatch[];
+  season: SeasonNumber;
+}) {
+  const stages = [
+    "round-of-16",
+    "quarterfinal",
+    "semifinal",
+    "final",
+  ];
+
+  return (
+    <div className="overflow-x-auto pb-3">
+      <div className="grid min-w-[1080px] grid-cols-4 gap-6">
+        {stages.map(
+          (stage) => {
+            const stageMatches =
+              matches
+                .filter(
+                  (match) =>
+                    match.stage ===
+                    stage
+                )
+                .sort(
+                  (a, b) =>
+                    (a.round ??
+                      0) -
+                    (b.round ??
+                      0)
+                );
+
+            return (
+              <div
+                key={stage}
+                className="min-w-0"
+              >
+                {/* STAGE HEADER */}
+
+                <div className="mb-5 border-b border-white/10 pb-3">
+                  <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">
+                    {getStageTitle(
+                      stage
+                    )}
+                  </div>
+
+                  <div className="mt-1 text-xs text-white/35">
+                    {
+                      stageMatches.length
+                    }{" "}
+                    {stageMatches.length ===
+                    1
+                      ? "матч"
+                      : "матчів"}
+                  </div>
+                </div>
+
+                {/* MATCHES */}
+
+                {stageMatches.length >
+                0 ? (
+                  <div
+                    className={
+                      stage ===
+                      "round-of-16"
+                        ? "space-y-4"
+                        : stage ===
+                            "quarterfinal"
+                          ? "space-y-10 pt-8"
+                          : stage ===
+                              "semifinal"
+                            ? "space-y-24 pt-28"
+                            : "pt-64"
+                    }
+                  >
+                    {stageMatches.map(
+                      (
+                        match
+                      ) => (
+                        <MatchCard
+                          key={
+                            match.id
+                          }
+                          match={
+                            match
+                          }
+                          season={
+                            season
+                          }
+                        />
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-8 text-center text-sm text-white/25">
+                    Даних немає
+                  </div>
+                )}
+              </div>
+            );
+          }
+        )}
+      </div>
+    </div>
+  );
+}
+
+/*
+  ========================================
+  PAGE
+  ========================================
+*/
 
 export default async function DivisionCupsPage({
   searchParams,
@@ -42,9 +367,7 @@ export default async function DivisionCupsPage({
     await searchParams;
 
   const requestedSeason =
-    Number(
-      params.season
-    );
+    Number(params.season);
 
   const season: SeasonNumber =
     requestedSeason >= 1 &&
@@ -54,115 +377,185 @@ export default async function DivisionCupsPage({
 
   /*
     ========================================
-    ДАНІ СЕЗОНУ
+    CUP NUMBERS
+
+    Season 1:
+    only Divisions 1-3 existed.
+
+    Seasons 2-4:
+    Divisions 1-4.
     ========================================
   */
 
-  const seasonData =
-    season === 3
-      ? season3
-      : season === 4
-        ? season4
-        : null;
+  const cupNumbers =
+    season === 1
+      ? [1, 2, 3]
+      : [1, 2, 3, 4];
 
-  /*
-    ========================================
-    КУБКИ
-    ========================================
-  */
-
-  const cups: CupData[] =
-    seasonData
-      ? [
-          {
-            number: 1,
-
-            name:
-              "Кубок 1 Дивізіону",
-
-            competition:
-              "division-1-cup",
-
-            playerIds:
-              seasonData
-                .division1Cup
-                .players as readonly string[],
-          },
-
-          {
-            number: 2,
-
-            name:
-              "Кубок 2 Дивізіону",
-
-            competition:
-              "division-2-cup",
-
-            playerIds:
-              seasonData
-                .division2Cup
-                .players as readonly string[],
-          },
-
-          {
-            number: 3,
-
-            name:
-              "Кубок 3 Дивізіону",
-
-            competition:
-              "division-3-cup",
-
-            playerIds:
-              seasonData
-                .division3Cup
-                .players as readonly string[],
-          },
-
-          {
-            number: 4,
-
-            name:
-              "Кубок 4 Дивізіону",
-
-            competition:
-              "division-4-cup",
-
-            playerIds:
-              seasonData
-                .division4Cup
-                .players as readonly string[],
-          },
-        ]
-      : [];
-
-  /*
-    ========================================
-    ЗАГАЛЬНА КІЛЬКІСТЬ УЧАСНИКІВ
-    ========================================
-  */
-
-  const totalPlayers =
-    cups.reduce(
-      (
-        total,
-        cup
-      ) =>
-        total +
-        cup.playerIds.length,
-      0
+  const competitionIds =
+    cupNumbers.map(
+      (number) =>
+        `division-${number}-cup`
     );
 
   /*
     ========================================
-    СТАТУС СЕЗОНУ
+    LOAD MATCHES
+    ========================================
+  */
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("matches")
+    .select(
+      `
+        id,
+        competition,
+        division,
+        stage,
+        round,
+        leg,
+        home_id,
+        away_id,
+        home_goals,
+        away_goals,
+        status
+      `
+    )
+    .eq(
+      "season",
+      season
+    )
+    .in(
+      "competition",
+      competitionIds
+    );
+
+  const allMatches =
+    ((data ?? []) as CupMatch[])
+      .sort(
+        (a, b) => {
+          const competitionCompare =
+            a.competition.localeCompare(
+              b.competition
+            );
+
+          if (
+            competitionCompare !==
+            0
+          ) {
+            return competitionCompare;
+          }
+
+          const stageCompare =
+            getStageOrder(
+              a.stage
+            ) -
+            getStageOrder(
+              b.stage
+            );
+
+          if (
+            stageCompare !== 0
+          ) {
+            return stageCompare;
+          }
+
+          return (
+            (a.round ?? 0) -
+            (b.round ?? 0)
+          );
+        }
+      );
+
+  /*
+    ========================================
+    CUP DATA
+    ========================================
+  */
+
+  const cups =
+    cupNumbers.map(
+      (number) => {
+        const competition =
+          `division-${number}-cup`;
+
+        const matches =
+          allMatches.filter(
+            (match) =>
+              match.competition ===
+              competition
+          );
+
+        const participantIds =
+          new Set<string>();
+
+        for (
+          const match of matches
+        ) {
+          participantIds.add(
+            match.home_id
+          );
+
+          participantIds.add(
+            match.away_id
+          );
+        }
+
+        return {
+          number,
+          competition,
+
+          name:
+            `Кубок ${number} Дивізіону`,
+
+          matches,
+
+          participantIds:
+            Array.from(
+              participantIds
+            ),
+        };
+      }
+    );
+
+  /*
+    ========================================
+    TOTAL PARTICIPANTS
+    ========================================
+  */
+
+  const allParticipantIds =
+    new Set<string>();
+
+  for (
+    const cup of cups
+  ) {
+    for (
+      const playerId of
+        cup.participantIds
+    ) {
+      allParticipantIds.add(
+        playerId
+      );
+    }
+  }
+
+  const totalPlayers =
+    allParticipantIds.size;
+
+  /*
+    ========================================
+    STATUS
     ========================================
   */
 
   const seasonStatus =
     season === 1 ||
     season === 2
-      ? "Архів — дані буде додано"
+      ? "Архів"
       : season === 3
         ? "Поточний сезон"
         : "Підготовка";
@@ -228,10 +621,10 @@ export default async function DivisionCupsPage({
           </h1>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/55">
-            Чотири окремі
-            турніри на вибування
-            для учасників
-            дивізіонів Iron League.
+            Окремі турніри на
+            вибування для
+            учасників дивізіонів
+            Iron League.
           </p>
 
           {/* SEASON SWITCHER */}
@@ -275,7 +668,7 @@ export default async function DivisionCupsPage({
             </div>
           </div>
 
-          {/* STATS */}
+          {/* SUMMARY */}
 
           <div className="mt-8 flex flex-wrap gap-3">
             <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
@@ -294,7 +687,9 @@ export default async function DivisionCupsPage({
               </span>
 
               <span className="ml-2 font-black">
-                4
+                {
+                  cupNumbers.length
+                }
               </span>
             </div>
 
@@ -338,95 +733,34 @@ export default async function DivisionCupsPage({
           </h2>
         </div>
 
-        {/* ARCHIVE */}
+        {/* DATABASE ERROR */}
 
-        {season === 1 ||
-        season === 2 ? (
-          <div className="rounded-3xl border border-white/10 bg-[#07101d] px-8 py-16 text-center">
-            <h3 className="text-3xl font-black">
-              Дані сезону ще
-              не додано
-            </h3>
-
-            <p className="mx-auto mt-4 max-w-xl leading-7 text-white/40">
-              Склади та сітки
-              Кубків дивізіонів
-              Сезону {season}{" "}
-              будуть внесені
-              пізніше.
-            </p>
-          </div>
-        ) : totalPlayers ===
-          0 ? (
-          /*
-            ==================================
-            НОВИЙ СЕЗОН БЕЗ СКЛАДІВ
-            ==================================
-          */
-
-          <div className="rounded-3xl border border-white/10 bg-[#07101d] px-8 py-16 text-center">
-            <h3 className="text-3xl font-black">
-              Склади ще не
-              сформовано
-            </h3>
-
-            <p className="mx-auto mt-4 max-w-xl leading-7 text-white/40">
-              Учасники Кубків
-              дивізіонів Сезону{" "}
-              {season} будуть
-              додані після
-              формування складів
-              нового сезону.
-            </p>
+        {error ? (
+          <div className="rounded-3xl border border-red-400/20 bg-red-500/10 px-8 py-12 text-center text-red-200">
+            Не вдалося
+            завантажити Кубки
+            дивізіонів.
           </div>
         ) : (
-          /*
-            ==================================
-            КУБКИ
-            ==================================
-          */
-
           <div className="space-y-10">
             {cups.map(
-              (cup) => {
-                const cupPlayers =
-                  cup.playerIds
-                    .map(
-                      (id) =>
-                        players.find(
-                          (
-                            player
-                          ) =>
-                            player.id ===
-                            id
-                        )
-                    )
-                    .filter(
-                      (
-                        player
-                      ): player is (typeof players)[number] =>
-                        player !==
-                        undefined
-                    );
+              (cup) => (
+                <article
+                  key={
+                    cup.number
+                  }
+                  className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-xl"
+                >
+                  {/* CUP HEADER */}
 
-                return (
-                  <div
-                    key={
-                      cup.number
-                    }
-                    className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-xl"
-                  >
-                    {/* DECORATION */}
-
-                    <div className="pointer-events-none absolute right-4 top-0 text-[110px] font-black text-white/[0.025]">
+                  <div className="relative border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-7 py-6">
+                    <div className="absolute right-5 top-0 text-[100px] font-black text-white/[0.025]">
                       {
                         cup.number
                       }
                     </div>
 
-                    {/* CUP HEADER */}
-
-                    <div className="relative border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-7 py-6">
+                    <div className="relative">
                       <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
                         Knockout
                         Tournament
@@ -438,90 +772,64 @@ export default async function DivisionCupsPage({
                         }
                       </h3>
 
-                      <div className="mt-3 text-sm text-white/40">
-                        {
-                          cupPlayers.length
-                        }{" "}
-                        учасників
+                      <div className="mt-3 flex flex-wrap gap-5 text-sm text-white/40">
+                        <span>
+                          {
+                            cup
+                              .participantIds
+                              .length
+                          }{" "}
+                          учасників
+                        </span>
+
+                        <span>
+                          {
+                            cup.matches
+                              .length
+                          }{" "}
+                          матчів
+                        </span>
                       </div>
                     </div>
+                  </div>
 
-                    {/* PLAYERS */}
+                  {/* CUP CONTENT */}
 
-                    <div className="relative">
-                      <div className="border-b border-white/10 px-7 py-5">
-                        <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/30">
-                          Учасники
-                        </div>
-                      </div>
-
-                      <div className="grid gap-px bg-white/5 sm:grid-cols-2 lg:grid-cols-4">
-                        {cupPlayers.map(
-                          (
-                            player,
-                            index
-                          ) => (
-                            <a
-                              key={
-                                player.id
-                              }
-                              href={`/players/${player.id}`}
-                              className="flex items-center gap-3 bg-[#07101d] px-5 py-4 transition hover:bg-white/[0.04]"
-                            >
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-xs font-black text-white/40">
-                                {index +
-                                  1}
-                              </div>
-
-                              <div className="min-w-0">
-                                <div className="truncate font-bold">
-                                  {
-                                    player.nickname
-                                  }
-                                </div>
-
-                                {player.account && (
-                                  <div className="mt-1 truncate text-xs text-white/35">
-                                    (
-                                    {
-                                      player.account
-                                    }
-                                    )
-                                  </div>
-                                )}
-                              </div>
-                            </a>
-                          )
-                        )}
-                      </div>
-                    </div>
-
-                    {/* PLAYOFF BRACKET */}
-
-                    <div className="relative border-t border-white/10 px-7 py-7">
-                      <div className="mb-5">
-                        <div className="text-xs font-bold uppercase tracking-[0.2em] text-blue-400">
-                          Турнірна
-                          сітка
-                        </div>
-
-                        <h4 className="mt-2 text-2xl font-black">
-                          Плей-оф
-                        </h4>
-                      </div>
-
-                      <DivisionCupPlayoffBracket
+                  <div className="p-5 md:p-7">
+                    {cup.matches
+                      .length >
+                    0 ? (
+                      <CupBracket
+                        matches={
+                          cup.matches
+                        }
                         season={
                           season
                         }
-                        competition={
-                          cup.competition
-                        }
                       />
-                    </div>
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-8 py-12 text-center">
+                        <div className="text-xl font-black">
+                          Дані цього
+                          кубка ще не
+                          додано
+                        </div>
+
+                        <div className="mt-3 text-sm text-white/35">
+                          Матчі{" "}
+                          {
+                            cup.name
+                          }{" "}
+                          Сезону{" "}
+                          {season} ще
+                          відсутні в
+                          базі.
+                        </div>
+                      </div>
+                    )}
                   </div>
-                );
-              }
+                </article>
+              )
             )}
           </div>
         )}
