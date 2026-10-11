@@ -1,7 +1,20 @@
 import { season4 } from "../../../data/seasons/season-4";
 
+import {
+  seasonCompetitions,
+} from "../../../data/competitions/season-competitions";
+
+import SeasonWinners from "../../../components/SeasonWinners";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+type TournamentCard = {
+  id: string;
+  category: string;
+  name: string;
+  href: string;
+};
 
 const playerIds = Array.from(
   new Set([
@@ -12,67 +25,186 @@ const playerIds = Array.from(
   ])
 );
 
-const tournaments = [
+function getTournamentCard(
+  competitionId: string
+): TournamentCard | null {
+  if (
+    competitionId ===
+      "season-qualification" ||
+    competitionId ===
+      "league-of-associations"
+  ) {
+    return null;
+  }
+
+  if (
+    /^division-[1-4]$/.test(
+      competitionId
+    )
+  ) {
+    return null;
+  }
+
+  if (
+    /^division-[1-4]-cup$/.test(
+      competitionId
+    )
+  ) {
+    return null;
+  }
+
+  if (
+    competitionId ===
+    "champions-league"
+  ) {
+    return {
+      id: competitionId,
+      category: "Єврокубок",
+      name: "Ліга чемпіонів",
+      href:
+        "/tournaments/champions-league?season=4",
+    };
+  }
+
+  if (
+    competitionId ===
+    "europa-league"
+  ) {
+    return {
+      id: competitionId,
+      category: "Єврокубок",
+      name: "Ліга Європи",
+      href:
+        "/tournaments/europa-league?season=4",
+    };
+  }
+
+  if (
+    competitionId ===
+    "conference-league"
+  ) {
+    return {
+      id: competitionId,
+      category: "Єврокубок",
+      name: "Ліга конференцій",
+      href:
+        "/tournaments/conference-league?season=4",
+    };
+  }
+
+  if (
+    competitionId ===
+    "european-super-cup"
+  ) {
+    return {
+      id: competitionId,
+      category: "Суперкубок",
+      name: "Суперкубок Європи",
+      href:
+        "/tournaments/european-super-cup?season=4",
+    };
+  }
+
+  if (
+    competitionId ===
+    "associations-cup"
+  ) {
+    return {
+      id: competitionId,
+      category: "Асоціації",
+      name: "Ліга Асоціацій",
+      href:
+        "/tournaments/associations?season=4",
+    };
+  }
+
+  if (
+    competitionId ===
+    "iron-coop-cup"
+  ) {
+    return {
+      id: competitionId,
+      category: "Co-op",
+      name: "Iron Co-op Cup",
+      href:
+        "/tournaments/coop-cup?season=4",
+    };
+  }
+
+  return null;
+}
+
+const competitions =
+  seasonCompetitions[4] ?? [];
+
+const hasDivisionCups =
+  competitions.some(
+    (competition) =>
+      /^division-[1-4]-cup$/.test(
+        competition.id
+      )
+  );
+
+const tournaments: TournamentCard[] = [
   {
+    id: "division-1",
     category: "Чемпіонат",
     name: "1 Дивізіон",
     href: "/divisions/1?season=4",
   },
+
   {
+    id: "division-2",
     category: "Чемпіонат",
     name: "2 Дивізіон",
     href: "/divisions/2?season=4",
   },
+
   {
+    id: "division-3",
     category: "Чемпіонат",
     name: "3 Дивізіон",
     href: "/divisions/3?season=4",
   },
+
   {
+    id: "division-4",
     category: "Чемпіонат",
     name: "4 Дивізіон",
     href: "/divisions/4?season=4",
   },
-  {
-    category: "Єврокубок",
-    name: "Ліга чемпіонів",
-    href: "/tournaments/champions-league?season=4",
-  },
-  {
-    category: "Єврокубок",
-    name: "Ліга Європи",
-    href: "/tournaments/europa-league?season=4",
-  },
-  {
-    category: "Єврокубок",
-    name: "Ліга конференцій",
-    href: "/tournaments/conference-league?season=4",
-  },
-  {
-    category: "Суперкубок",
-    name: "Суперкубок Європи",
-    href: "/tournaments/european-super-cup?season=4",
-  },
-  {
-    category: "Кубки",
-    name: "Кубки дивізіонів",
-    href: "/tournaments/division-cups?season=4",
-  },
-  {
-    category: "Командний турнір",
-    name: "Кубок асоціацій",
-    href: "/tournaments/associations?season=4",
-  },
-  {
-    category: "2 × 2",
-    name: "Iron Co-op Cup",
-    href: "/tournaments/coop-cup?season=4",
-  },
+
+  ...competitions
+    .map((competition) =>
+      getTournamentCard(
+        competition.id
+      )
+    )
+    .filter(
+      (
+        card
+      ): card is TournamentCard =>
+        card !== null
+    ),
+
+  ...(hasDivisionCups
+    ? [
+        {
+          id: "division-cups",
+          category: "Кубки",
+          name: "Кубки дивізіонів",
+          href:
+            "/tournaments/division-cups?season=4",
+        },
+      ]
+    : []),
 ];
 
 export default function Season4HistoryPage() {
   return (
     <main className="min-h-screen bg-[#030711] text-white">
+      {/* HEADER */}
+
       <header className="border-b border-white/10 bg-[#030711]/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <a
@@ -98,12 +230,14 @@ export default function Season4HistoryPage() {
 
           <a
             href="/history"
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300"
+            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
           >
             ← Усі сезони
           </a>
         </div>
       </header>
+
+      {/* HERO */}
 
       <section className="relative overflow-hidden border-b border-white/10">
         <div
@@ -118,7 +252,7 @@ export default function Season4HistoryPage() {
 
         <div className="relative mx-auto max-w-7xl px-6 py-20">
           <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
-            Майбутній сезон
+            Iron League
           </div>
 
           <h1 className="mt-4 text-5xl font-black sm:text-6xl">
@@ -126,11 +260,11 @@ export default function Season4HistoryPage() {
           </h1>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/45">
-            Підготовка до четвертого
-            сезону Iron League.
-            Склади та турніри будуть
-            наповнюватися перед його
-            стартом.
+            Майбутній сезон Iron League.
+            Склади, турніри та переможці
+            автоматично з'являтимуться
+            після формування і проведення
+            змагань.
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
@@ -177,30 +311,29 @@ export default function Season4HistoryPage() {
         </div>
       </section>
 
+      {/* TOURNAMENTS */}
+
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-          Структура сезону
+          Турніри
         </div>
 
         <h2 className="mt-3 text-4xl font-black">
           Сезон 4
         </h2>
 
-        <p className="mt-3 text-white/40">
-          Заплановані змагання
-          четвертого сезону.
-        </p>
-
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {tournaments.map(
             (tournament) => (
               <a
-                key={tournament.name}
+                key={tournament.id}
                 href={tournament.href}
-                className="group rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:border-blue-400/30"
+                className="group rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/30"
               >
                 <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-400">
-                  {tournament.category}
+                  {
+                    tournament.category
+                  }
                 </div>
 
                 <h3 className="mt-5 text-2xl font-black">
@@ -209,7 +342,7 @@ export default function Season4HistoryPage() {
 
                 <div className="mt-7 flex items-center justify-between border-t border-white/10 pt-5">
                   <span className="text-sm text-white/30">
-                    Підготовка
+                    Відкрити
                   </span>
 
                   <span className="text-blue-400">
@@ -222,6 +355,8 @@ export default function Season4HistoryPage() {
         </div>
       </section>
 
+      {/* HALL OF FAME */}
+
       <section className="border-t border-white/10 bg-white/[0.02]">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
@@ -232,20 +367,11 @@ export default function Season4HistoryPage() {
             Переможці сезону
           </h2>
 
-          <div className="mt-8 rounded-3xl border border-white/10 bg-[#07101d] p-8">
-            <h3 className="text-xl font-black">
-              Сезон ще не розпочався
-            </h3>
-
-            <p className="mt-3 leading-7 text-white/40">
-              Переможці Сезону 4
-              з'являться після
-              проведення відповідних
-              турнірів.
-            </p>
-          </div>
+          <SeasonWinners season={4} />
         </div>
       </section>
+
+      {/* FOOTER */}
 
       <footer className="border-t border-white/10 bg-[#02050b]">
         <div className="mx-auto flex max-w-7xl justify-between px-6 py-10">

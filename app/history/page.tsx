@@ -3,17 +3,17 @@ export const revalidate = 0;
 
 const seasons = [
   {
-    number: 1,
-    title: "Сезон 1",
-    status: "Дані буде додано",
-    href: "/history/season-1",
-  },
-  {
-    number: 2,
-    title: "Сезон 2",
-    status: "Дані буде додано",
-    href: "/history/season-2",
-  },
+  number: 1,
+  title: "Сезон 1",
+  status: "Архів",
+  href: "/history/season-1",
+},
+{
+  number: 2,
+  title: "Сезон 2",
+  status: "Архів",
+  href: "/history/season-2",
+},
   {
     number: 3,
     title: "Сезон 3",

@@ -1,10 +1,11 @@
 import "server-only";
 
 import { players } from "../data/players";
-
 import { season2Coefficients } from "../data/coefficients/season-2";
 
-import { getCompetitionAssociations } from "../data/competitions/get-competition-associations";
+import {
+  getSeasonAssociationSquads,
+} from "./association-squads";
 
 import {
   calculateCoefficients,
@@ -21,11 +22,20 @@ import {
   type AssociationRankLabel,
 } from "./association-ranks";
 
-import { supabaseAdmin } from "./supabase-admin";
+import {
+  supabaseAdmin,
+} from "./supabase-admin";
+
+/*
+  ========================================
+  TYPES
+  ========================================
+*/
 
 export type AssociationLeagueSeason =
   | 2
-  | 3;
+  | 3
+  | 4;
 
 export type AssociationCupPlacement =
   | "winner"
@@ -51,7 +61,8 @@ export type AssociationLeagueMember = {
     Скільки реально входить
     у рейтинг Асоціації.
 
-    Сезон 3:
+    Сезон 3+:
+
     R1 = 0.
   */
 
@@ -79,7 +90,8 @@ export type AssociationLeagueRow = {
     Сума внесків членів
     Асоціації.
 
-    Для Сезону 3:
+    Сезон 3+:
+
     R2 + R3 + R4 + R5 + R6.
   */
 
@@ -362,14 +374,29 @@ function getSeason2CoefficientMap() {
 
 /*
   ========================================
-  СЕЗОН 3
+  LIVE-СЕЗОНИ
 
-  LIVE-МАТЧІ ДЛЯ
-  ТАБЛИЦІ КОЕФІЦІЄНТІВ
+  Сезон 3 та наступні
   ========================================
 */
 
-async function loadSeason3CoefficientMatches() {
+type LiveAssociationLeagueSeason =
+  Exclude<
+    AssociationLeagueSeason,
+    2
+  >;
+
+/*
+  ========================================
+  LIVE-МАТЧІ ДЛЯ
+  КОЕФІЦІЄНТІВ
+  ========================================
+*/
+
+async function loadLiveCoefficientMatches(
+  season:
+    LiveAssociationLeagueSeason
+) {
   const PAGE_SIZE =
     1000;
 
@@ -408,7 +435,7 @@ async function loadSeason3CoefficientMatches() {
         `)
         .eq(
           "season",
-          3
+          season
         )
         .in(
           "competition",
@@ -459,20 +486,43 @@ async function loadSeason3CoefficientMatches() {
 /*
   ========================================
   LIVE-КОЕФІЦІЄНТИ
-  СЕЗОНУ 3
+
+  СЕЗОН 3+
   ========================================
 */
 
-async function getSeason3CoefficientMap() {
+async function getLiveCoefficientMap(
+  season:
+    LiveAssociationLeagueSeason
+) {
   const matches =
-    await loadSeason3CoefficientMatches();
+    await loadLiveCoefficientMatches(
+      season
+    );
+
+  /*
+    calculateCoefficients
+    вже є єдиним калькулятором
+    особистих коефіцієнтів.
+
+    Тут ми передаємо
+    реальний номер сезону.
+
+    Type cast потрібен лише
+    для сумісності з поточним
+    TypeScript-типом функції.
+  */
 
   const rows =
-    calculateCoefficients({
-      season: 3,
+    calculateCoefficients(
+      ({
+        season,
 
-      matches,
-    });
+        matches,
+      } as unknown) as Parameters<
+        typeof calculateCoefficients
+      >[0]
+    );
 
   const map =
     new Map<
@@ -594,9 +644,11 @@ type AssociationSeriesResult = {
   awayAssociationId:
     string;
 
-  winnerId: string;
+  winnerId:
+    string;
 
-  loserId: string;
+  loserId:
+    string;
 };
 
 function getStageSeriesResults(
@@ -949,7 +1001,8 @@ function assignBaseRanks(
     | null =
     null;
 
-  let previousRank = 0;
+  let previousRank =
+    0;
 
   return sorted.map(
     (
@@ -1033,7 +1086,8 @@ function assignLeagueRanks(
     | null =
     null;
 
-  let previousRank = 0;
+  let previousRank =
+    0;
 
   return sorted.map(
     (
@@ -1094,40 +1148,46 @@ export async function getAssociationLeague(
   */
 
   const associations =
-    getCompetitionAssociations({
-      season,
-
-      competition:
-        "associations-cup",
-    });
+    await getSeasonAssociationSquads(
+      season
+    );
 
   /*
     ========================================
     КОЕФІЦІЄНТИ
     ========================================
+
+    Сезон 2:
+    архівна таблиця.
+
+    Сезон 3+:
+    live-коефіцієнти.
   */
 
   const coefficientMap =
     season === 2
       ? getSeason2CoefficientMap()
-      : await getSeason3CoefficientMap();
+      : await getLiveCoefficientMap(
+          season
+        );
 
   /*
     ========================================
     РАНГИ
-
-    Для Сезону 3 беремо
-    зафіксований snapshot
-    з Supabase.
-
-    Сезон 2 не використовуємо.
     ========================================
+
+    Сезон 2:
+    рангів немає.
+
+    Сезон 3+:
+    snapshot із
+    association_seed_ranks.
   */
 
   const rankMap =
-    season === 3
+    season >= 3
       ? await getSeasonAssociationRankMap(
-          3
+          season
         )
       : new Map();
 
@@ -1167,13 +1227,15 @@ export async function getAssociationLeague(
                 ) ?? 0;
 
               /*
-                Для Сезону 3
-                шукаємо зафіксований
-                ранг у базі.
+                Сезон 3+:
+
+                беремо
+                зафіксований
+                ранг R1–R6.
               */
 
               const seed =
-                season === 3
+                season >= 3
                   ? rankMap.get(
                       playerId
                     )
@@ -1187,18 +1249,22 @@ export async function getAssociationLeague(
                   : null;
 
               /*
-                Головне правило
-                Сезону 3:
+                Головне правило:
 
-                R1 залишається
-                повноцінним гравцем,
-                але його внесок
-                у рейтинг Асоціації = 0.
+                Сезон 3+
+                R1 має вагу 0
+                у рейтингу Асоціації.
+
+                Сам особистий
+                коефіцієнт R1
+                при цьому
+                не змінюється.
               */
 
               const associationCoefficient =
-                season === 3 &&
-                seed?.rank === 1
+                season >= 3 &&
+                seed?.rank ===
+                  1
                   ? 0
                   : coefficient;
 
@@ -1232,7 +1298,8 @@ export async function getAssociationLeague(
               member
             ) =>
               sum +
-              member.associationCoefficient,
+              member
+                .associationCoefficient,
             0
           );
 
@@ -1338,8 +1405,7 @@ export async function getAssociationLeague(
   */
 
   const cupComplete =
-    rows.length >
-      0 &&
+    rows.length > 0 &&
     rows.every(
       (row) =>
         row.cupPlacement !==

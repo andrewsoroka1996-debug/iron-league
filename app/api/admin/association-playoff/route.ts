@@ -4,9 +4,9 @@ import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 import { calculateAssociationSeries } from "../../../../lib/association-series";
 
-import { getCompetitionAssociations } from "../../../../data/competitions/get-competition-associations";
-
-import type { SeasonNumber } from "../../../../data/competitions/season-competitions";
+import {
+  getSeasonAssociationSquads,
+} from "../../../../lib/association-squads";
 
 type Match = {
   id: string;
@@ -162,13 +162,9 @@ export async function GET(
     */
 
     const associations =
-      getCompetitionAssociations({
-        season:
-          season as SeasonNumber,
-
-        competition:
-          "associations-cup",
-      });
+  await getSeasonAssociationSquads(
+    season
+  );
 
     function getAssociationName(
       associationId:

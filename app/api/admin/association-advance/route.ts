@@ -15,8 +15,8 @@ import {
 } from "../../../../lib/association-ranks";
 
 import {
-  getCompetitionAssociations,
-} from "../../../../data/competitions/get-competition-associations";
+  getSeasonAssociationSquads,
+} from "../../../../lib/association-squads";
 
 type AssociationStage =
   | "quarterfinal"
@@ -431,13 +431,9 @@ async function createSeries({
   */
 
   const associations =
-    getCompetitionAssociations({
-      season:
-        season as 3,
-
-      competition:
-        "associations-cup",
-    });
+  await getSeasonAssociationSquads(
+    season
+  );
 
   const homeAssociation =
     associations.find(

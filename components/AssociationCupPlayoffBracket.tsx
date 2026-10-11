@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-type SeasonNumber = 2 | 3;
+type SeasonNumber = 2 | 3 | 4;
 
 type Series = {
   series_id: string;

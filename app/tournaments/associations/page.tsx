@@ -304,7 +304,7 @@ function Season2LeagueTable() {
 
 /*
   ========================================
-  СЕЗОН 3
+  СЕЗОН 3+
   LIVE РЕЙТИНГ
   ========================================
 */
@@ -458,7 +458,8 @@ function Season3BaseRanking({
 
                     <td className="px-5 py-5 text-center text-white/45">
                       {
-                        row.members.length
+                        row.members
+                          .length
                       }
                     </td>
 
@@ -480,7 +481,7 @@ function Season3BaseRanking({
 
 /*
   ========================================
-  СЕЗОН 3
+  СЕЗОН 3+
   LIVE ЛІГА АСОЦІАЦІЙ
   ========================================
 */
@@ -674,14 +675,14 @@ export default async function AssociationsPage({
 
   /*
     ========================================
-    LIVE ДАНІ СЕЗОНУ 3
+    LIVE ДАНІ СЕЗОНУ 3+
     ========================================
   */
 
   const liveLeague =
-    season === 3
+    season >= 3
       ? await getAssociationLeague(
-          3
+          season
         )
       : null;
 
@@ -764,7 +765,7 @@ export default async function AssociationsPage({
 
           {/* SEASONS */}
 
-          <div className="mt-8 flex flex-wrap gap-2">
+          <div className="mt-8 flex gap-2">
             <Link
               href="/tournaments/associations?season=2"
               className={`rounded-xl border px-5 py-3 text-sm font-black transition ${
@@ -814,39 +815,21 @@ export default async function AssociationsPage({
           </h2>
 
           <p className="mt-3 max-w-3xl leading-7 text-white/40">
-            {season === 2
-              ? "Рейтинг Асоціації сформований відповідно до офіційних підсумків Сезону 2."
-              : season === 3
-                ? "У Сезоні 3 до рейтингу Асоціації входять коефіцієнти гравців R2–R6. Коефіцієнт R1 має вагу 0."
-                : "Сезон 4 перебуває у підготовці. Рейтинг Асоціацій буде активований після старту сезону."}
+            {season >= 3
+              ? `У Сезоні ${season} до рейтингу Асоціації входять коефіцієнти гравців R2–R6. Коефіцієнт R1 має вагу 0.`
+              : "Рейтинг Асоціації сформований відповідно до офіційних підсумків Сезону 2."}
           </p>
         </div>
 
         {season === 2 ? (
           <Season2BaseRanking />
-        ) : season === 3 &&
-          liveLeague ? (
+        ) : liveLeague ? (
           <Season3BaseRanking
             rows={
               liveLeague.rows
             }
           />
-        ) : (
-          <div className="rounded-3xl border border-white/10 bg-[#07101d] p-8">
-            <div className="text-sm font-black text-blue-300">
-              Сезон 4 — підготовка
-            </div>
-
-            <div className="mt-3 max-w-2xl text-sm leading-7 text-white/40">
-              Ранги R1–R6 та склади
-              Асоціацій будуть сформовані
-              перед початком сезону.
-              Після старту тут
-              автоматично зʼявиться
-              рейтинг Асоціацій.
-            </div>
-          </div>
-        )}
+        ) : null}
       </section>
 
       {/* ASSOCIATIONS */}
@@ -887,8 +870,7 @@ export default async function AssociationsPage({
 
                     <div className="mt-2 text-sm text-white/30">
                       {
-                        association
-                          .players
+                        association.players
                           .length
                       }{" "}
                       гравців
@@ -896,38 +878,29 @@ export default async function AssociationsPage({
                   </div>
 
                   <div className="space-y-2 p-5">
-                    {association.players
-                      .length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-center text-sm text-white/30">
-                        Склад ще не
-                        визначено
-                      </div>
-                    ) : (
-                      association.players.map(
-                        (
-                          playerId,
-                          index
-                        ) => (
-                          <Link
-                            key={
-                              playerId
-                            }
-                            href={`/players/${playerId}`}
-                            className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] px-4 py-3 transition hover:border-blue-400/20 hover:bg-blue-500/[0.04]"
-                          >
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-xs font-black text-blue-300">
-                              {season === 4
-                                ? `R${index + 1}`
-                                : index + 1}
-                            </div>
+                    {association.players.map(
+                      (
+                        playerId,
+                        index
+                      ) => (
+                        <Link
+                          key={
+                            playerId
+                          }
+                          href={`/players/${playerId}`}
+                          className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] px-4 py-3 transition hover:border-blue-400/20 hover:bg-blue-500/[0.04]"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-xs font-black text-blue-300">
+                            {index +
+                              1}
+                          </div>
 
-                            <div className="min-w-0 font-bold">
-                              {getPlayerName(
-                                playerId
-                              )}
-                            </div>
-                          </Link>
-                        )
+                          <div className="min-w-0 font-bold">
+                            {getPlayerName(
+                              playerId
+                            )}
+                          </div>
+                        </Link>
                       )
                     )}
                   </div>
@@ -963,8 +936,7 @@ export default async function AssociationsPage({
 
         {season === 2 ? (
           <Season2LeagueTable />
-        ) : season === 3 &&
-          liveLeague ? (
+        ) : liveLeague ? (
           <Season3LeagueTable
             rows={
               liveLeague.rows
@@ -973,21 +945,7 @@ export default async function AssociationsPage({
               liveLeague.cupComplete
             }
           />
-        ) : (
-          <div className="rounded-3xl border border-white/10 bg-[#07101d] p-8">
-            <div className="text-lg font-black">
-              Ліга Асоціацій ще не
-              розпочалася
-            </div>
-
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/40">
-              Після старту Сезону 4
-              рейтинг та очки Ліги
-              зʼявляться тут
-              автоматично.
-            </p>
-          </div>
-        )}
+        ) : null}
       </section>
 
       {/* RULES */}
@@ -1083,26 +1041,9 @@ export default async function AssociationsPage({
           </p>
         </div>
 
-        {season === 2 ||
-        season === 3 ? (
-          <AssociationCupPlayoffBracket
-            season={season}
-          />
-        ) : (
-          <div className="rounded-3xl border border-white/10 bg-[#07101d] p-8">
-            <div className="font-black text-white/70">
-              Сітка ще не
-              сформована
-            </div>
-
-            <p className="mt-3 text-sm text-white/35">
-              Кубок асоціацій
-              Сезону 4 буде
-              сформований після
-              жеребкування складів.
-            </p>
-          </div>
-        )}
+        <AssociationCupPlayoffBracket
+          season={season}
+        />
       </section>
 
       {/* CUP MATCHES */}
@@ -1119,27 +1060,17 @@ export default async function AssociationsPage({
             </h2>
 
             <p className="mt-3 max-w-3xl leading-7 text-white/40">
-              Кожне протистояння
-              складається з шести
-              матчів — R1 проти R1,
-              R2 проти R2, R3 проти
-              R3, R4 проти R4, R5
-              проти R5 та R6 проти
-              R6.
+              Кожне протистояння складається
+              з шести матчів — R1 проти R1,
+              R2 проти R2, R3 проти R3,
+              R4 проти R4, R5 проти R5
+              та R6 проти R6.
             </p>
           </div>
 
-          {season === 2 ||
-          season === 3 ? (
-            <AssociationCupMatches
-              season={season}
-            />
-          ) : (
-            <div className="rounded-3xl border border-dashed border-white/10 bg-[#07101d] p-8 text-sm text-white/35">
-              Матчів Сезону 4
-              поки немає.
-            </div>
-          )}
+          <AssociationCupMatches
+            season={season}
+          />
         </div>
       </section>
 

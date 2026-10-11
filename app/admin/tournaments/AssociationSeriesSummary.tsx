@@ -3,15 +3,10 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
 import { players } from "../../../data/players";
-
-import { getCompetitionAssociations } from "../../../data/competitions/get-competition-associations";
-
-import type { SeasonNumber } from "../../../data/competitions/season-competitions";
 
 type SeriesSide = {
   points: number;
@@ -106,6 +101,12 @@ type Props = {
   onTiebreakCreated?: () => void;
 };
 
+/*
+  ========================================
+  РІЗНИЦЯ ГОЛІВ
+  ========================================
+*/
+
 function formatGoalDifference(
   value: number
 ) {
@@ -115,6 +116,12 @@ function formatGoalDifference(
 
   return String(value);
 }
+
+/*
+  ========================================
+  COMPONENT
+  ========================================
+*/
 
 export default function AssociationSeriesSummary({
   season,
@@ -169,23 +176,6 @@ export default function AssociationSeriesSummary({
 
   /*
     ========================================
-    СКЛАДИ АСОЦІАЦІЙ СЕЗОНУ
-    ========================================
-  */
-
-  const associations =
-    useMemo(() => {
-      return getCompetitionAssociations({
-        season:
-          season as SeasonNumber,
-
-        competition:
-          "associations-cup",
-      });
-    }, [season]);
-
-  /*
-    ========================================
     НАЗВА ГРАВЦЯ
     ========================================
   */
@@ -197,7 +187,8 @@ export default function AssociationSeriesSummary({
       players.find(
         (player) =>
           player.id === playerId
-      )?.nickname ?? playerId
+      )?.nickname ??
+      playerId
     );
   }
 
@@ -236,7 +227,8 @@ export default function AssociationSeriesSummary({
           await fetch(
             `/api/admin/association-series?${params.toString()}`,
             {
-              cache: "no-store",
+              cache:
+                "no-store",
             }
           );
 
@@ -280,7 +272,8 @@ export default function AssociationSeriesSummary({
 
   /*
     При зміні серії
-    очищаємо вибір 7-го матчу.
+    очищаємо вибір
+    для 7-го матчу.
   */
 
   useEffect(() => {
@@ -327,27 +320,29 @@ export default function AssociationSeriesSummary({
         await fetch(
           "/api/admin/association-series",
           {
-            method: "PUT",
+            method:
+              "PUT",
 
             headers: {
               "Content-Type":
                 "application/json",
             },
 
-            body: JSON.stringify({
-              password,
+            body:
+              JSON.stringify({
+                password,
 
-              season,
+                season,
 
-              series_id:
-                seriesId,
+                series_id:
+                  seriesId,
 
-              home_id:
-                tiebreakHomeId,
+                home_id:
+                  tiebreakHomeId,
 
-              away_id:
-                tiebreakAwayId,
-            }),
+                away_id:
+                  tiebreakAwayId,
+              }),
           }
         );
 
@@ -372,7 +367,9 @@ export default function AssociationSeriesSummary({
 
       await loadSeries();
 
-      if (onTiebreakCreated) {
+      if (
+        onTiebreakCreated
+      ) {
         onTiebreakCreated();
       }
     } catch {
@@ -380,7 +377,9 @@ export default function AssociationSeriesSummary({
         "Помилка з'єднання із сервером"
       );
     } finally {
-      setCreatingTiebreak(false);
+      setCreatingTiebreak(
+        false
+      );
     }
   }
 
@@ -419,28 +418,51 @@ export default function AssociationSeriesSummary({
 
   const {
     series,
+    matches,
     summary,
   } = data;
 
   /*
     ========================================
-    СКЛАДИ САМЕ ЦИХ АСОЦІАЦІЙ
+    СКЛАДИ САМЕ ЦІЄЇ СЕРІЇ
     ========================================
+
+    Більше не читаємо
+    статичні склади сезону.
+
+    Беремо гравців
+    безпосередньо із
+    шести основних матчів.
+
+    Це працює однаково
+    для Сезонів 2, 3, 4+
+    і не залежить від
+    season-*.ts.
   */
 
-  const homeAssociation =
-    associations.find(
-      (association) =>
-        association.id ===
-        series.home.id
+  const regularMatches =
+    matches.filter(
+      (match) =>
+        !match.is_tiebreak
     );
 
-  const awayAssociation =
-    associations.find(
-      (association) =>
-        association.id ===
-        series.away.id
-    );
+  const homePlayerIds = [
+    ...new Set(
+      regularMatches.map(
+        (match) =>
+          match.home_id
+      )
+    ),
+  ];
+
+  const awayPlayerIds = [
+    ...new Set(
+      regularMatches.map(
+        (match) =>
+          match.away_id
+      )
+    ),
+  ];
 
   /*
     ========================================
@@ -510,7 +532,8 @@ export default function AssociationSeriesSummary({
 
         <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold">
           {
-            summary.regularMatchesPlayed
+            summary
+              .regularMatchesPlayed
           }
           /6 матчів
         </div>
@@ -527,7 +550,10 @@ export default function AssociationSeriesSummary({
           </div>
 
           <div className="mt-5 text-center text-5xl font-black text-blue-400">
-            {summary.home.points}
+            {
+              summary.home
+                .points
+            }
           </div>
 
           <div className="mt-1 text-center text-xs uppercase tracking-[0.2em] text-white/30">
@@ -540,7 +566,10 @@ export default function AssociationSeriesSummary({
             </div>
 
             <div className="text-right font-bold">
-              {summary.home.wins}
+              {
+                summary.home
+                  .wins
+              }
             </div>
 
             <div className="text-white/40">
@@ -548,7 +577,10 @@ export default function AssociationSeriesSummary({
             </div>
 
             <div className="text-right font-bold">
-              {summary.home.draws}
+              {
+                summary.home
+                  .draws
+              }
             </div>
 
             <div className="text-white/40">
@@ -556,7 +588,10 @@ export default function AssociationSeriesSummary({
             </div>
 
             <div className="text-right font-bold">
-              {summary.home.losses}
+              {
+                summary.home
+                  .losses
+              }
             </div>
 
             <div className="text-white/40">
@@ -565,7 +600,8 @@ export default function AssociationSeriesSummary({
 
             <div className="text-right font-bold">
               {
-                summary.home.goalsFor
+                summary.home
+                  .goalsFor
               }
               :
               {
@@ -601,7 +637,10 @@ export default function AssociationSeriesSummary({
           </div>
 
           <div className="mt-5 text-center text-5xl font-black text-blue-400">
-            {summary.away.points}
+            {
+              summary.away
+                .points
+            }
           </div>
 
           <div className="mt-1 text-center text-xs uppercase tracking-[0.2em] text-white/30">
@@ -614,7 +653,10 @@ export default function AssociationSeriesSummary({
             </div>
 
             <div className="text-right font-bold">
-              {summary.away.wins}
+              {
+                summary.away
+                  .wins
+              }
             </div>
 
             <div className="text-white/40">
@@ -622,7 +664,10 @@ export default function AssociationSeriesSummary({
             </div>
 
             <div className="text-right font-bold">
-              {summary.away.draws}
+              {
+                summary.away
+                  .draws
+              }
             </div>
 
             <div className="text-white/40">
@@ -630,7 +675,10 @@ export default function AssociationSeriesSummary({
             </div>
 
             <div className="text-right font-bold">
-              {summary.away.losses}
+              {
+                summary.away
+                  .losses
+              }
             </div>
 
             <div className="text-white/40">
@@ -639,7 +687,8 @@ export default function AssociationSeriesSummary({
 
             <div className="text-right font-bold">
               {
-                summary.away.goalsFor
+                summary.away
+                  .goalsFor
               }
               :
               {
@@ -718,16 +767,22 @@ export default function AssociationSeriesSummary({
 
               <div>
                 <label className="text-sm font-bold">
-                  {series.home.name}
+                  {
+                    series.home
+                      .name
+                  }
                 </label>
 
                 <select
                   value={
                     tiebreakHomeId
                   }
-                  onChange={(event) =>
+                  onChange={(
+                    event
+                  ) =>
                     setTiebreakHomeId(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
@@ -736,11 +791,15 @@ export default function AssociationSeriesSummary({
                     Оберіть гравця
                   </option>
 
-                  {homeAssociation?.players.map(
+                  {homePlayerIds.map(
                     (playerId) => (
                       <option
-                        key={playerId}
-                        value={playerId}
+                        key={
+                          playerId
+                        }
+                        value={
+                          playerId
+                        }
                       >
                         {getPlayerName(
                           playerId
@@ -755,16 +814,22 @@ export default function AssociationSeriesSummary({
 
               <div>
                 <label className="text-sm font-bold">
-                  {series.away.name}
+                  {
+                    series.away
+                      .name
+                  }
                 </label>
 
                 <select
                   value={
                     tiebreakAwayId
                   }
-                  onChange={(event) =>
+                  onChange={(
+                    event
+                  ) =>
                     setTiebreakAwayId(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
@@ -773,11 +838,15 @@ export default function AssociationSeriesSummary({
                     Оберіть гравця
                   </option>
 
-                  {awayAssociation?.players.map(
+                  {awayPlayerIds.map(
                     (playerId) => (
                       <option
-                        key={playerId}
-                        value={playerId}
+                        key={
+                          playerId
+                        }
+                        value={
+                          playerId
+                        }
                       >
                         {getPlayerName(
                           playerId
@@ -808,7 +877,9 @@ export default function AssociationSeriesSummary({
 
             {tiebreakMessage && (
               <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-center text-sm">
-                {tiebreakMessage}
+                {
+                  tiebreakMessage
+                }
               </div>
             )}
           </div>
@@ -826,12 +897,14 @@ export default function AssociationSeriesSummary({
 
             <div className="mt-3 text-lg font-black">
               {getPlayerName(
-                summary.tiebreakMatch
+                summary
+                  .tiebreakMatch
                   .home_id
               )}
               {" — "}
               {getPlayerName(
-                summary.tiebreakMatch
+                summary
+                  .tiebreakMatch
                   .away_id
               )}
             </div>

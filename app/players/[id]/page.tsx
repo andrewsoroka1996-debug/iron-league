@@ -14,7 +14,9 @@ import {
 
 import { getCompetitionPlayers } from "../../../data/competitions/get-competition-players";
 import { getCompetitionGroups } from "../../../data/competitions/get-competition-groups";
-import { getCompetitionAssociations } from "../../../data/competitions/get-competition-associations";
+import {
+  getSeasonAssociationSquads,
+} from "../../../lib/association-squads";
 
 import { supabase } from "../../../lib/supabase";
 
@@ -1348,14 +1350,9 @@ export default async function PlayerPage({
     ) {
       try {
         const associations =
-          getCompetitionAssociations(
-            {
-              season,
-
-              competition:
-                "associations-cup",
-            }
-          );
+  await getSeasonAssociationSquads(
+    season
+  );
 
         const association =
           associations.find(

@@ -4,6 +4,8 @@ import {
   seasonCompetitions,
 } from "../../../data/competitions/season-competitions";
 
+import SeasonWinners from "../../../components/SeasonWinners";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -27,24 +29,17 @@ function getTournamentCard(
 ): TournamentCard | null {
   /*
     Сезон 1:
-    Кубка асоціацій ще не було.
-
-    Лігу асоціацій також
-    ніколи не показуємо.
+    Асоціацій та Co-op
+    ще не було.
   */
 
   if (
     competitionId ===
       "associations-cup" ||
     competitionId ===
-      "league-of-associations"
-  ) {
-    return null;
-  }
-
-  if (
+      "league-of-associations" ||
     competitionId ===
-    "season-qualification"
+      "season-qualification"
   ) {
     return null;
   }
@@ -56,6 +51,11 @@ function getTournamentCard(
   ) {
     return null;
   }
+
+  /*
+    Кубки дивізіонів
+    показуємо однією карткою.
+  */
 
   if (
     /^division-[1-4]-cup$/.test(
@@ -189,6 +189,8 @@ const tournaments: TournamentCard[] = [
 export default function Season1HistoryPage() {
   return (
     <main className="min-h-screen bg-[#030711] text-white">
+      {/* HEADER */}
+
       <header className="border-b border-white/10 bg-[#030711]/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <a
@@ -214,12 +216,14 @@ export default function Season1HistoryPage() {
 
           <a
             href="/history"
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300"
+            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
           >
             ← Усі сезони
           </a>
         </div>
       </header>
+
+      {/* HERO */}
 
       <section className="relative overflow-hidden border-b border-white/10">
         <div
@@ -243,9 +247,8 @@ export default function Season1HistoryPage() {
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/45">
             Перший сезон Iron League.
-            Історичні результати та
-            переможці будуть додані
-            після перенесення архіву.
+            Повний архів дивізіонів,
+            турнірів та переможців.
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
@@ -292,6 +295,8 @@ export default function Season1HistoryPage() {
         </div>
       </section>
 
+      {/* TOURNAMENTS */}
+
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
           Турніри
@@ -316,9 +321,7 @@ export default function Season1HistoryPage() {
                 </div>
 
                 <h3 className="mt-5 text-2xl font-black">
-                  {
-                    tournament.name
-                  }
+                  {tournament.name}
                 </h3>
 
                 <div className="mt-7 flex items-center justify-between border-t border-white/10 pt-5">
@@ -336,6 +339,8 @@ export default function Season1HistoryPage() {
         </div>
       </section>
 
+      {/* HALL OF FAME */}
+
       <section className="border-t border-white/10 bg-white/[0.02]">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
@@ -346,21 +351,29 @@ export default function Season1HistoryPage() {
             Переможці сезону
           </h2>
 
-          <div className="mt-8 rounded-3xl border border-white/10 bg-[#07101d] p-8">
-            <div className="text-xl font-black">
-              Дані буде додано
-            </div>
-
-            <p className="mt-3 leading-7 text-white/40">
-              Чемпіони та переможці
-              турнірів Сезону 1
-              будуть внесені разом з
-              історичними
-              результатами.
-            </p>
-          </div>
+          <SeasonWinners season={1} />
         </div>
       </section>
+
+      {/* FOOTER */}
+
+      <footer className="border-t border-white/10 bg-[#02050b]">
+        <div className="mx-auto flex max-w-7xl justify-between px-6 py-10">
+          <div>
+            <div className="font-black tracking-[0.16em]">
+              IRON LEAGUE
+            </div>
+
+            <div className="mt-1 text-xs text-white/30">
+              Більше ніж гра
+            </div>
+          </div>
+
+          <div className="text-sm text-white/30">
+            © 2026 Iron League
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

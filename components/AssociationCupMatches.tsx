@@ -3,14 +3,15 @@ import Link from "next/link";
 import { players } from "../data/players";
 
 import {
-  getCompetitionAssociations,
-} from "../data/competitions/get-competition-associations";
+  getSeasonAssociationSquads,
+} from "../lib/association-squads";
 
 import { supabaseAdmin } from "../lib/supabase-admin";
 
 type SeasonNumber =
   | 2
-  | 3;
+  | 3
+  | 4;
 
 type MatchRow = {
   id: string;
@@ -116,7 +117,8 @@ function getPlayerName(
   return (
     players.find(
       (player) =>
-        player.id === playerId
+        player.id ===
+        playerId
     )?.nickname ??
     playerId
   );
@@ -234,15 +236,19 @@ export default async function AssociationCupMatches({
     ========================================
     ASSOCIATIONS
     ========================================
+
+    Сезони 2–3:
+    історичні склади.
+
+    Сезон 4:
+    динамічні склади
+    з association_seed_ranks.
   */
 
   const associations =
-    getCompetitionAssociations({
-      season,
-
-      competition:
-        "associations-cup",
-    });
+    await getSeasonAssociationSquads(
+      season
+    );
 
   function getAssociationName(
     associationId:

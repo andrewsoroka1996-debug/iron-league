@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { season1 } from "../data/seasons/season-1";
 import { season2 } from "../data/seasons/season-2";
 import { season3 } from "../data/seasons/season-3";
@@ -9,6 +11,7 @@ import type { SeasonNumber } from "../data/competitions/season-competitions";
 
 import { supabaseAdmin } from "./supabase-admin";
 import { buildStandings } from "./standings";
+
 import {
   getAssociationLeague,
 } from "./association-league";
@@ -368,23 +371,41 @@ function getSeriesWinner(
 function getFinalWinner(
   matches: MatchRow[]
 ) {
-  const finished =
-    matches.filter(
-      isFinished
-    );
-
-  if (finished.length === 0) {
+  if (matches.length === 0) {
     return null;
   }
 
-  if (finished.length === 1) {
+  /*
+    Трофей не видаємо,
+    поки не завершені
+    всі матчі фіналу.
+  */
+
+  const allFinished =
+    matches.every(
+      isFinished
+    );
+
+  if (!allFinished) {
+    return null;
+  }
+
+  /*
+    Одноматчевий фінал.
+  */
+
+  if (matches.length === 1) {
     return getSingleMatchWinner(
-      finished[0]
+      matches[0]
     );
   }
 
+  /*
+    Фінал із кількох матчів.
+  */
+
   return getSeriesWinner(
-    finished
+    matches
   );
 }
 
@@ -393,751 +414,818 @@ function getFinalWinner(
   ЗАВАНТАЖЕННЯ ВСІХ МАТЧІВ
   ========================================
 
-  ВАЖЛИВО:
+  Supabase може обмежувати
+  кількість рядків одного запиту.
 
-  Supabase може обмежувати кількість
-  рядків одного запиту.
-
-  Тому не робимо один запит на всю
-  таблицю matches, а читаємо її
+  Тому читаємо matches
   сторінками по 1000 рядків.
 
-  Це потрібно, щоб старі матчі
-  та старі трофеї не зникали,
-  коли база росте.
+  React cache() гарантує,
+  що в межах одного серверного
+  рендера цей список не буде
+  завантажуватися заново
+  для кожного гравця.
 */
 
-async function getAllMatches(): Promise<
-  MatchRow[]
-> {
-  const PAGE_SIZE = 1000;
+const getAllMatches = cache(
+  async (): Promise<
+    MatchRow[]
+  > => {
+    const PAGE_SIZE = 1000;
 
-  const allMatches:
-    MatchRow[] = [];
+    const allMatches:
+      MatchRow[] = [];
 
-  let from = 0;
+    let from = 0;
 
-  while (true) {
+    while (true) {
+      const {
+        data,
+        error,
+      } = await supabaseAdmin
+        .from("matches")
+        .select(
+          `
+            id,
+            season,
+            competition,
+            division,
+            stage,
+            round,
+            leg,
+            participant_type,
+            home_id,
+            away_id,
+            home_goals,
+            away_goals,
+            status,
+            series_id,
+            series_home_id,
+            series_away_id,
+            is_tiebreak
+          `
+        )
+        .in(
+          "season",
+          [1, 2, 3, 4]
+        )
+        .order(
+          "id",
+          {
+            ascending: true,
+          }
+        )
+        .range(
+          from,
+          from +
+            PAGE_SIZE -
+            1
+        );
+
+      if (error) {
+        throw error;
+      }
+
+      const batch =
+        (data ??
+          []) as MatchRow[];
+
+      allMatches.push(
+        ...batch
+      );
+
+      /*
+        Якщо повернулося менше
+        ніж PAGE_SIZE —
+        це остання сторінка.
+      */
+
+      if (
+        batch.length <
+        PAGE_SIZE
+      ) {
+        break;
+      }
+
+      from += PAGE_SIZE;
+    }
+
+    return allMatches;
+  }
+);
+
+/*
+  ========================================
+  CO-OP КОМАНДИ
+  ========================================
+
+  Так само кешуємо список
+  команд у межах серверного
+  рендера.
+*/
+
+const getAllCoopTeams = cache(
+  async (): Promise<
+    CoopTeamRow[]
+  > => {
     const {
       data,
       error,
     } = await supabaseAdmin
-      .from("matches")
+      .from("coop_teams")
       .select(
         `
           id,
+          name,
           season,
-          competition,
-          division,
-          stage,
-          round,
-          leg,
-          participant_type,
-          home_id,
-          away_id,
-          home_goals,
-          away_goals,
-          status,
-          series_id,
-          series_home_id,
-          series_away_id,
-          is_tiebreak
+          player_1_id,
+          player_2_id
         `
-      )
-      .in(
-        "season",
-        [1, 2, 3, 4]
-      )
-      .order(
-        "id",
-        {
-          ascending: true,
-        }
-      )
-      .range(
-        from,
-        from +
-          PAGE_SIZE -
-          1
       );
 
     if (error) {
-      throw error;
+      console.error(
+        "PLAYER HONOURS COOP TEAMS ERROR:",
+        error
+      );
+
+      return [];
     }
 
-    const batch =
-      (data ??
-        []) as MatchRow[];
-
-    allMatches.push(
-      ...batch
+    return (
+      (data ?? []) as
+        CoopTeamRow[]
     );
-
-    /*
-      Якщо повернулося менше
-      ніж PAGE_SIZE —
-      це остання сторінка.
-    */
-
-    if (
-      batch.length <
-      PAGE_SIZE
-    ) {
-      break;
-    }
-
-    from += PAGE_SIZE;
   }
+);
 
-  return allMatches;
-}
+/*
+  ========================================
+  ЛІГА АСОЦІАЦІЙ
+  ========================================
+
+  Один сезон Ліги Асоціацій
+  рахуємо тільки один раз
+  у межах серверного рендера.
+*/
+
+const getCachedAssociationLeague =
+  cache(
+    async (
+      season: 2 | 3 | 4
+    ) =>
+      getAssociationLeague(
+        season
+      )
+  );
 
 /*
   ========================================
   ОСНОВНА ФУНКЦІЯ
   ========================================
+
+  Результат для одного playerId
+  також кешується.
 */
 
-export async function getPlayerHonours(
-  playerId: string
-): Promise<PlayerHonour[]> {
-  const honours:
-    PlayerHonour[] = [];
-
-  /*
-    ========================================
-    ВСІ МАТЧІ
-    ========================================
-  */
-
-  let matches:
-    MatchRow[] = [];
-
-  try {
-    matches =
-      await getAllMatches();
-  } catch (error) {
-    console.error(
-      "PLAYER HONOURS MATCHES ERROR:",
-      error
-    );
-
-    return [];
-  }
-
-  /*
-    ========================================
-    1. ЧЕМПІОНИ ДИВІЗІОНІВ
-    ========================================
-
-    Чемпіон визначається автоматично
-    з турнірної таблиці.
-
-    Трофей присвоюємо тільки після
-    завершення всього дивізіону.
-
-    Для двоколового чемпіонату:
-
-    N * (N - 1)
-
-    16 учасників:
-    16 * 15 = 240 матчів.
-  */
-
-  for (const season of seasons) {
-    const divisions:
-      DivisionNumber[] =
-      season === 1
-        ? [1, 2, 3]
-        : [1, 2, 3, 4];
-
-    for (
-      const division of
-        divisions
-    ) {
-      const participantIds =
-        getDivisionPlayers(
-          season,
-          division
-        );
-
-      if (
-        participantIds.length <
-        2
-      ) {
-        continue;
-      }
-
-      const divisionMatches =
-        matches.filter(
-          (match) =>
-            match.season ===
-              season &&
-            match.competition ===
-              "division" &&
-            match.division ===
-              division
-        );
-
-      const expectedMatches =
-        participantIds.length *
-        (
-          participantIds.length -
-          1
-        );
+export const getPlayerHonours =
+  cache(
+    async (
+      playerId: string
+    ): Promise<
+      PlayerHonour[]
+    > => {
+      const honours:
+        PlayerHonour[] = [];
 
       /*
-        Сезон ще не завершено.
+        ========================================
+        ВСІ МАТЧІ
+        ========================================
       */
 
-      if (
-        divisionMatches.length <
-        expectedMatches
-      ) {
-        continue;
+      let matches:
+        MatchRow[] = [];
+
+      try {
+        matches =
+          await getAllMatches();
+      } catch (error) {
+        console.error(
+          "PLAYER HONOURS MATCHES ERROR:",
+          error
+        );
+
+        return [];
       }
 
       /*
-  Для архівних Сезонів 1–2
-  допускаємо історично
-  незіграні матчі.
+        ========================================
+        1. ЧЕМПІОНИ ДИВІЗІОНІВ
+        ========================================
 
-  Для Сезонів 3–4 чемпіон
-  визначається тільки після
-  завершення всього календаря.
-*/
+        Чемпіон визначається
+        автоматично з таблиці.
 
-const isArchiveSeason =
-  season === 1 ||
-  season === 2;
+        Для двоколового чемпіонату:
 
-const allFinished =
-  divisionMatches.every(
-    isFinished
-  );
+        N * (N - 1)
 
-if (
-  !isArchiveSeason &&
-  !allFinished
-) {
-  continue;
-}
+        16 учасників:
+        16 * 15 = 240 матчів.
+      */
 
-      const standings =
-        buildStandings({
-          participantIds,
-
-          matches:
-            divisionMatches.map(
-              (match) => ({
-                home_id:
-                  match.home_id,
-
-                away_id:
-                  match.away_id,
-
-                home_goals:
-                  match.home_goals,
-
-                away_goals:
-                  match.away_goals,
-
-                status:
-                  match.status,
-              })
-            ),
-
-          format:
-            "division-qualification",
-        });
-
-      const championId =
-        standings[0]?.playerId;
-
-      if (
-        championId ===
-        playerId
+      for (
+        const season of
+          seasons
       ) {
+        const divisions:
+          DivisionNumber[] =
+          season === 1
+            ? [1, 2, 3]
+            : [1, 2, 3, 4];
+
+        for (
+          const division of
+            divisions
+        ) {
+          const participantIds =
+            getDivisionPlayers(
+              season,
+              division
+            );
+
+          if (
+            participantIds.length <
+            2
+          ) {
+            continue;
+          }
+
+          const divisionMatches =
+            matches.filter(
+              (match) =>
+                match.season ===
+                  season &&
+                match.competition ===
+                  "division" &&
+                match.division ===
+                  division
+            );
+
+          const expectedMatches =
+            participantIds.length *
+            (
+              participantIds.length -
+              1
+            );
+
+          /*
+            Календар ще не створено
+            повністю.
+          */
+
+          if (
+            divisionMatches.length <
+            expectedMatches
+          ) {
+            continue;
+          }
+
+          /*
+            Для архівних
+            Сезонів 1–2
+            допускаємо історично
+            незіграні матчі.
+
+            Для Сезонів 3–4
+            чемпіона визначаємо
+            тільки після завершення
+            всього календаря.
+          */
+
+          const isArchiveSeason =
+            season === 1 ||
+            season === 2;
+
+          const allFinished =
+            divisionMatches.every(
+              isFinished
+            );
+
+          if (
+            !isArchiveSeason &&
+            !allFinished
+          ) {
+            continue;
+          }
+
+          const standings =
+            buildStandings({
+              participantIds,
+
+              matches:
+                divisionMatches.map(
+                  (match) => ({
+                    home_id:
+                      match.home_id,
+
+                    away_id:
+                      match.away_id,
+
+                    home_goals:
+                      match.home_goals,
+
+                    away_goals:
+                      match.away_goals,
+
+                    status:
+                      match.status,
+                  })
+                ),
+
+              format:
+                "division-qualification",
+            });
+
+          const championId =
+            standings[0]?.playerId;
+
+          if (
+            championId ===
+            playerId
+          ) {
+            addHonour(
+              honours,
+              {
+                key:
+                  `season-${season}-division-${division}`,
+
+                season,
+
+                category:
+                  "division",
+
+                title:
+                  `${division} Дивізіон`,
+              }
+            );
+          }
+        }
+      }
+
+      /*
+        ========================================
+        2. КУБКИ ДИВІЗІОНІВ
+        ========================================
+      */
+
+      const divisionCups = [
+        {
+          competition:
+            "division-1-cup",
+
+          title:
+            "Кубок 1 Дивізіону",
+        },
+
+        {
+          competition:
+            "division-2-cup",
+
+          title:
+            "Кубок 2 Дивізіону",
+        },
+
+        {
+          competition:
+            "division-3-cup",
+
+          title:
+            "Кубок 3 Дивізіону",
+        },
+
+        {
+          competition:
+            "division-4-cup",
+
+          title:
+            "Кубок 4 Дивізіону",
+        },
+      ];
+
+      for (
+        const season of
+          seasons
+      ) {
+        for (
+          const cup of
+            divisionCups
+        ) {
+          const finalMatches =
+            matches.filter(
+              (match) =>
+                match.season ===
+                  season &&
+                match.competition ===
+                  cup.competition &&
+                match.stage ===
+                  "final"
+            );
+
+          const winnerId =
+            getFinalWinner(
+              finalMatches
+            );
+
+          if (
+            winnerId !==
+            playerId
+          ) {
+            continue;
+          }
+
+          addHonour(
+            honours,
+            {
+              key:
+                `season-${season}-${cup.competition}`,
+
+              season,
+
+              category:
+                "cup",
+
+              title:
+                cup.title,
+            }
+          );
+        }
+      }
+
+      /*
+        ========================================
+        3. ЄВРОКУБКИ
+        ========================================
+      */
+
+      const europeanCups = [
+        {
+          competition:
+            "champions-league",
+
+          title:
+            "Ліга чемпіонів",
+        },
+
+        {
+          competition:
+            "europa-league",
+
+          title:
+            "Ліга Європи",
+        },
+
+        {
+          competition:
+            "conference-league",
+
+          title:
+            "Ліга конференцій",
+        },
+      ];
+
+      for (
+        const season of
+          seasons
+      ) {
+        for (
+          const cup of
+            europeanCups
+        ) {
+          const finalMatches =
+            matches.filter(
+              (match) =>
+                match.season ===
+                  season &&
+                match.competition ===
+                  cup.competition &&
+                match.stage ===
+                  "final"
+            );
+
+          const winnerId =
+            getFinalWinner(
+              finalMatches
+            );
+
+          if (
+            winnerId !==
+            playerId
+          ) {
+            continue;
+          }
+
+          addHonour(
+            honours,
+            {
+              key:
+                `season-${season}-${cup.competition}`,
+
+              season,
+
+              category:
+                "europe",
+
+              title:
+                cup.title,
+            }
+          );
+        }
+      }
+
+      /*
+        ========================================
+        4. СУПЕРКУБОК ЄВРОПИ
+        ========================================
+      */
+
+      for (
+        const season of
+          seasons
+      ) {
+        const finalMatches =
+          matches.filter(
+            (match) =>
+              match.season ===
+                season &&
+              match.competition ===
+                "european-super-cup" &&
+              match.stage ===
+                "final"
+          );
+
+        const winnerId =
+          getFinalWinner(
+            finalMatches
+          );
+
+        if (
+          winnerId !==
+          playerId
+        ) {
+          continue;
+        }
+
         addHonour(
           honours,
           {
             key:
-              `season-${season}-division-${division}`,
+              `season-${season}-european-super-cup`,
 
             season,
 
             category:
-              "division",
+              "super-cup",
 
             title:
-              `${division} Дивізіон`,
+              "Суперкубок Європи",
           }
         );
       }
-    }
-  }
 
-  /*
-    ========================================
-    2. КУБКИ ДИВІЗІОНІВ
-    ========================================
-  */
+      /*
+        ========================================
+        5. ЛІГА АСОЦІАЦІЙ
+        ========================================
 
-  const divisionCups = [
-    {
-      competition:
-        "division-1-cup",
+        Кубок Асоціацій
+        окремого трофея НЕ дає.
 
-      title:
-        "Кубок 1 Дивізіону",
-    },
+        Він лише визначає множники:
 
-    {
-      competition:
-        "division-2-cup",
+        переможець     ×2.0
+        фіналіст       ×1.8
+        3 місце        ×1.7
+        4 місце        ×1.6
+        1/4 фіналу     ×1.5
 
-      title:
-        "Кубок 2 Дивізіону",
-    },
+        Трофей отримує Асоціація,
+        яка посіла 1 місце
+        у Лізі Асоціацій.
+      */
 
-    {
-      competition:
-        "division-3-cup",
-
-      title:
-        "Кубок 3 Дивізіону",
-    },
-
-    {
-      competition:
-        "division-4-cup",
-
-      title:
-        "Кубок 4 Дивізіону",
-    },
-  ];
-
-  for (const season of seasons) {
-    for (
-      const cup of
-        divisionCups
-    ) {
-      const finalMatches =
-        matches.filter(
-          (match) =>
-            match.season ===
-              season &&
-            match.competition ===
-              cup.competition &&
-            match.stage ===
-              "final"
-        );
-
-      const winnerId =
-        getFinalWinner(
-          finalMatches
-        );
-
-      if (
-        winnerId !==
-        playerId
+      for (
+        const associationSeason of
+          [2, 3, 4] as const
       ) {
-        continue;
+        try {
+          const league =
+            await getCachedAssociationLeague(
+              associationSeason
+            );
+
+          /*
+            Поки Кубок
+            не завершений,
+            остаточного переможця
+            Ліги Асоціацій немає.
+          */
+
+          if (
+            !league.cupComplete
+          ) {
+            continue;
+          }
+
+          /*
+            Шукаємо офіційного
+            переможця Ліги.
+          */
+
+          const champion =
+            league.rows.find(
+              (row) =>
+                row.leaguePlace ===
+                1
+            );
+
+          if (!champion) {
+            continue;
+          }
+
+          /*
+            Трофей отримують
+            усі члени
+            Асоціації-переможця.
+          */
+
+          const playerWon =
+            champion.members.some(
+              (member) =>
+                member.playerId ===
+                playerId
+            );
+
+          if (!playerWon) {
+            continue;
+          }
+
+          addHonour(
+            honours,
+            {
+              key:
+                `season-${associationSeason}-association-league`,
+
+              season:
+                associationSeason,
+
+              category:
+                "association",
+
+              title:
+                "Ліга Асоціацій",
+            }
+          );
+        } catch {
+          /*
+            Якщо для сезону
+            ще немає повних даних
+            Ліги Асоціацій —
+            нагороду не додаємо.
+          */
+        }
       }
 
-      addHonour(
-        honours,
-        {
-          key:
-            `season-${season}-${cup.competition}`,
+      /*
+        ========================================
+        6. IRON CO-OP CUP
+        ========================================
 
-          season,
+        Переможцем є команда
+        з 2 гравців.
 
-          category:
-            "cup",
+        Трофей отримують обидва
+        члени команди-переможця.
+      */
 
-          title:
-            cup.title,
+      const coopTeams =
+        await getAllCoopTeams();
+
+      for (
+        const season of
+          seasons
+      ) {
+        const finalMatches =
+          matches.filter(
+            (match) =>
+              match.season ===
+                season &&
+              match.competition ===
+                "iron-coop-cup" &&
+              match.stage ===
+                "final"
+          );
+
+        if (
+          finalMatches.length ===
+          0
+        ) {
+          continue;
+        }
+
+        const winnerTeamRef =
+          getFinalWinner(
+            finalMatches
+          );
+
+        if (!winnerTeamRef) {
+          continue;
+        }
+
+        /*
+          У matches команда може
+          зберігатися як через ID,
+          так і через name.
+
+          Підтримуємо обидва
+          варіанти.
+        */
+
+        const winnerTeam =
+          coopTeams.find(
+            (team) =>
+              team.season ===
+                season &&
+              (
+                team.id ===
+                  winnerTeamRef ||
+                team.name ===
+                  winnerTeamRef
+              )
+          );
+
+        if (!winnerTeam) {
+          continue;
+        }
+
+        const playerWon =
+          winnerTeam.player_1_id ===
+            playerId ||
+          winnerTeam.player_2_id ===
+            playerId;
+
+        if (!playerWon) {
+          continue;
+        }
+
+        addHonour(
+          honours,
+          {
+            key:
+              `season-${season}-iron-coop-cup`,
+
+            season,
+
+            category:
+              "coop",
+
+            title:
+              "Iron Co-op Cup",
+          }
+        );
+      }
+
+      /*
+        ========================================
+        СОРТУВАННЯ
+        ========================================
+
+        Нові сезони зверху.
+
+        Усередині сезону —
+        за назвою трофею.
+      */
+
+      honours.sort(
+        (a, b) => {
+          if (
+            a.season !==
+            b.season
+          ) {
+            return (
+              b.season -
+              a.season
+            );
+          }
+
+          return a.title.localeCompare(
+            b.title,
+            "uk"
+          );
         }
       );
-    }
-  }
 
-  /*
-    ========================================
-    3. ЄВРОКУБКИ
-    ========================================
-  */
-
-  const europeanCups = [
-    {
-      competition:
-        "champions-league",
-
-      title:
-        "Ліга чемпіонів",
-    },
-
-    {
-      competition:
-        "europa-league",
-
-      title:
-        "Ліга Європи",
-    },
-
-    {
-      competition:
-        "conference-league",
-
-      title:
-        "Ліга конференцій",
-    },
-  ];
-
-  for (const season of seasons) {
-    for (
-      const cup of
-        europeanCups
-    ) {
-      const finalMatches =
-        matches.filter(
-          (match) =>
-            match.season ===
-              season &&
-            match.competition ===
-              cup.competition &&
-            match.stage ===
-              "final"
-        );
-
-      const winnerId =
-        getFinalWinner(
-          finalMatches
-        );
-
-      if (
-        winnerId !==
-        playerId
-      ) {
-        continue;
-      }
-
-      addHonour(
-        honours,
-        {
-          key:
-            `season-${season}-${cup.competition}`,
-
-          season,
-
-          category:
-            "europe",
-
-          title:
-            cup.title,
-        }
-      );
-    }
-  }
-
-  /*
-    ========================================
-    4. СУПЕРКУБОК ЄВРОПИ
-    ========================================
-  */
-
-  for (const season of seasons) {
-    const finalMatches =
-      matches.filter(
-        (match) =>
-          match.season ===
-            season &&
-          match.competition ===
-            "european-super-cup" &&
-          match.stage ===
-            "final"
-      );
-
-    const winnerId =
-      getFinalWinner(
-        finalMatches
-      );
-
-    if (
-      winnerId !==
-      playerId
-    ) {
-      continue;
-    }
-
-    addHonour(
-      honours,
-      {
-        key:
-          `season-${season}-european-super-cup`,
-
-        season,
-
-        category:
-          "super-cup",
-
-        title:
-          "Суперкубок Європи",
-      }
-    );
-  }
-
-  /*
-  ========================================
-  5. ЛІГА АСОЦІАЦІЙ
-  ========================================
-
-  ВАЖЛИВО:
-
-  Кубок асоціацій
-  окремого трофея НЕ дає.
-
-  Кубок лише визначає
-  множники:
-
-  переможець     ×2.0
-  фіналіст       ×1.8
-  3 місце        ×1.7
-  4 місце        ×1.6
-  1/4 фіналу     ×1.5
-
-  Трофей отримує Асоціація,
-  яка посіла 1 місце
-  у Лізі Асоціацій.
-*/
-
-for (
-  const associationSeason of
-  [2, 3] as const
-) {
-  try {
-    const league =
-      await getAssociationLeague(
-        associationSeason
-      );
-
-    /*
-      Поки Кубок не завершений,
-      остаточного переможця
-      Ліги Асоціацій немає.
-    */
-
-    if (
-      !league.cupComplete
-    ) {
-      continue;
-    }
-
-    /*
-      Шукаємо офіційного
-      переможця Ліги.
-    */
-
-    const champion =
-      league.rows.find(
-        (row) =>
-          row.leaguePlace ===
-          1
-      );
-
-    if (!champion) {
-      continue;
-    }
-
-    /*
-      Трофей отримують усі
-      члени Асоціації-переможця.
-    */
-
-    const playerWon =
-      champion.members.some(
-        (member) =>
-          member.playerId ===
-          playerId
-      );
-
-    if (!playerWon) {
-      continue;
-    }
-
-    addHonour(
-      honours,
-      {
-        key:
-          `season-${associationSeason}-association-league`,
-
-        season:
-          associationSeason,
-
-        category:
-          "association",
-
-        title:
-          "Ліга Асоціацій",
-      }
-    );
-  } catch {
-    /*
-      Якщо для сезону
-      ще немає повних даних
-      Ліги Асоціацій —
-      нагороду не додаємо.
-    */
-  }
-}
-
-  /*
-    ========================================
-    6. IRON CO-OP CUP
-    ========================================
-
-    Переможцем є команда з 2 гравців.
-
-    Трофей отримують обидва
-    члени команди-переможця.
-  */
-
-  const {
-    data: coopTeamsData,
-    error: coopTeamsError,
-  } = await supabaseAdmin
-    .from("coop_teams")
-    .select(
-      `
-        id,
-        name,
-        season,
-        player_1_id,
-        player_2_id
-      `
-    );
-
-  if (coopTeamsError) {
-    console.error(
-      "PLAYER HONOURS COOP TEAMS ERROR:",
-      coopTeamsError
-    );
-  }
-
-  const coopTeams =
-    (coopTeamsData ??
-      []) as CoopTeamRow[];
-
-  for (const season of seasons) {
-    const finalMatches =
-      matches.filter(
-        (match) =>
-          match.season ===
-            season &&
-          match.competition ===
-            "iron-coop-cup" &&
-          match.stage ===
-            "final"
-      );
-
-    if (
-      finalMatches.length ===
-      0
-    ) {
-      continue;
-    }
-
-    const winnerTeamRef =
-      getFinalWinner(
-        finalMatches
-      );
-
-    if (!winnerTeamRef) {
-      continue;
-    }
-
-    /*
-      У matches команда може
-      зберігатися як через ID,
-      так і через name.
-
-      Підтримуємо обидва варіанти.
-    */
-
-    const winnerTeam =
-      coopTeams.find(
-        (team) =>
-          team.season ===
-            season &&
-          (
-            team.id ===
-              winnerTeamRef ||
-            team.name ===
-              winnerTeamRef
-          )
-      );
-
-    if (!winnerTeam) {
-      continue;
-    }
-
-    const playerWon =
-      winnerTeam.player_1_id ===
-        playerId ||
-      winnerTeam.player_2_id ===
-        playerId;
-
-    if (!playerWon) {
-      continue;
-    }
-
-    addHonour(
-      honours,
-      {
-        key:
-          `season-${season}-iron-coop-cup`,
-
-        season,
-
-        category:
-          "coop",
-
-        title:
-          "Iron Co-op Cup",
-      }
-    );
-  }
-
-  /*
-    ========================================
-    СОРТУВАННЯ
-    ========================================
-
-    Нові сезони зверху.
-
-    Усередині сезону —
-    за назвою трофею.
-  */
-
-  honours.sort(
-    (a, b) => {
-      if (
-        a.season !==
-        b.season
-      ) {
-        return (
-          b.season -
-          a.season
-        );
-      }
-
-      return a.title.localeCompare(
-        b.title,
-        "uk"
-      );
+      return honours;
     }
   );
-
-  return honours;
-}

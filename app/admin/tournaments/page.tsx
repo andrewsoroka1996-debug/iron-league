@@ -16,7 +16,6 @@ import {
 } from "../../../data/competitions/season-competitions";
 
 import { getCompetitionPlayers } from "../../../data/competitions/get-competition-players";
-import { getCompetitionAssociations } from "../../../data/competitions/get-competition-associations";
 import { getCompetitionGroups } from "../../../data/competitions/get-competition-groups";
 import { getCompetitionStages } from "../../../data/competitions/get-competition-stages";
 
@@ -64,6 +63,22 @@ type TournamentMatch = {
   is_tiebreak: boolean;
 };
 
+type AdminAssociation = {
+  id: string;
+  name: string;
+  players: string[];
+};
+
+type AssociationSquadsResponse = {
+  success?: boolean;
+
+  season?: number;
+
+  associations?: AdminAssociation[];
+
+  error?: string;
+};
+
 /*
   ========================================
   ЧИ ЄВРОКУБОК
@@ -74,9 +89,12 @@ function isEuropeanCompetition(
   competitionId: string
 ) {
   return (
-    competitionId === "champions-league" ||
-    competitionId === "europa-league" ||
-    competitionId === "conference-league"
+    competitionId ===
+      "champions-league" ||
+    competitionId ===
+      "europa-league" ||
+    competitionId ===
+      "conference-league"
   );
 }
 
@@ -114,14 +132,11 @@ function isTwoLeggedCompetition(
     Iron Co-op Cup теж
     двоматчевий на всіх стадіях,
     включно з фіналом.
-
-    Саму форму підключимо,
-    коли будуть сформовані
-    16 команд.
   */
 
   if (
-    competitionId === "iron-coop-cup"
+    competitionId ===
+    "iron-coop-cup"
   ) {
     return true;
   }
@@ -136,17 +151,25 @@ export default function TournamentAdminPage() {
     ========================================
   */
 
-  const [password, setPassword] =
-    useState("");
+  const [
+    password,
+    setPassword,
+  ] = useState("");
 
-  const [season, setSeason] =
-    useState<SeasonNumber>(3);
+  const [
+    season,
+    setSeason,
+  ] =
+    useState<SeasonNumber>(
+      3
+    );
 
   const [
     competitionId,
     setCompetitionId,
   ] = useState(
-    seasonCompetitions[3][0]?.id ?? ""
+    seasonCompetitions[3][0]
+      ?.id ?? ""
   );
 
   /*
@@ -155,20 +178,30 @@ export default function TournamentAdminPage() {
     ========================================
   */
 
-  const [stage, setStage] =
-    useState("");
+  const [
+    stage,
+    setStage,
+  ] = useState("");
 
-  const [groupName, setGroupName] =
-    useState("");
+  const [
+    groupName,
+    setGroupName,
+  ] = useState("");
 
-  const [round, setRound] =
-    useState("");
+  const [
+    round,
+    setRound,
+  ] = useState("");
 
-  const [homeId, setHomeId] =
-    useState("");
+  const [
+    homeId,
+    setHomeId,
+  ] = useState("");
 
-  const [awayId, setAwayId] =
-    useState("");
+  const [
+    awayId,
+    setAwayId,
+  ] = useState("");
 
   /*
     ========================================
@@ -179,7 +212,10 @@ export default function TournamentAdminPage() {
   const [
     matches,
     setMatches,
-  ] = useState<TournamentMatch[]>([]);
+  ] =
+    useState<
+      TournamentMatch[]
+    >([]);
 
   const [
     matchesLoading,
@@ -213,11 +249,15 @@ export default function TournamentAdminPage() {
     ========================================
   */
 
-  const [loading, setLoading] =
-    useState(false);
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
 
-  const [message, setMessage] =
-    useState("");
+  const [
+    message,
+    setMessage,
+  ] = useState("");
 
   const [
     summaryRefreshKey,
@@ -226,12 +266,38 @@ export default function TournamentAdminPage() {
 
   /*
     ========================================
+    АСОЦІАЦІЇ
+    ========================================
+  */
+
+  const [
+    availableAssociations,
+    setAvailableAssociations,
+  ] =
+    useState<
+      AdminAssociation[]
+    >([]);
+
+  const [
+    associationsLoading,
+    setAssociationsLoading,
+  ] = useState(false);
+
+  const [
+    associationsError,
+    setAssociationsError,
+  ] = useState("");
+
+  /*
+    ========================================
     ТУРНІРИ СЕЗОНУ
     ========================================
   */
 
   const competitions =
-    seasonCompetitions[season];
+    seasonCompetitions[
+      season
+    ];
 
   const competitionConfig =
     useMemo(() => {
@@ -246,7 +312,8 @@ export default function TournamentAdminPage() {
     ]);
 
   const division =
-    competitionConfig?.division ?? null;
+    competitionConfig
+      ?.division ?? null;
 
   /*
     ========================================
@@ -256,13 +323,17 @@ export default function TournamentAdminPage() {
 
   const availableStages =
     useMemo(() => {
-      if (!competitionId) {
+      if (
+        !competitionId
+      ) {
         return [];
       }
 
       return getCompetitionStages({
         season,
-        competition: competitionId,
+
+        competition:
+          competitionId,
       });
     }, [
       season,
@@ -271,7 +342,8 @@ export default function TournamentAdminPage() {
 
   useEffect(() => {
     if (
-      availableStages.length === 0
+      availableStages.length ===
+      0
     ) {
       setStage("");
 
@@ -280,13 +352,17 @@ export default function TournamentAdminPage() {
 
     const stageExists =
       availableStages.some(
-        (stageOption) =>
-          stageOption.value === stage
+        (
+          stageOption
+        ) =>
+          stageOption.value ===
+          stage
       );
 
     if (!stageExists) {
       setStage(
-        availableStages[0].value
+        availableStages[0]
+          .value
       );
     }
   }, [
@@ -302,13 +378,17 @@ export default function TournamentAdminPage() {
 
   const availableGroups =
     useMemo(() => {
-      if (!competitionId) {
+      if (
+        !competitionId
+      ) {
         return [];
       }
 
       return getCompetitionGroups({
         season,
-        competition: competitionId,
+
+        competition:
+          competitionId,
       });
     }, [
       season,
@@ -316,10 +396,13 @@ export default function TournamentAdminPage() {
     ]);
 
   const hasGroups =
-    availableGroups.length > 0;
+    availableGroups.length >
+    0;
 
   useEffect(() => {
-    if (stage !== "group") {
+    if (
+      stage !== "group"
+    ) {
       setGroupName("");
     }
   }, [stage]);
@@ -343,7 +426,7 @@ export default function TournamentAdminPage() {
 
   /*
     ========================================
-    ЧИ ПОТРІБНА ДВОМАТЧЕВА ФОРМА
+    ТИПИ СТАДІЙ
     ========================================
   */
 
@@ -353,17 +436,21 @@ export default function TournamentAdminPage() {
       stage
     );
 
-    const isEuropeanFinal =
-  isEuropeanCompetition(
-    competitionId
-  ) &&
-  stage === "final";
+  const isEuropeanFinal =
+    isEuropeanCompetition(
+      competitionId
+    ) &&
+    stage === "final";
 
   const isDivisionCup =
-  competitionId === "division-1-cup" ||
-  competitionId === "division-2-cup" ||
-  competitionId === "division-3-cup" ||
-  competitionId === "division-4-cup";
+    competitionId ===
+      "division-1-cup" ||
+    competitionId ===
+      "division-2-cup" ||
+    competitionId ===
+      "division-3-cup" ||
+    competitionId ===
+      "division-4-cup";
 
   /*
     ========================================
@@ -405,26 +492,119 @@ export default function TournamentAdminPage() {
     ========================================
     АСОЦІАЦІЇ
     ========================================
+
+    Сезони 2–3:
+    історичні склади.
+
+    Сезон 4:
+    association_seed_ranks.
   */
 
-  const availableAssociations =
-    useMemo(() => {
+  useEffect(() => {
+    let cancelled =
+      false;
+
+    async function loadAssociations() {
       if (
         competitionId !==
         "associations-cup"
       ) {
-        return [];
+        setAvailableAssociations(
+          []
+        );
+
+        setAssociationsError(
+          ""
+        );
+
+        setAssociationsLoading(
+          false
+        );
+
+        return;
       }
 
-      return getCompetitionAssociations({
-        season,
-        competition:
-          "associations-cup",
-      });
-    }, [
-      season,
-      competitionId,
-    ]);
+      setAssociationsLoading(
+        true
+      );
+
+      setAssociationsError(
+        ""
+      );
+
+      try {
+        const params =
+          new URLSearchParams();
+
+        params.set(
+          "season",
+          String(season)
+        );
+
+        const response =
+          await fetch(
+            `/api/admin/association-squads?${params.toString()}`,
+            {
+              cache:
+                "no-store",
+            }
+          );
+
+        const result =
+          (await response.json()) as
+            AssociationSquadsResponse;
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!response.ok) {
+          setAvailableAssociations(
+            []
+          );
+
+          setAssociationsError(
+            result.error ??
+              "Не вдалося завантажити склади Асоціацій"
+          );
+
+          return;
+        }
+
+        setAvailableAssociations(
+          result.associations ??
+            []
+        );
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        setAvailableAssociations(
+          []
+        );
+
+        setAssociationsError(
+          "Помилка з'єднання при завантаженні Асоціацій"
+        );
+      } finally {
+        if (!cancelled) {
+          setAssociationsLoading(
+            false
+          );
+        }
+      }
+    }
+
+    void loadAssociations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    season,
+    competitionId,
+  ]);
 
   /*
     ========================================
@@ -478,8 +658,10 @@ export default function TournamentAdminPage() {
     return (
       players.find(
         (player) =>
-          player.id === playerId
-      )?.nickname ?? playerId
+          player.id ===
+          playerId
+      )?.nickname ??
+      playerId
     );
   }
 
@@ -487,11 +669,15 @@ export default function TournamentAdminPage() {
     id: string,
     type: string
   ) {
-    if (type === "team") {
+    if (
+      type === "team"
+    ) {
       return id;
     }
 
-    return getPlayerName(id);
+    return getPlayerName(
+      id
+    );
   }
 
   /*
@@ -502,13 +688,17 @@ export default function TournamentAdminPage() {
 
   const loadMatches =
     useCallback(async () => {
-      if (!competitionId) {
+      if (
+        !competitionId
+      ) {
         setMatches([]);
 
         return;
       }
 
-      setMatchesLoading(true);
+      setMatchesLoading(
+        true
+      );
 
       try {
         const params =
@@ -524,7 +714,9 @@ export default function TournamentAdminPage() {
           competitionId
         );
 
-        if (division !== null) {
+        if (
+          division !== null
+        ) {
           params.set(
             "division",
             String(division)
@@ -535,7 +727,8 @@ export default function TournamentAdminPage() {
           await fetch(
             `/api/admin/match?${params.toString()}`,
             {
-              cache: "no-store",
+              cache:
+                "no-store",
             }
           );
 
@@ -552,14 +745,17 @@ export default function TournamentAdminPage() {
         }
 
         setMatches(
-          result.matches ?? []
+          result.matches ??
+            []
         );
       } catch {
         setMessage(
           "Помилка з'єднання із сервером"
         );
       } finally {
-        setMatchesLoading(false);
+        setMatchesLoading(
+          false
+        );
       }
     }, [
       season,
@@ -596,7 +792,9 @@ export default function TournamentAdminPage() {
   */
 
   useEffect(() => {
-    if (!selectedMatch) {
+    if (
+      !selectedMatch
+    ) {
       setHomeGoals("");
       setAwayGoals("");
 
@@ -611,13 +809,15 @@ export default function TournamentAdminPage() {
     ) {
       setHomeGoals(
         String(
-          selectedMatch.home_goals
+          selectedMatch
+            .home_goals
         )
       );
 
       setAwayGoals(
         String(
-          selectedMatch.away_goals
+          selectedMatch
+            .away_goals
         )
       );
     } else {
@@ -633,7 +833,8 @@ export default function TournamentAdminPage() {
   */
 
   function changeSeason(
-    newSeason: SeasonNumber
+    newSeason:
+      SeasonNumber
   ) {
     setSeason(newSeason);
 
@@ -643,21 +844,23 @@ export default function TournamentAdminPage() {
       ][0];
 
     setCompetitionId(
-      firstCompetition?.id ?? ""
+      firstCompetition
+        ?.id ?? ""
     );
 
     setStage("");
     setGroupName("");
     setRound("");
-
     setHomeId("");
     setAwayId("");
-
-    setSelectedMatchId("");
-
+    setSelectedMatchId(
+      ""
+    );
     setMessage("");
 
-    setSummaryRefreshKey(0);
+    setSummaryRefreshKey(
+      0
+    );
   }
 
   /*
@@ -676,34 +879,29 @@ export default function TournamentAdminPage() {
     setStage("");
     setGroupName("");
     setRound("");
-
     setHomeId("");
     setAwayId("");
 
-    setSelectedMatchId("");
+    setSelectedMatchId(
+      ""
+    );
 
     setMessage("");
 
-    setSummaryRefreshKey(0);
+    setSummaryRefreshKey(
+      0
+    );
   }
 
   /*
     ========================================
     СТВОРЕННЯ ОДНОГО МАТЧУ
     ========================================
-
-    Використовується для:
-
-    - дивізіонів
-    - кваліфікації
-    - груп єврокубків
-    - фіналу ЛЧ / ЛЄ / ЛК
-    - кубків дивізіонів
-    - Суперкубка
   */
 
   async function createMatch(
-    event: FormEvent<HTMLFormElement>
+    event:
+      FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
@@ -715,7 +913,9 @@ export default function TournamentAdminPage() {
       return;
     }
 
-    if (!competitionId) {
+    if (
+      !competitionId
+    ) {
       setMessage(
         "Оберіть турнір"
       );
@@ -772,60 +972,63 @@ export default function TournamentAdminPage() {
         await fetch(
           "/api/admin/match",
           {
-            method: "PUT",
+            method:
+              "PUT",
 
             headers: {
               "Content-Type":
                 "application/json",
             },
 
-            body: JSON.stringify({
-              password,
+            body:
+              JSON.stringify({
+                password,
 
-              season,
+                season,
 
-              competition:
-                competitionId,
+                competition:
+                  competitionId,
 
-              division,
+                division,
 
-              stage,
+                stage,
 
-              group_name:
-                stage === "group"
-                  ? normalizedGroupName
-                  : null,
+                group_name:
+                  stage ===
+                  "group"
+                    ? normalizedGroupName
+                    : null,
 
-              round:
-                round === ""
-                  ? null
-                  : Number(round),
+                round:
+                  round === ""
+                    ? null
+                    : Number(
+                        round
+                      ),
 
-              /*
-                Усі матчі,
-                створені через цю форму,
-                одноматчеві.
-              */
+                leg: 1,
 
-              leg: 1,
+                participant_type:
+                  "player",
 
-              participant_type:
-                "player",
+                home_id:
+                  homeId,
 
-              home_id:
-                homeId,
+                away_id:
+                  awayId,
 
-              away_id:
-                awayId,
+                series_id:
+                  null,
 
-              series_id: null,
+                series_home_id:
+                  null,
 
-              series_home_id: null,
+                series_away_id:
+                  null,
 
-              series_away_id: null,
-
-              is_tiebreak: false,
-            }),
+                is_tiebreak:
+                  false,
+              }),
           }
         );
 
@@ -865,7 +1068,8 @@ export default function TournamentAdminPage() {
   */
 
   async function saveResult(
-    event: FormEvent<HTMLFormElement>
+    event:
+      FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
@@ -909,8 +1113,10 @@ export default function TournamentAdminPage() {
       !Number.isInteger(
         parsedAwayGoals
       ) ||
-      parsedHomeGoals < 0 ||
-      parsedAwayGoals < 0
+      parsedHomeGoals <
+        0 ||
+      parsedAwayGoals <
+        0
     ) {
       setMessage(
         "Невірно введено рахунок"
@@ -927,25 +1133,27 @@ export default function TournamentAdminPage() {
         await fetch(
           "/api/admin/match",
           {
-            method: "POST",
+            method:
+              "POST",
 
             headers: {
               "Content-Type":
                 "application/json",
             },
 
-            body: JSON.stringify({
-              password,
+            body:
+              JSON.stringify({
+                password,
 
-              match_id:
-                selectedMatch.id,
+                match_id:
+                  selectedMatch.id,
 
-              home_goals:
-                parsedHomeGoals,
+                home_goals:
+                  parsedHomeGoals,
 
-              away_goals:
-                parsedAwayGoals,
-            }),
+                away_goals:
+                  parsedAwayGoals,
+              }),
           }
         );
 
@@ -961,86 +1169,18 @@ export default function TournamentAdminPage() {
         return;
       }
 
-      let successMessage =
-  result.updated
-    ? "✅ Результат оновлено"
-    : "✅ Результат збережено";
-
-/*
-  Після кожного результату
-  Кубка асоціацій перевіряємо,
-  чи можна створити
-  наступну стадію.
-*/
-
-if (
-  competitionId ===
-    "associations-cup" &&
-  season === 3
-) {
-  try {
-    const advanceResponse =
-      await fetch(
-        "/api/admin/association-advance",
-        {
-          method:
-            "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body:
-            JSON.stringify({
-              password,
-
-              season,
-            }),
-        }
+      setMessage(
+        result.updated
+          ? "✅ Результат оновлено"
+          : "✅ Результат збережено"
       );
 
-    const advanceResult =
-      await advanceResponse.json();
+      await loadMatches();
 
-    if (
-      advanceResponse.ok &&
-      Array.isArray(
-        advanceResult.created
-      ) &&
-      advanceResult.created
-        .length > 0
-    ) {
-      successMessage +=
-        ` • ${advanceResult.message}`;
-    }
-
-    if (
-      !advanceResponse.ok
-    ) {
-      console.error(
-        "Association advance:",
-        advanceResult
+      setSummaryRefreshKey(
+        (current) =>
+          current + 1
       );
-    }
-  } catch (error) {
-    console.error(
-      "Association advance request:",
-      error
-    );
-  }
-}
-
-setMessage(
-  successMessage
-);
-
-await loadMatches();
-
-setSummaryRefreshKey(
-  (current) =>
-    current + 1
-);
     } catch {
       setMessage(
         "Помилка з'єднання із сервером"
@@ -1062,7 +1202,8 @@ setSummaryRefreshKey(
             </div>
 
             <div className="mt-1 text-xs text-white/40">
-              Керування турнірами
+              Керування
+              турнірами
             </div>
           </div>
 
@@ -1094,8 +1235,9 @@ setSummaryRefreshKey(
         </h1>
 
         <p className="mt-4 max-w-3xl leading-7 text-white/40">
-          Календарі та результати
-          турнірів Iron League.
+          Календарі та
+          результати турнірів
+          Iron League.
         </p>
 
         {/* SETTINGS */}
@@ -1103,15 +1245,19 @@ setSummaryRefreshKey(
         <div className="mt-10 grid gap-5 rounded-3xl border border-white/10 bg-[#07101d] p-7 lg:grid-cols-3">
           <div>
             <label className="text-sm font-bold text-white/60">
-              Пароль адміністратора
+              Пароль
+              адміністратора
             </label>
 
             <input
               type="password"
               value={password}
-              onChange={(event) =>
+              onChange={(
+                event
+              ) =>
                 setPassword(
-                  event.target.value
+                  event.target
+                    .value
                 )
               }
               placeholder="Пароль"
@@ -1126,28 +1272,39 @@ setSummaryRefreshKey(
 
             <select
               value={season}
-              onChange={(event) =>
+              onChange={(
+                event
+              ) =>
                 changeSeason(
                   Number(
-                    event.target.value
+                    event.target
+                      .value
                   ) as SeasonNumber
                 )
               }
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             >
-              <option value={1}>
+              <option
+                value={1}
+              >
                 Сезон 1
               </option>
 
-              <option value={2}>
+              <option
+                value={2}
+              >
                 Сезон 2
               </option>
 
-              <option value={3}>
+              <option
+                value={3}
+              >
                 Сезон 3
               </option>
 
-              <option value={4}>
+              <option
+                value={4}
+              >
                 Сезон 4
               </option>
             </select>
@@ -1159,10 +1316,15 @@ setSummaryRefreshKey(
             </label>
 
             <select
-              value={competitionId}
-              onChange={(event) =>
+              value={
+                competitionId
+              }
+              onChange={(
+                event
+              ) =>
                 changeCompetition(
-                  event.target.value
+                  event.target
+                    .value
                 )
               }
               disabled={
@@ -1174,11 +1336,14 @@ setSummaryRefreshKey(
               {competitions.length ===
               0 ? (
                 <option value="">
-                  Турніри ще не налаштовані
+                  Турніри ще не
+                  налаштовані
                 </option>
               ) : (
                 competitions.map(
-                  (competition) => (
+                  (
+                    competition
+                  ) => (
                     <option
                       key={
                         competition.id
@@ -1203,13 +1368,15 @@ setSummaryRefreshKey(
         {competitionConfig && (
           <div className="mt-5 rounded-xl border border-blue-400/20 bg-blue-500/10 px-5 py-4 text-sm text-blue-200">
             Обрано:{" "}
+
             <b>
               {
                 competitionConfig.name
               }
             </b>
 
-            {division !== null && (
+            {division !==
+              null && (
               <>
                 {" "}
                 • Дивізіон{" "}
@@ -1226,11 +1393,13 @@ setSummaryRefreshKey(
           <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
             <div>
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                Кубок асоціацій
+                Кубок
+                асоціацій
               </div>
 
               <h2 className="mt-2 text-3xl font-black">
-                Створити протистояння
+                Створити
+                протистояння
               </h2>
             </div>
 
@@ -1241,15 +1410,20 @@ setSummaryRefreshKey(
 
               <select
                 value={stage}
-                onChange={(event) =>
+                onChange={(
+                  event
+                ) =>
                   setStage(
-                    event.target.value
+                    event.target
+                      .value
                   )
                 }
                 className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
               >
                 {availableStages.map(
-                  (stageOption) => (
+                  (
+                    stageOption
+                  ) => (
                     <option
                       key={
                         stageOption.value
@@ -1267,12 +1441,244 @@ setSummaryRefreshKey(
               </select>
             </div>
 
-            <AssociationSeriesForm
-              password={password}
-              season={season}
-              stage={stage}
-              associations={
-                availableAssociations
+            {associationsLoading && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/40">
+                Завантаження
+                складів
+                Асоціацій...
+              </div>
+            )}
+
+            {associationsError && (
+              <div className="rounded-xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">
+                {
+                  associationsError
+                }
+              </div>
+            )}
+
+            {!associationsLoading &&
+              !associationsError && (
+                <AssociationSeriesForm
+                  password={
+                    password
+                  }
+                  season={
+                    season
+                  }
+                  stage={
+                    stage
+                  }
+                  associations={
+                    availableAssociations
+                  }
+                  onCreated={() => {
+                    void loadMatches();
+                  }}
+                />
+              )}
+          </div>
+        )}
+
+        {/* IRON CO-OP */}
+
+        {competitionId ===
+          "iron-coop-cup" && (
+          <div className="mt-8 space-y-8">
+            {/* TEAMS */}
+
+            <div className="space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                  Iron Co-op Cup
+                </div>
+
+                <h2 className="mt-2 text-3xl font-black">
+                  Формування
+                  команд
+                </h2>
+
+                <p className="mt-4 max-w-2xl leading-7 text-white/40">
+                  Сформуй 16
+                  команд по два
+                  гравці. Один
+                  гравець може
+                  входити лише
+                  до однієї
+                  команди цього
+                  сезону.
+                </p>
+              </div>
+
+              <CoopTeamsForm
+                password={
+                  password
+                }
+                season={
+                  season
+                }
+              />
+            </div>
+
+            {/* PLAYOFF */}
+
+            <div className="space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                  Iron Co-op Cup
+                </div>
+
+                <h2 className="mt-2 text-3xl font-black">
+                  Турнірна
+                  сітка
+                </h2>
+
+                <p className="mt-4 max-w-2xl leading-7 text-white/40">
+                  1/8 фіналу
+                  формується
+                  вручну.
+                  Наступні
+                  стадії
+                  отримують
+                  переможців
+                  автоматично
+                  відповідно
+                  до турнірної
+                  сітки.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-bold">
+                  Стадія
+                </label>
+
+                <select
+                  value={stage}
+                  onChange={(
+                    event
+                  ) =>
+                    setStage(
+                      event.target
+                        .value
+                    )
+                  }
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                >
+                  {availableStages.map(
+                    (
+                      stageOption
+                    ) => (
+                      <option
+                        key={
+                          stageOption.value
+                        }
+                        value={
+                          stageOption.value
+                        }
+                      >
+                        {
+                          stageOption.label
+                        }
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              <CoopSeriesForm
+                password={
+                  password
+                }
+                season={
+                  season
+                }
+                stage={
+                  stage
+                }
+                onCreated={() => {
+                  void loadMatches();
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* DIVISION CUP */}
+
+        {isDivisionCup && (
+          <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                Кубок дивізіону
+              </div>
+
+              <h2 className="mt-2 text-3xl font-black">
+                Турнірна сітка
+              </h2>
+            </div>
+
+            <div>
+              <label className="text-sm font-bold">
+                Стадія
+              </label>
+
+              <select
+                value={stage}
+                onChange={(
+                  event
+                ) => {
+                  setStage(
+                    event.target
+                      .value
+                  );
+
+                  setSelectedMatchId(
+                    ""
+                  );
+
+                  setMessage(
+                    ""
+                  );
+                }}
+                className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+              >
+                {availableStages.map(
+                  (
+                    stageOption
+                  ) => (
+                    <option
+                      key={
+                        stageOption.value
+                      }
+                      value={
+                        stageOption.value
+                      }
+                    >
+                      {
+                        stageOption.label
+                      }
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+
+            <DivisionCupBracketForm
+              password={
+                password
+              }
+              season={
+                season
+              }
+              competition={
+                competitionId
+              }
+              stage={
+                stage
+              }
+              playerIds={
+                availablePlayerIds
               }
               onCreated={() => {
                 void loadMatches();
@@ -1281,172 +1687,16 @@ setSummaryRefreshKey(
           </div>
         )}
 
-        {/* IRON CO-OP */}
-
-{competitionId ===
-  "iron-coop-cup" && (
-  <div className="mt-8 space-y-8">
-    {/* TEAMS */}
-
-    <div className="space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
-      <div>
-        <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-          Iron Co-op Cup
-        </div>
-
-        <h2 className="mt-2 text-3xl font-black">
-          Формування команд
-        </h2>
-
-        <p className="mt-4 max-w-2xl leading-7 text-white/40">
-          Сформуй 16 команд по два
-          гравці. Один гравець може
-          входити лише до однієї
-          команди цього сезону.
-        </p>
-      </div>
-
-      <CoopTeamsForm
-        password={password}
-        season={season}
-      />
-    </div>
-
-    {/* PLAYOFF */}
-
-    <div className="space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
-      <div>
-        <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-          Iron Co-op Cup
-        </div>
-
-        <h2 className="mt-2 text-3xl font-black">
-          Турнірна сітка
-        </h2>
-
-        <p className="mt-4 max-w-2xl leading-7 text-white/40">
-          1/8 фіналу формується
-          вручну. Наступні стадії
-          отримують переможців
-          автоматично відповідно
-          до турнірної сітки.
-        </p>
-      </div>
-
-      {/* STAGE */}
-
-      <div>
-        <label className="text-sm font-bold">
-          Стадія
-        </label>
-
-        <select
-          value={stage}
-          onChange={(event) =>
-            setStage(
-              event.target.value
-            )
-          }
-          className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
-        >
-          {availableStages.map(
-            (stageOption) => (
-              <option
-                key={
-                  stageOption.value
-                }
-                value={
-                  stageOption.value
-                }
-              >
-                {
-                  stageOption.label
-                }
-              </option>
-            )
-          )}
-        </select>
-      </div>
-
-      <CoopSeriesForm
-        password={password}
-        season={season}
-        stage={stage}
-        onCreated={() => {
-          void loadMatches();
-        }}
-      />
-    </div>
-  </div>
-)}
-
-        {/* DIVISION CUP */}
-
-{isDivisionCup && (
-  <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
-    <div>
-      <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-        Кубок дивізіону
-      </div>
-
-      <h2 className="mt-2 text-3xl font-black">
-        Турнірна сітка
-      </h2>
-    </div>
-
-    <div>
-      <label className="text-sm font-bold">
-        Стадія
-      </label>
-
-      <select
-        value={stage}
-        onChange={(event) => {
-          setStage(
-            event.target.value
-          );
-
-          setSelectedMatchId("");
-          setMessage("");
-        }}
-        className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
-      >
-        {availableStages.map(
-          (stageOption) => (
-            <option
-              key={stageOption.value}
-              value={stageOption.value}
-            >
-              {stageOption.label}
-            </option>
-          )
-        )}
-      </select>
-    </div>
-
-    <DivisionCupBracketForm
-      password={password}
-      season={season}
-      competition={competitionId}
-      stage={stage}
-      playerIds={availablePlayerIds}
-      onCreated={() => {
-        void loadMatches();
-      }}
-    />
-  </div>
-)}
-
         {/* EUROPEAN TWO LEG SERIES */}
 
         {competitionId &&
-  competitionId !==
-    "associations-cup" &&
-  competitionId !==
-    "iron-coop-cup" &&
-  !usesTwoLegs &&
-  !isEuropeanFinal &&
-  !isDivisionCup && (
+          competitionId !==
+            "associations-cup" &&
+          competitionId !==
+            "iron-coop-cup" &&
+          usesTwoLegs &&
+          !isEuropeanFinal &&
+          !isDivisionCup && (
             <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
               <div>
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -1454,7 +1704,9 @@ setSummaryRefreshKey(
                 </div>
 
                 <h2 className="mt-2 text-3xl font-black">
-                  Створити двоматчеве протистояння
+                  Створити
+                  двоматчеве
+                  протистояння
                 </h2>
               </div>
 
@@ -1465,15 +1717,20 @@ setSummaryRefreshKey(
 
                 <select
                   value={stage}
-                  onChange={(event) =>
+                  onChange={(
+                    event
+                  ) =>
                     setStage(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                 >
                   {availableStages.map(
-                    (stageOption) => (
+                    (
+                      stageOption
+                    ) => (
                       <option
                         key={
                           stageOption.value
@@ -1492,12 +1749,18 @@ setSummaryRefreshKey(
               </div>
 
               <TwoLegSeriesForm
-                password={password}
-                season={season}
+                password={
+                  password
+                }
+                season={
+                  season
+                }
                 competition={
                   competitionId
                 }
-                stage={stage}
+                stage={
+                  stage
+                }
                 playerIds={
                   availablePlayerIds
                 }
@@ -1508,45 +1771,52 @@ setSummaryRefreshKey(
             </div>
           )}
 
-          {/* EUROPEAN FINAL */}
+        {/* EUROPEAN FINAL */}
 
-{isEuropeanFinal && (
-  <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
-    <div>
-      <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-        Фінал
-      </div>
+        {isEuropeanFinal && (
+          <div className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                Фінал
+              </div>
 
-      <h2 className="mt-2 text-3xl font-black">
-        Створити фінальний матч
-      </h2>
-    </div>
+              <h2 className="mt-2 text-3xl font-black">
+                Створити
+                фінальний матч
+              </h2>
+            </div>
 
-    <EuropeanFinalForm
-      password={password}
-      season={season}
-      competition={
-        competitionId
-      }
-      onCreated={() => {
-        void loadMatches();
-      }}
-    />
-  </div>
-)}
+            <EuropeanFinalForm
+              password={
+                password
+              }
+              season={
+                season
+              }
+              competition={
+                competitionId
+              }
+              onCreated={() => {
+                void loadMatches();
+              }}
+            />
+          </div>
+        )}
 
         {/* REGULAR MATCH */}
 
         {competitionId &&
-  competitionId !==
-    "associations-cup" &&
-  competitionId !==
-    "iron-coop-cup" &&
-  !usesTwoLegs &&
-  !isEuropeanFinal &&
-  !isDivisionCup && (
+          competitionId !==
+            "associations-cup" &&
+          competitionId !==
+            "iron-coop-cup" &&
+          !usesTwoLegs &&
+          !isEuropeanFinal &&
+          !isDivisionCup && (
             <form
-              onSubmit={createMatch}
+              onSubmit={
+                createMatch
+              }
               className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
             >
               <div>
@@ -1568,20 +1838,32 @@ setSummaryRefreshKey(
 
                 <select
                   value={stage}
-                  onChange={(event) => {
+                  onChange={(
+                    event
+                  ) => {
                     setStage(
-                      event.target.value
+                      event.target
+                        .value
                     );
 
-                    setGroupName("");
+                    setGroupName(
+                      ""
+                    );
 
-                    setHomeId("");
-                    setAwayId("");
+                    setHomeId(
+                      ""
+                    );
+
+                    setAwayId(
+                      ""
+                    );
                   }}
                   className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                 >
                   {availableStages.map(
-                    (stageOption) => (
+                    (
+                      stageOption
+                    ) => (
                       <option
                         key={
                           stageOption.value
@@ -1601,7 +1883,8 @@ setSummaryRefreshKey(
 
               {/* GROUP */}
 
-              {stage === "group" &&
+              {stage ===
+                "group" &&
                 hasGroups && (
                   <div>
                     <label className="text-sm font-bold">
@@ -1612,27 +1895,45 @@ setSummaryRefreshKey(
                       value={
                         groupName
                       }
-                      onChange={(event) => {
+                      onChange={(
+                        event
+                      ) => {
                         setGroupName(
-                          event.target.value
+                          event.target
+                            .value
                         );
 
-                        setHomeId("");
-                        setAwayId("");
+                        setHomeId(
+                          ""
+                        );
+
+                        setAwayId(
+                          ""
+                        );
                       }}
                       className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                     >
                       <option value="">
-                        Оберіть групу
+                        Оберіть
+                        групу
                       </option>
 
                       {availableGroups.map(
-                        (group) => (
+                        (
+                          group
+                        ) => (
                           <option
-                            key={group}
-                            value={group}
+                            key={
+                              group
+                            }
+                            value={
+                              group
+                            }
                           >
-                            Група {group}
+                            Група{" "}
+                            {
+                              group
+                            }
                           </option>
                         )
                       )}
@@ -1651,9 +1952,12 @@ setSummaryRefreshKey(
                   type="number"
                   min="1"
                   value={round}
-                  onChange={(event) =>
+                  onChange={(
+                    event
+                  ) =>
                     setRound(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   placeholder="Не обов'язково"
@@ -1663,18 +1967,20 @@ setSummaryRefreshKey(
 
               {/* PLAYERS */}
 
-              {stage === "group" &&
+              {stage ===
+                "group" &&
               hasGroups &&
               !groupName ? (
                 <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
-                  Спочатку оберіть
-                  групу.
+                  Спочатку
+                  оберіть групу.
                 </div>
               ) : availablePlayerIds.length ===
                 0 ? (
                 <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-5 text-yellow-200">
-                  Для цієї стадії
-                  немає доступних
+                  Для цієї
+                  стадії немає
+                  доступних
                   гравців.
                 </div>
               ) : (
@@ -1685,20 +1991,28 @@ setSummaryRefreshKey(
                     </label>
 
                     <select
-                      value={homeId}
-                      onChange={(event) =>
+                      value={
+                        homeId
+                      }
+                      onChange={(
+                        event
+                      ) =>
                         setHomeId(
-                          event.target.value
+                          event.target
+                            .value
                         )
                       }
                       className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                     >
                       <option value="">
-                        Оберіть гравця
+                        Оберіть
+                        гравця
                       </option>
 
                       {availablePlayerIds.map(
-                        (playerId) => (
+                        (
+                          playerId
+                        ) => (
                           <option
                             key={
                               playerId
@@ -1722,20 +2036,28 @@ setSummaryRefreshKey(
                     </label>
 
                     <select
-                      value={awayId}
-                      onChange={(event) =>
+                      value={
+                        awayId
+                      }
+                      onChange={(
+                        event
+                      ) =>
                         setAwayId(
-                          event.target.value
+                          event.target
+                            .value
                         )
                       }
                       className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                     >
                       <option value="">
-                        Оберіть гравця
+                        Оберіть
+                        гравця
                       </option>
 
                       {availablePlayerIds.map(
-                        (playerId) => (
+                        (
+                          playerId
+                        ) => (
                           <option
                             key={
                               playerId
@@ -1783,12 +2105,16 @@ setSummaryRefreshKey(
                 </div>
 
                 <h2 className="mt-2 text-3xl font-black">
-                  Створені матчі
+                  Створені
+                  матчі
                 </h2>
               </div>
 
               <div className="text-sm text-white/35">
-                {matches.length} матчів
+                {
+                  matches.length
+                }{" "}
+                матчів
               </div>
             </div>
 
@@ -1800,7 +2126,8 @@ setSummaryRefreshKey(
               0 ? (
               <div className="mt-7 rounded-xl border border-white/10 bg-white/[0.03] p-5 text-white/40">
                 Матчів цього
-                турніру ще немає.
+                турніру ще
+                немає.
               </div>
             ) : (
               <div className="mt-7 space-y-3">
@@ -1808,7 +2135,9 @@ setSummaryRefreshKey(
                   (match) => (
                     <button
                       type="button"
-                      key={match.id}
+                      key={
+                        match.id
+                      }
                       onClick={() =>
                         setSelectedMatchId(
                           match.id
@@ -1847,11 +2176,13 @@ setSummaryRefreshKey(
                             {match.round &&
                               ` • № ${match.round}`}
 
-                            {match.leg === 1 &&
+                            {match.leg ===
+                              1 &&
                               match.series_id &&
                               " • 1-й матч"}
 
-                            {match.leg === 2 &&
+                            {match.leg ===
+                              2 &&
                               " • Матч-відповідь"}
 
                             {match.is_tiebreak &&
@@ -1878,7 +2209,9 @@ setSummaryRefreshKey(
 
         {selectedMatch && (
           <form
-            onSubmit={saveResult}
+            onSubmit={
+              saveResult
+            }
             className="mt-8 rounded-3xl border border-white/10 bg-[#07101d] p-7"
           >
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -1901,10 +2234,15 @@ setSummaryRefreshKey(
                 <input
                   type="number"
                   min="0"
-                  value={homeGoals}
-                  onChange={(event) =>
+                  value={
+                    homeGoals
+                  }
+                  onChange={(
+                    event
+                  ) =>
                     setHomeGoals(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
@@ -1926,10 +2264,15 @@ setSummaryRefreshKey(
                 <input
                   type="number"
                   min="0"
-                  value={awayGoals}
-                  onChange={(event) =>
+                  value={
+                    awayGoals
+                  }
+                  onChange={(
+                    event
+                  ) =>
                     setAwayGoals(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
@@ -1939,7 +2282,9 @@ setSummaryRefreshKey(
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={
+                loading
+              }
               className="mt-6 w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:opacity-40"
             >
               {loading
@@ -1956,14 +2301,19 @@ setSummaryRefreshKey(
 
         {competitionId ===
           "associations-cup" &&
-          selectedMatch?.series_id && (
+          selectedMatch
+            ?.series_id && (
             <div className="mt-8">
               <AssociationSeriesSummary
-                season={season}
+                season={
+                  season
+                }
                 seriesId={
                   selectedMatch.series_id
                 }
-                password={password}
+                password={
+                  password
+                }
                 refreshKey={
                   summaryRefreshKey
                 }
@@ -1971,31 +2321,39 @@ setSummaryRefreshKey(
                   void loadMatches();
 
                   setSummaryRefreshKey(
-                    (current) =>
-                      current + 1
+                    (
+                      current
+                    ) =>
+                      current +
+                      1
                   );
                 }}
               />
             </div>
           )}
 
-          {/* TWO LEG SERIES SUMMARY */}
+        {/* TWO LEG SERIES SUMMARY */}
 
-{isEuropeanCompetition(competitionId) &&
-  selectedMatch?.series_id &&
-  !selectedMatch.is_tiebreak && (
-    <div className="mt-8">
-      <TwoLegSeriesSummary
-        season={season}
-        seriesId={
-          selectedMatch.series_id
-        }
-        refreshKey={
-          summaryRefreshKey
-        }
-      />
-    </div>
-  )}
+        {isEuropeanCompetition(
+          competitionId
+        ) &&
+          selectedMatch
+            ?.series_id &&
+          !selectedMatch.is_tiebreak && (
+            <div className="mt-8">
+              <TwoLegSeriesSummary
+                season={
+                  season
+                }
+                seriesId={
+                  selectedMatch.series_id
+                }
+                refreshKey={
+                  summaryRefreshKey
+                }
+              />
+            </div>
+          )}
 
         {/* MESSAGE */}
 

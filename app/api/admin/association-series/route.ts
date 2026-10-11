@@ -6,7 +6,13 @@ import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 import { calculateAssociationSeries } from "../../../../lib/association-series";
 
-import { getCompetitionAssociations } from "../../../../data/competitions/get-competition-associations";
+import {
+  getSeasonAssociationRankMap,
+} from "../../../../lib/association-ranks";
+
+import {
+  getSeasonAssociationSquads,
+} from "../../../../lib/association-squads";
 
 import { getCompetitionStages } from "../../../../data/competitions/get-competition-stages";
 
@@ -301,13 +307,9 @@ export async function GET(
     }
 
     const associations =
-      getCompetitionAssociations({
-        season:
-          season as SeasonNumber,
-
-        competition:
-          "associations-cup",
-      });
+  await getSeasonAssociationSquads(
+    season
+  );
 
     const homeAssociation =
       associations.find(
@@ -611,13 +613,9 @@ export async function POST(
     */
 
     const associations =
-      getCompetitionAssociations({
-        season:
-          seasonNumber,
-
-        competition:
-          "associations-cup",
-      });
+  await getSeasonAssociationSquads(
+    seasonNumber
+  );
 
     const homeAssociation =
       associations.find(
@@ -788,6 +786,177 @@ export async function POST(
         }
       );
     }
+
+    /*
+  ========================================
+  ПЕРЕВІРКА РАНГІВ R1–R6
+  ========================================
+
+  Сезон 3+:
+
+  R1 може грати тільки проти R1
+  R2 тільки проти R2
+  ...
+  R6 тільки проти R6
+
+  Також у протистоянні
+  повинні бути використані
+  всі шість рангів рівно один раз.
+*/
+
+if (
+  seasonNumber >= 3
+) {
+  const rankMap =
+    await getSeasonAssociationRankMap(
+      seasonNumber
+    );
+
+  /*
+    У сезоні повинні бути
+    зафіксовані ранги.
+  */
+
+  if (
+    rankMap.size !== 48
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          `Для Сезону ${seasonNumber} не зафіксовані всі 48 рангів R1–R6`,
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  const usedRanks =
+    new Set<number>();
+
+  for (
+    let index = 0;
+    index < pairings.length;
+    index += 1
+  ) {
+    const pairing =
+      pairings[index];
+
+    const homeRankRow =
+      rankMap.get(
+        pairing.home_id
+      );
+
+    const awayRankRow =
+      rankMap.get(
+        pairing.away_id
+      );
+
+    /*
+      Обидва гравці повинні
+      мати зафіксований ранг.
+    */
+
+    if (
+      !homeRankRow
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `Гравець ${pairing.home_id} не має зафіксованого рангу у Сезоні ${seasonNumber}`,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      !awayRankRow
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `Гравець ${pairing.away_id} не має зафіксованого рангу у Сезоні ${seasonNumber}`,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+      Ранги повинні співпадати.
+    */
+
+    if (
+      homeRankRow.rank !==
+      awayRankRow.rank
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `Матч ${index + 1}: R${homeRankRow.rank} не може грати проти R${awayRankRow.rank}`,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+      Кожен ранг можна
+      використати лише один раз.
+    */
+
+    if (
+      usedRanks.has(
+        homeRankRow.rank
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `Ранг R${homeRankRow.rank} використаний у протистоянні більше одного разу`,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    usedRanks.add(
+      homeRankRow.rank
+    );
+  }
+
+  /*
+    Обов'язково повинні бути
+    всі ранги R1–R6.
+  */
+
+  for (
+    let rank = 1;
+    rank <= 6;
+    rank += 1
+  ) {
+    if (
+      !usedRanks.has(
+        rank
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `У протистоянні відсутній матч R${rank} проти R${rank}`,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+  }
+}
 
     /*
       ========================================
@@ -1547,13 +1716,9 @@ export async function PUT(
     }
 
     const associations =
-      getCompetitionAssociations({
-        season:
-          season as SeasonNumber,
-
-        competition:
-          "associations-cup",
-      });
+  await getSeasonAssociationSquads(
+    season
+  );
 
     const homeAssociation =
       associations.find(
