@@ -1,4 +1,5 @@
 import StadiumBackground from "../../../components/StadiumBackground";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
 import { players } from "../../../data/players";
@@ -15,6 +16,7 @@ import {
 
 import { getCompetitionPlayers } from "../../../data/competitions/get-competition-players";
 import { getCompetitionGroups } from "../../../data/competitions/get-competition-groups";
+
 import {
   getSeasonAssociationSquads,
 } from "../../../lib/association-squads";
@@ -736,29 +738,38 @@ function formatMatchDate(
 
 /*
   ========================================
-  PAGE
+  DATA COMPONENT
   ========================================
 */
 
-export default async function PlayerPage({
-  params,
-  searchParams,
-}: PageProps) {
-  const resolvedParams =
-    await params;
+type PlayerProfileDataProps = {
+  playerId: string;
+  season: SeasonNumber;
+};
 
-  const resolvedSearchParams =
-    await searchParams;
+type AssociationSquads =
+  Awaited<
+    ReturnType<
+      typeof getSeasonAssociationSquads
+    >
+  >;
 
-  const playerId =
-    resolvedParams.id;
+/*
+  ========================================
+  ЗАВАНТАЖЕННЯ ДАНИХ ПРОФІЛЮ
+  ========================================
 
-  /*
-    ========================================
-    ГРАВЕЦЬ
-    ========================================
-  */
+  Цей компонент працює всередині
+  Suspense.
 
+  HEADER і HERO не чекають
+  трофеї, статистику та матчі.
+*/
+
+async function PlayerProfileData({
+  playerId,
+  season,
+}: PlayerProfileDataProps) {
   const player =
     players.find(
       (item) =>
@@ -769,26 +780,6 @@ export default async function PlayerPage({
   if (!player) {
     notFound();
   }
-
-  /*
-    ========================================
-    СЕЗОН
-    ========================================
-  */
-
-  const requestedSeason =
-    Number(
-      resolvedSearchParams
-        .season
-    );
-
-  const season: SeasonNumber =
-    requestedSeason >= 1 &&
-    requestedSeason <= 4
-      ? (
-          requestedSeason as SeasonNumber
-        )
-      : 3;
 
   /*
     ========================================
@@ -812,177 +803,94 @@ export default async function PlayerPage({
 
   /*
     ========================================
-    ТРОФЕЇ
+    ПАРАЛЕЛЬНІ ЗАПИТИ
     ========================================
   */
 
-  const honours =
-    await getPlayerHonours(
+  const competitions =
+    seasonCompetitions[
+      season
+    ];
+
+  const hasAssociationCup =
+    competitions.some(
+      (competition) =>
+        competition.id ===
+        "associations-cup"
+    );
+
+  const associationSquadsPromise:
+    Promise<AssociationSquads> =
+    hasAssociationCup
+      ? getSeasonAssociationSquads(
+          season
+        ).catch(
+          () =>
+            [] as AssociationSquads
+        )
+      : Promise.resolve(
+          [] as AssociationSquads
+        );
+
+  const [
+    honours,
+    coopTeamsResult,
+    directMatchesResult,
+    coopMatchesResult,
+    associationSquads,
+  ] = await Promise.all([
+    getPlayerHonours(
       playerId
-    );
+    ),
 
-  const trophyCount =
-    honours.length;
+    supabase
+      .from("coop_teams")
+      .select(
+        `
+          id,
+          name,
+          season,
+          player_1_id,
+          player_2_id
+        `
+      ),
 
-  const selectedSeasonHonours =
-    honours.filter(
-      (honour) =>
-        honour.season ===
-        season
-    );
+    supabase
+      .from("matches")
+      .select(
+        `
+          id,
+          season,
+          competition,
+          division,
+          participant_type,
+          home_id,
+          away_id,
+          home_goals,
+          away_goals,
+          status,
+          played_at
+        `
+      )
+      .eq(
+        "status",
+        "finished"
+      )
+      .not(
+        "home_goals",
+        "is",
+        null
+      )
+      .not(
+        "away_goals",
+        "is",
+        null
+      )
+      .or(
+        `home_id.eq.${playerId},away_id.eq.${playerId}`
+      ),
 
-  /*
-    ========================================
-    ВСІ CO-OP КОМАНДИ
-    ========================================
-  */
-
-  const {
-    data: coopTeamsData,
-    error: coopTeamsError,
-  } = await supabase
-    .from("coop_teams")
-    .select(
-      `
-        id,
-        name,
-        season,
-        player_1_id,
-        player_2_id
-      `
-    );
-
-  if (coopTeamsError) {
-    console.error(
-      "PLAYER COOP TEAMS ERROR:",
-      coopTeamsError
-    );
-  }
-
-  const coopTeams =
-    (
-      coopTeamsData ??
-      []
-    ) as CoopTeamRow[];
-
-  /*
-    Команди, де грає
-    саме цей гравець.
-  */
-
-  const playerCoopTeams =
-    coopTeams.filter(
-      (team) =>
-        team.player_1_id ===
-          playerId ||
-        team.player_2_id ===
-          playerId
-    );
-
-  /*
-    У деяких матчах команда
-    може зберігатися через ID,
-    а в деяких — через назву.
-
-    Підтримуємо обидва варіанти.
-  */
-
-  const coopTeamRefs =
-    new Set<string>();
-
-  for (
-    const team of playerCoopTeams
-  ) {
-    coopTeamRefs.add(
-      team.id
-    );
-
-    coopTeamRefs.add(
-      team.name
-    );
-  }
-
-  /*
-    ========================================
-    ЗВИЧАЙНІ МАТЧІ
-    ========================================
-  */
-
-  const {
-    data:
-      directMatchesData,
-    error:
-      directMatchesError,
-  } = await supabase
-    .from("matches")
-    .select(
-      `
-        id,
-        season,
-        competition,
-        division,
-        participant_type,
-        home_id,
-        away_id,
-        home_goals,
-        away_goals,
-        status,
-        played_at
-      `
-    )
-    .eq(
-      "status",
-      "finished"
-    )
-    .not(
-      "home_goals",
-      "is",
-      null
-    )
-    .not(
-      "away_goals",
-      "is",
-      null
-    )
-    .or(
-      `home_id.eq.${playerId},away_id.eq.${playerId}`
-    );
-
-  if (
-    directMatchesError
-  ) {
-    console.error(
-      "PLAYER MATCHES ERROR:",
-      directMatchesError
-    );
-  }
-
-  const directMatches =
-    (
-      directMatchesData ??
-      []
-    ) as PlayerStatsMatch[];
-
-  /*
-    ========================================
-    CO-OP МАТЧІ
-    ========================================
-  */
-
-  let coopMatches:
-    PlayerStatsMatch[] = [];
-
-  if (
-    coopTeamRefs.size >
-    0
-  ) {
-    const {
-      data:
-        coopMatchesData,
-
-      error:
-        coopMatchesError,
-    } = await supabase
+    supabase
       .from("matches")
       .select(
         `
@@ -1016,31 +924,121 @@ export default async function PlayerPage({
         "away_goals",
         "is",
         null
-      );
+      ),
 
-    if (
-      coopMatchesError
-    ) {
-      console.error(
-        "PLAYER COOP MATCHES ERROR:",
-        coopMatchesError
-      );
-    }
+    associationSquadsPromise,
+  ]);
 
-    coopMatches =
-      (
-        coopMatchesData ??
-        []
-      ).filter(
-        (match) =>
-          coopTeamRefs.has(
-            match.home_id
-          ) ||
-          coopTeamRefs.has(
-            match.away_id
-          )
-      ) as PlayerStatsMatch[];
+  /*
+    ========================================
+    ТРОФЕЇ
+    ========================================
+  */
+
+  const trophyCount =
+    honours.length;
+
+  const selectedSeasonHonours =
+    honours.filter(
+      (honour) =>
+        honour.season ===
+        season
+    );
+
+  /*
+    ========================================
+    CO-OP КОМАНДИ
+    ========================================
+  */
+
+  if (
+    coopTeamsResult.error
+  ) {
+    console.error(
+      "PLAYER COOP TEAMS ERROR:",
+      coopTeamsResult.error
+    );
   }
+
+  const coopTeams =
+    (
+      coopTeamsResult.data ??
+      []
+    ) as CoopTeamRow[];
+
+  const playerCoopTeams =
+    coopTeams.filter(
+      (team) =>
+        team.player_1_id ===
+          playerId ||
+        team.player_2_id ===
+          playerId
+    );
+
+  const coopTeamRefs =
+    new Set<string>();
+
+  for (
+    const team of playerCoopTeams
+  ) {
+    coopTeamRefs.add(
+      team.id
+    );
+
+    coopTeamRefs.add(
+      team.name
+    );
+  }
+
+  /*
+    ========================================
+    ЗВИЧАЙНІ МАТЧІ
+    ========================================
+  */
+
+  if (
+    directMatchesResult.error
+  ) {
+    console.error(
+      "PLAYER MATCHES ERROR:",
+      directMatchesResult.error
+    );
+  }
+
+  const directMatches =
+    (
+      directMatchesResult.data ??
+      []
+    ) as PlayerStatsMatch[];
+
+  /*
+    ========================================
+    CO-OP МАТЧІ
+    ========================================
+  */
+
+  if (
+    coopMatchesResult.error
+  ) {
+    console.error(
+      "PLAYER COOP MATCHES ERROR:",
+      coopMatchesResult.error
+    );
+  }
+
+  const coopMatches =
+    (
+      coopMatchesResult.data ??
+      []
+    ).filter(
+      (match) =>
+        coopTeamRefs.has(
+          match.home_id
+        ) ||
+        coopTeamRefs.has(
+          match.away_id
+        )
+    ) as PlayerStatsMatch[];
 
   /*
     ========================================
@@ -1322,11 +1320,6 @@ export default async function PlayerPage({
     });
   }
 
-  const competitions =
-    seasonCompetitions[
-      season
-    ];
-
   for (
     const competition of competitions
   ) {
@@ -1349,40 +1342,31 @@ export default async function PlayerPage({
       id ===
       "associations-cup"
     ) {
-      try {
-        const associations =
-  await getSeasonAssociationSquads(
-    season
-  );
+      const association =
+        associationSquads.find(
+          (item) =>
+            Array.isArray(
+              item?.players
+            ) &&
+            item.players.includes(
+              playerId
+            )
+        );
 
-        const association =
-          associations.find(
-            (item) =>
-              Array.isArray(
-                item?.players
-              ) &&
-              item.players.includes(
-                playerId
-              )
-          );
+      if (association) {
+        seasonCards.push({
+          key:
+            "associations-cup",
 
-        if (association) {
-          seasonCards.push({
-            key:
-              "associations-cup",
+          eyebrow:
+            "Кубок",
 
-            eyebrow:
-              "Кубок",
+          title:
+            "Кубок асоціацій",
 
-            title:
-              "Кубок асоціацій",
-
-            subtitle:
-              association.name,
-          });
-        }
-      } catch {
-        // Даних немає.
+          subtitle:
+            association.name,
+        });
       }
 
       continue;
@@ -1500,126 +1484,8 @@ export default async function PlayerPage({
       ).values()
     );
 
-  const initials =
-    getInitials(
-      player.nickname
-    );
-
   return (
-    <main className="min-h-screen bg-[#030711] text-white">
-      {/* HEADER */}
-
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a
-            href="/"
-            className="flex items-center gap-4"
-          >
-            <img
-              src="/iron-league-logo.jpg"
-              alt="Iron League"
-              className="h-14 w-auto object-contain"
-            />
-
-            <div>
-              <div className="font-black tracking-[0.18em]">
-                IRON LEAGUE
-              </div>
-
-              <div className="text-xs text-white/35">
-                Профіль гравця
-              </div>
-            </div>
-          </a>
-
-          <a
-            href={`/players?season=${season}`}
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
-          >
-            ← Усі гравці
-          </a>
-        </div>
-      </header>
-
-      {/* HERO */}
-
-      <section className="relative overflow-hidden border-b border-white/10">
-        <StadiumBackground
-  opacity="20"
-  preload
-/>
-
-        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/75" />
-
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/80" />
-
-        <div className="relative mx-auto max-w-7xl px-6 py-20">
-          <div className="flex flex-col gap-8 sm:flex-row sm:items-center">
-            <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-[30px] border border-blue-400/30 bg-blue-500/10 text-4xl font-black text-blue-300 shadow-[0_0_40px_rgba(59,130,246,0.08)]">
-              {initials}
-            </div>
-
-            <div className="min-w-0">
-              <div className="text-xs font-black uppercase tracking-[0.28em] text-blue-400">
-                Iron League
-              </div>
-
-              <h1 className="mt-3 break-words text-5xl font-black sm:text-6xl">
-                {player.nickname}
-              </h1>
-
-              {player.account && (
-                <div className="mt-3 text-lg text-white/35">
-                  ({player.account})
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* SEASONS */}
-
-          <div className="mt-10">
-            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
-              Кар&apos;єра за
-              сезонами
-            </div>
-
-            <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d]/90 p-1">
-              {(
-                [
-                  1,
-                  2,
-                  3,
-                  4,
-                ] as const
-              ).map(
-                (
-                  seasonNumber
-                ) => (
-                  <a
-                    key={
-                      seasonNumber
-                    }
-                    href={`/players/${playerId}?season=${seasonNumber}`}
-                    className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
-                      season ===
-                      seasonNumber
-                        ? "bg-blue-500 text-white"
-                        : "text-white/45 hover:bg-white/[0.04] hover:text-white"
-                    }`}
-                  >
-                    Сезон{" "}
-                    {
-                      seasonNumber
-                    }
-                  </a>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
+    <>
       {/* SEASON CAREER */}
 
       <section className="mx-auto max-w-7xl px-6 py-16">
@@ -1898,8 +1764,6 @@ export default async function PlayerPage({
             </div>
           ) : (
             <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]">
-              {/* TABLE HEADER */}
-
               <div className="hidden grid-cols-[120px_80px_1fr_120px_1fr_120px] gap-4 border-b border-white/10 bg-white/[0.025] px-6 py-4 text-xs font-bold uppercase tracking-[0.12em] text-white/30 lg:grid">
                 <div>
                   Дата
@@ -1941,8 +1805,6 @@ export default async function PlayerPage({
                         }
                         className="grid gap-4 px-6 py-5 transition hover:bg-white/[0.025] lg:grid-cols-[120px_80px_1fr_120px_1fr_120px] lg:items-center"
                       >
-                        {/* DATE */}
-
                         <div>
                           <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
                             Дата
@@ -1954,8 +1816,6 @@ export default async function PlayerPage({
                             )}
                           </div>
                         </div>
-
-                        {/* SEASON */}
 
                         <div>
                           <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
@@ -1969,8 +1829,6 @@ export default async function PlayerPage({
                           </div>
                         </div>
 
-                        {/* OPPONENT */}
-
                         <div className="min-w-0">
                           <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
                             Суперник
@@ -1982,8 +1840,6 @@ export default async function PlayerPage({
                             )}
                           </div>
                         </div>
-
-                        {/* SCORE */}
 
                         <div>
                           <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
@@ -1997,8 +1853,6 @@ export default async function PlayerPage({
                           </div>
                         </div>
 
-                        {/* COMPETITION */}
-
                         <div className="min-w-0">
                           <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
                             Турнір
@@ -2011,8 +1865,6 @@ export default async function PlayerPage({
                             )}
                           </div>
                         </div>
-
-                        {/* RESULT */}
 
                         <div className="lg:text-right">
                           <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
@@ -2139,6 +1991,256 @@ export default async function PlayerPage({
           )}
         </div>
       </section>
+    </>
+  );
+}
+
+/*
+  ========================================
+  FALLBACK ПІД ЧАС ЗАВАНТАЖЕННЯ
+  ========================================
+*/
+
+function PlayerProfileDataFallback() {
+  return (
+    <>
+      <section className="mx-auto max-w-7xl px-6 py-16">
+        <div className="h-3 w-24 animate-pulse rounded-full bg-blue-400/20" />
+
+        <div className="mt-4 h-9 w-52 animate-pulse rounded-xl bg-white/[0.06]" />
+
+        <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {[
+            1,
+            2,
+            3,
+          ].map(
+            (item) => (
+              <div
+                key={item}
+                className="h-36 animate-pulse rounded-3xl border border-white/10 bg-[#07101d]"
+              />
+            )
+          )}
+        </div>
+      </section>
+
+      <section className="border-t border-white/10 bg-white/[0.02]">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="h-8 w-56 animate-pulse rounded-xl bg-white/[0.06]" />
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              1,
+              2,
+              3,
+              4,
+            ].map(
+              (item) => (
+                <div
+                  key={item}
+                  className="h-32 animate-pulse rounded-2xl border border-white/10 bg-[#07101d]"
+                />
+              )
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="min-h-[520px] border-t border-white/10" />
+    </>
+  );
+}
+
+/*
+  ========================================
+  PAGE
+  ========================================
+*/
+
+export default async function PlayerPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const resolvedParams =
+    await params;
+
+  const resolvedSearchParams =
+    await searchParams;
+
+  const playerId =
+    resolvedParams.id;
+
+  /*
+    ========================================
+    ГРАВЕЦЬ
+    ========================================
+  */
+
+  const player =
+    players.find(
+      (item) =>
+        item.id ===
+        playerId
+    );
+
+  if (!player) {
+    notFound();
+  }
+
+  /*
+    ========================================
+    СЕЗОН
+    ========================================
+  */
+
+  const requestedSeason =
+    Number(
+      resolvedSearchParams
+        .season
+    );
+
+  const season: SeasonNumber =
+    requestedSeason >= 1 &&
+    requestedSeason <= 4
+      ? (
+          requestedSeason as SeasonNumber
+        )
+      : 3;
+
+  const initials =
+    getInitials(
+      player.nickname
+    );
+
+  return (
+    <main className="min-h-screen bg-[#030711] text-white">
+      {/* HEADER */}
+
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <a
+            href="/"
+            className="flex items-center gap-4"
+          >
+            <img
+              src="/iron-league-logo.jpg"
+              alt="Iron League"
+              className="h-14 w-auto object-contain"
+            />
+
+            <div>
+              <div className="font-black tracking-[0.18em]">
+                IRON LEAGUE
+              </div>
+
+              <div className="text-xs text-white/35">
+                Профіль гравця
+              </div>
+            </div>
+          </a>
+
+          <a
+            href={`/players?season=${season}`}
+            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
+          >
+            ← Усі гравці
+          </a>
+        </div>
+      </header>
+
+      {/* HERO */}
+
+      <section className="relative overflow-hidden border-b border-white/10">
+        <StadiumBackground
+          opacity="20"
+          preload
+        />
+
+        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/75" />
+
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/80" />
+
+        <div className="relative mx-auto max-w-7xl px-6 py-20">
+          <div className="flex flex-col gap-8 sm:flex-row sm:items-center">
+            <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-[30px] border border-blue-400/30 bg-blue-500/10 text-4xl font-black text-blue-300 shadow-[0_0_40px_rgba(59,130,246,0.08)]">
+              {initials}
+            </div>
+
+            <div className="min-w-0">
+              <div className="text-xs font-black uppercase tracking-[0.28em] text-blue-400">
+                Iron League
+              </div>
+
+              <h1 className="mt-3 break-words text-5xl font-black sm:text-6xl">
+                {player.nickname}
+              </h1>
+
+              {player.account && (
+                <div className="mt-3 text-lg text-white/35">
+                  ({player.account})
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SEASONS */}
+
+          <div className="mt-10">
+            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
+              Кар&apos;єра за
+              сезонами
+            </div>
+
+            <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d]/90 p-1">
+              {(
+                [
+                  1,
+                  2,
+                  3,
+                  4,
+                ] as const
+              ).map(
+                (
+                  seasonNumber
+                ) => (
+                  <a
+                    key={
+                      seasonNumber
+                    }
+                    href={`/players/${playerId}?season=${seasonNumber}`}
+                    className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
+                      season ===
+                      seasonNumber
+                        ? "bg-blue-500 text-white"
+                        : "text-white/45 hover:bg-white/[0.04] hover:text-white"
+                    }`}
+                  >
+                    Сезон{" "}
+                    {
+                      seasonNumber
+                    }
+                  </a>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* HEAVY PROFILE DATA */}
+
+      <Suspense
+        key={`${playerId}-${season}`}
+        fallback={
+          <PlayerProfileDataFallback />
+        }
+      >
+        <PlayerProfileData
+          playerId={playerId}
+          season={season}
+        />
+      </Suspense>
 
       {/* FOOTER */}
 
