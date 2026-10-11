@@ -1071,12 +1071,18 @@ export default async function Home() {
             </div>
 
             <div className="max-w-2xl">
-              <img
-                src="/iron-league-logo.jpg"
-                alt="Iron League"
-                className="w-full max-w-[420px] object-contain drop-shadow-[0_0_40px_rgba(59,130,246,0.30)]"
-              />
-            </div>
+  <Image
+    src="/iron-league-logo.jpg"
+    alt="Iron League"
+    width={420}
+    height={420}
+    preload
+    fetchPriority="high"
+    sizes="(max-width: 768px) 90vw, 420px"
+    quality={75}
+    className="h-auto w-full max-w-[420px] object-contain drop-shadow-[0_0_40px_rgba(59,130,246,0.30)]"
+  />
+</div>
 
             <p className="mt-7 max-w-xl text-lg leading-8 text-white/65">
               Єдина платформа Iron
