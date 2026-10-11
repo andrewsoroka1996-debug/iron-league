@@ -267,13 +267,9 @@ export default function AssociationCupPlayoffBracket({
               "final"
             ),
 
-            season === 2
-              ? loadStage(
-                  "third-place"
-                )
-              : Promise.resolve(
-                  []
-                ),
+            loadStage(
+  "third-place"
+),
           ]);
 
         if (cancelled) {
@@ -540,8 +536,8 @@ export default function AssociationCupPlayoffBracket({
 
             {/* THIRD PLACE */}
 
-            {season ===
-              2 && (
+            {(season === 2 ||
+  season === 3) && (
               <div className="mt-8">
                 <div className="mb-3 text-center text-xs font-bold uppercase tracking-[0.2em] text-yellow-300">
                   Матч за 3

@@ -961,18 +961,86 @@ export default function TournamentAdminPage() {
         return;
       }
 
-      setMessage(
-        result.updated
-          ? "✅ Результат оновлено"
-          : "✅ Результат збережено"
+      let successMessage =
+  result.updated
+    ? "✅ Результат оновлено"
+    : "✅ Результат збережено";
+
+/*
+  Після кожного результату
+  Кубка асоціацій перевіряємо,
+  чи можна створити
+  наступну стадію.
+*/
+
+if (
+  competitionId ===
+    "associations-cup" &&
+  season === 3
+) {
+  try {
+    const advanceResponse =
+      await fetch(
+        "/api/admin/association-advance",
+        {
+          method:
+            "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body:
+            JSON.stringify({
+              password,
+
+              season,
+            }),
+        }
       );
 
-      await loadMatches();
+    const advanceResult =
+      await advanceResponse.json();
 
-      setSummaryRefreshKey(
-        (current) =>
-          current + 1
+    if (
+      advanceResponse.ok &&
+      Array.isArray(
+        advanceResult.created
+      ) &&
+      advanceResult.created
+        .length > 0
+    ) {
+      successMessage +=
+        ` • ${advanceResult.message}`;
+    }
+
+    if (
+      !advanceResponse.ok
+    ) {
+      console.error(
+        "Association advance:",
+        advanceResult
       );
+    }
+  } catch (error) {
+    console.error(
+      "Association advance request:",
+      error
+    );
+  }
+}
+
+setMessage(
+  successMessage
+);
+
+await loadMatches();
+
+setSummaryRefreshKey(
+  (current) =>
+    current + 1
+);
     } catch {
       setMessage(
         "Помилка з'єднання із сервером"

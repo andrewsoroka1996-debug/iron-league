@@ -742,9 +742,10 @@ export async function GET(
       | null = null;
 
     if (
-      season === 2 &&
-      stage === "semifinal"
-    ) {
+  (season === 2 ||
+    season === 3) &&
+  stage === "semifinal"
+) {
       const semifinal1 =
         seriesResults.find(
           (series) =>

@@ -7,11 +7,11 @@ import { season4 } from "../data/seasons/season-4";
 
 import type { SeasonNumber } from "../data/competitions/season-competitions";
 
-import { getCompetitionAssociations } from "../data/competitions/get-competition-associations";
-
 import { supabaseAdmin } from "./supabase-admin";
 import { buildStandings } from "./standings";
-import { calculateAssociationSeries } from "./association-series";
+import {
+  getAssociationLeague,
+} from "./association-league";
 
 type DivisionNumber =
   | 1
@@ -889,205 +889,108 @@ if (
   }
 
   /*
-    ========================================
-    5. КУБОК АСОЦІАЦІЙ
-    ========================================
+  ========================================
+  5. ЛІГА АСОЦІАЦІЙ
+  ========================================
 
-    Переможцем є асоціація.
+  ВАЖЛИВО:
 
-    Трофей отримує кожен гравець,
-    який входить до складу
-    асоціації-переможця.
-  */
+  Кубок асоціацій
+  окремого трофея НЕ дає.
 
-  for (const season of seasons) {
-    const finalMatches =
-      matches.filter(
-        (match) =>
-          match.season ===
-            season &&
-          match.competition ===
-            "associations-cup" &&
-          match.stage ===
-            "final" &&
-          match.series_id !==
-            null
+  Кубок лише визначає
+  множники:
+
+  переможець     ×2.0
+  фіналіст       ×1.8
+  3 місце        ×1.7
+  4 місце        ×1.6
+  1/4 фіналу     ×1.5
+
+  Трофей отримує Асоціація,
+  яка посіла 1 місце
+  у Лізі Асоціацій.
+*/
+
+for (
+  const associationSeason of
+  [2, 3] as const
+) {
+  try {
+    const league =
+      await getAssociationLeague(
+        associationSeason
       );
 
+    /*
+      Поки Кубок не завершений,
+      остаточного переможця
+      Ліги Асоціацій немає.
+    */
+
     if (
-      finalMatches.length ===
-      0
+      !league.cupComplete
     ) {
       continue;
     }
 
     /*
-      Групуємо матчі фіналу
-      по series_id.
+      Шукаємо офіційного
+      переможця Ліги.
     */
 
-    const seriesMap =
-      new Map<
-        string,
-        MatchRow[]
-      >();
-
-    for (
-      const match of
-        finalMatches
-    ) {
-      if (!match.series_id) {
-        continue;
-      }
-
-      const current =
-        seriesMap.get(
-          match.series_id
-        ) ?? [];
-
-      current.push(
-        match
+    const champion =
+      league.rows.find(
+        (row) =>
+          row.leaguePlace ===
+          1
       );
 
-      seriesMap.set(
-        match.series_id,
-        current
+    if (!champion) {
+      continue;
+    }
+
+    /*
+      Трофей отримують усі
+      члени Асоціації-переможця.
+    */
+
+    const playerWon =
+      champion.members.some(
+        (member) =>
+          member.playerId ===
+          playerId
       );
+
+    if (!playerWon) {
+      continue;
     }
 
-    for (
-      const [
-        seriesId,
-        seriesMatches,
-      ] of seriesMap
-    ) {
-      const first =
-        seriesMatches[0];
+    addHonour(
+      honours,
+      {
+        key:
+          `season-${associationSeason}-association-league`,
 
-      const homeAssociationId =
-        first
-          ?.series_home_id;
+        season:
+          associationSeason,
 
-      const awayAssociationId =
-        first
-          ?.series_away_id;
+        category:
+          "association",
 
-      if (
-        !homeAssociationId ||
-        !awayAssociationId
-      ) {
-        continue;
+        title:
+          "Ліга Асоціацій",
       }
-
-      const summary =
-        calculateAssociationSeries(
-          seriesMatches.map(
-            (match) => ({
-              id:
-                match.id,
-
-              home_id:
-                match.home_id,
-
-              away_id:
-                match.away_id,
-
-              home_goals:
-                match.home_goals,
-
-              away_goals:
-                match.away_goals,
-
-              status:
-                match.status,
-
-              is_tiebreak:
-                match.is_tiebreak,
-            })
-          )
-        );
-
-      let winnerAssociationId:
-        string | null = null;
-
-      if (
-        summary.winner ===
-        "home"
-      ) {
-        winnerAssociationId =
-          homeAssociationId;
-      }
-
-      if (
-        summary.winner ===
-        "away"
-      ) {
-        winnerAssociationId =
-          awayAssociationId;
-      }
-
-      if (
-        !winnerAssociationId
-      ) {
-        continue;
-      }
-
-      try {
-        const associations =
-          getCompetitionAssociations({
-            season,
-
-            competition:
-              "associations-cup",
-          });
-
-        const championAssociation =
-          associations.find(
-            (association) =>
-              association.id ===
-              winnerAssociationId
-          );
-
-        if (
-          !championAssociation
-        ) {
-          continue;
-        }
-
-        if (
-          !championAssociation
-            .players
-            .includes(
-              playerId
-            )
-        ) {
-          continue;
-        }
-
-        addHonour(
-          honours,
-          {
-            key:
-              `season-${season}-associations-cup-${seriesId}`,
-
-            season,
-
-            category:
-              "association",
-
-            title:
-              "Кубок асоціацій",
-          }
-        );
-      } catch {
-        /*
-          У цьому сезоні
-          Кубка асоціацій
-          може не бути.
-        */
-      }
-    }
+    );
+  } catch {
+    /*
+      Якщо для сезону
+      ще немає повних даних
+      Ліги Асоціацій —
+      нагороду не додаємо.
+    */
   }
+}
 
   /*
     ========================================
