@@ -23,9 +23,18 @@ export default function StadiumBackground({
       src="/stadium-bg.jpg"
       alt=""
       fill
-      preload={preload}
       sizes={sizes}
       quality={70}
+      loading={
+        preload
+          ? "eager"
+          : "lazy"
+      }
+      fetchPriority={
+        preload
+          ? "high"
+          : "auto"
+      }
       className={`object-cover object-center ${opacityClass}`}
     />
   );
