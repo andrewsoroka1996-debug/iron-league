@@ -1575,6 +1575,13 @@ export default function AdminPage() {
   </a>
 
   <a
+  href="/admin/player-replacements"
+  className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
+>
+  Player Replacements
+</a>
+
+  <a
     href="/admin/news"
     className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
   >

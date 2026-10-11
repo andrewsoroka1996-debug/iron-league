@@ -11,6 +11,11 @@ import { buildStandings } from "../lib/standings";
 import { supabaseAdmin } from "../lib/supabase-admin";
 
 import DivisionSchedule from "./DivisionSchedule";
+import {
+  applyPlayerReplacements,
+  getDivisionReplacements,
+  resolveReplacementPlayerId,
+} from "../lib/player-replacements";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -137,11 +142,23 @@ export default async function DivisionPage({
     ========================================
   */
 
-  const divisionPlayersIds =
-    getDivisionPlayers(
-      season,
-      division
-    );
+  const baseDivisionPlayerIds =
+  getDivisionPlayers(
+    season,
+    division
+  );
+
+const replacements =
+  await getDivisionReplacements(
+    season,
+    division
+  );
+
+const divisionPlayersIds =
+  applyPlayerReplacements(
+    baseDivisionPlayerIds,
+    replacements
+  );
 
   /*
     ========================================
@@ -210,33 +227,55 @@ export default async function DivisionPage({
   */
 
   const standings =
-    buildStandings({
-      participantIds:
-        divisionPlayersIds,
+  buildStandings({
+    participantIds:
+      divisionPlayersIds,
 
-      matches:
-        databaseMatches.map(
-          (match) => ({
-            home_id:
+    matches:
+      databaseMatches.map(
+        (match) => ({
+          /*
+            Для ТУРНІРНОЇ ТАБЛИЦІ
+            старий гравець перетворюється
+            на поточного власника слота.
+
+            Наприклад:
+
+            A → B
+
+            завершені матчі A
+            рахуються в турнірний слот B.
+
+            Самі записи matches
+            при цьому НЕ змінюються.
+          */
+
+          home_id:
+            resolveReplacementPlayerId(
               match.home_id,
+              replacements
+            ),
 
-            away_id:
+          away_id:
+            resolveReplacementPlayerId(
               match.away_id,
+              replacements
+            ),
 
-            home_goals:
-              match.home_goals,
+          home_goals:
+            match.home_goals,
 
-            away_goals:
-              match.away_goals,
+          away_goals:
+            match.away_goals,
 
-            status:
-              match.status,
-          })
-        ),
+          status:
+            match.status,
+        })
+      ),
 
-      format:
-        "division-qualification",
-    });
+    format:
+      "division-qualification",
+  });
 
   /*
     ========================================

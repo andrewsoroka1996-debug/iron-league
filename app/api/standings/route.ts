@@ -4,21 +4,33 @@ import { supabaseAdmin } from "../../../lib/supabase-admin";
 
 import { buildStandings } from "../../../lib/standings";
 
+import {
+  applyPlayerReplacements,
+  getDivisionReplacements,
+  resolveReplacementPlayerId,
+} from "../../../lib/player-replacements";
+
 import { getCompetitionPlayers } from "../../../data/competitions/get-competition-players";
 
 import type { SeasonNumber } from "../../../data/competitions/season-competitions";
+
+type DivisionNumber =
+  | 1
+  | 2
+  | 3
+  | 4;
 
 /*
   ==========================================
   GET /api/standings
   ==========================================
 
-  Приклади:
+  Examples:
 
-  Дивізіон:
+  Division:
   /api/standings?season=3&competition=division-1
 
-  Група ЛЧ:
+  Champions League group:
   /api/standings?season=3&competition=champions-league&group_name=A
 */
 
@@ -26,22 +38,30 @@ export async function GET(
   request: Request
 ) {
   try {
-    const { searchParams } =
-      new URL(request.url);
+    const {
+      searchParams,
+    } = new URL(request.url);
 
-    const season = Number(
-      searchParams.get("season")
-    );
+    const season =
+      Number(
+        searchParams.get(
+          "season"
+        )
+      );
 
     const competition =
-      searchParams.get("competition");
+      searchParams.get(
+        "competition"
+      );
 
     const groupName =
-      searchParams.get("group_name");
+      searchParams.get(
+        "group_name"
+      );
 
     /*
       ========================================
-      СЕЗОН
+      SEASON
       ========================================
     */
 
@@ -52,7 +72,8 @@ export async function GET(
     ) {
       return NextResponse.json(
         {
-          error: "Невірний сезон",
+          error:
+            "Невірний сезон",
         },
         {
           status: 400,
@@ -62,7 +83,7 @@ export async function GET(
 
     /*
       ========================================
-      ТУРНІР
+      COMPETITION
       ========================================
     */
 
@@ -83,15 +104,43 @@ export async function GET(
 
     /*
       ========================================
-      ВИЗНАЧАЄМО ТИП ТАБЛИЦІ
+      DIVISION NUMBER
+      ========================================
+
+      Public competition IDs:
+
+      division-1
+      division-2
+      division-3
+      division-4
+
+      Database:
+
+      competition = "division"
+      division = 1 / 2 / 3 / 4
+      ========================================
+    */
+
+    const divisionMatch =
+      competition.match(
+        /^division-([1-4])$/
+      );
+
+    const divisionNumber =
+      divisionMatch
+        ? Number(
+            divisionMatch[1]
+          ) as DivisionNumber
+        : null;
+
+    /*
+      ========================================
+      TABLE TYPE
       ========================================
     */
 
     const isDivision =
-      competition === "division-1" ||
-      competition === "division-2" ||
-      competition === "division-3" ||
-      competition === "division-4";
+      divisionNumber !== null;
 
     const isQualification =
       competition ===
@@ -122,8 +171,8 @@ export async function GET(
     }
 
     /*
-      Для груп єврокубків
-      група обов'язкова.
+      European group tables
+      require a group.
     */
 
     if (
@@ -143,11 +192,11 @@ export async function GET(
 
     /*
       ========================================
-      УЧАСНИКИ ТАБЛИЦІ
+      BASE PARTICIPANTS
       ========================================
     */
 
-    const participantIds =
+    const baseParticipantIds =
       getCompetitionPlayers({
         season:
           seasonNumber,
@@ -161,7 +210,8 @@ export async function GET(
       });
 
     if (
-      participantIds.length === 0
+      baseParticipantIds.length ===
+      0
     ) {
       return NextResponse.json(
         {
@@ -176,7 +226,54 @@ export async function GET(
 
     /*
       ========================================
-      МАТЧІ З SUPABASE
+      PLAYER REPLACEMENTS
+      ========================================
+
+      Only divisions currently use
+      player replacement inheritance.
+      ========================================
+    */
+
+    const replacements =
+      isDivision &&
+      divisionNumber !== null
+        ? await getDivisionReplacements(
+            seasonNumber,
+            divisionNumber
+          )
+        : [];
+
+    /*
+      ========================================
+      CURRENT PARTICIPANTS
+      ========================================
+
+      Example:
+
+      Base:
+      VolodyaBES
+
+      Replacement:
+      VolodyaBES -> No_Stress23
+
+      Current table:
+      No_Stress23
+      ========================================
+    */
+
+    const participantIds =
+      isDivision
+        ? applyPlayerReplacements(
+            baseParticipantIds,
+            replacements
+          )
+        : [
+            ...baseParticipantIds,
+          ];
+
+    /*
+      ========================================
+      MATCHES FROM SUPABASE
       ========================================
     */
 
@@ -192,21 +289,55 @@ export async function GET(
             away_goals,
             status,
             group_name,
-            stage
+            stage,
+            division
           `
         )
         .eq(
           "season",
-          season
-        )
-        .eq(
-          "competition",
-          competition
+          seasonNumber
         );
 
     /*
-      Для єврокубків беремо
-      тільки потрібну групу.
+      ========================================
+      DIVISION MATCHES
+      ========================================
+
+      Public:
+      division-1
+
+      Database:
+      competition = division
+      division = 1
+      ========================================
+    */
+
+    if (
+      isDivision &&
+      divisionNumber !== null
+    ) {
+      query =
+        query
+          .eq(
+            "competition",
+            "division"
+          )
+          .eq(
+            "division",
+            divisionNumber
+          );
+    } else {
+      query =
+        query.eq(
+          "competition",
+          competition
+        );
+    }
+
+    /*
+      ========================================
+      EUROPEAN GROUP
+      ========================================
     */
 
     if (
@@ -228,7 +359,8 @@ export async function GET(
     const {
       data,
       error,
-    } = await query;
+    } =
+      await query;
 
     if (error) {
       return NextResponse.json(
@@ -244,7 +376,7 @@ export async function GET(
 
     /*
       ========================================
-      ФОРМАТ СОРТУВАННЯ
+      SORTING FORMAT
       ========================================
     */
 
@@ -255,7 +387,62 @@ export async function GET(
 
     /*
       ========================================
-      БУДУЄМО ТАБЛИЦЮ
+      MATCHES FOR STANDINGS
+      ========================================
+
+      Physical database history stays intact.
+
+      Example:
+
+      Round 4:
+      gadyuka -> VolodyaBES
+      finished 0:2
+
+      Database remains:
+      VolodyaBES
+
+      But for CURRENT standings calculation:
+
+      VolodyaBES -> No_Stress23
+
+      Therefore the 3 points and goals
+      belong to No_Stress23's inherited slot.
+      ========================================
+    */
+
+    const standingsMatches =
+      (data ?? []).map(
+        (match) => ({
+          home_id:
+            isDivision
+              ? resolveReplacementPlayerId(
+                  match.home_id,
+                  replacements
+                )
+              : match.home_id,
+
+          away_id:
+            isDivision
+              ? resolveReplacementPlayerId(
+                  match.away_id,
+                  replacements
+                )
+              : match.away_id,
+
+          home_goals:
+            match.home_goals,
+
+          away_goals:
+            match.away_goals,
+
+          status:
+            match.status,
+        })
+      );
+
+    /*
+      ========================================
+      BUILD STANDINGS
       ========================================
     */
 
@@ -264,24 +451,7 @@ export async function GET(
         participantIds,
 
         matches:
-          (data ?? []).map(
-            (match) => ({
-              home_id:
-                match.home_id,
-
-              away_id:
-                match.away_id,
-
-              home_goals:
-                match.home_goals,
-
-              away_goals:
-                match.away_goals,
-
-              status:
-                match.status,
-            })
-          ),
+          standingsMatches,
 
         format,
       });
@@ -295,9 +465,13 @@ export async function GET(
     return NextResponse.json({
       success: true,
 
-      season,
+      season:
+        seasonNumber,
 
       competition,
+
+      division:
+        divisionNumber,
 
       group_name:
         groupName ?? null,
@@ -306,6 +480,9 @@ export async function GET(
 
       matches_count:
         data?.length ?? 0,
+
+      replacements_count:
+        replacements.length,
 
       standings:
         standings.map(
@@ -329,7 +506,9 @@ export async function GET(
     return NextResponse.json(
       {
         error:
-          "Помилка розрахунку таблиці",
+          error instanceof Error
+            ? error.message
+            : "Помилка розрахунку таблиці",
       },
       {
         status: 500,
