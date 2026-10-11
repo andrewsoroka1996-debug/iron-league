@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { seasonCompetitions } from "../data/competitions/season-competitions";
 
 import { players } from "../data/players";
@@ -1045,13 +1046,15 @@ export default async function Home() {
       {/* HERO */}
 
       <section className="relative overflow-hidden border-b border-white/10">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              "url('/stadium-bg.jpg')",
-          }}
-        />
+        <Image
+  src="/stadium-bg.jpg"
+  alt=""
+  fill
+  preload
+  sizes="100vw"
+  quality={70}
+  className="object-cover object-center"
+/>
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#020611]/95 via-[#030711]/80 to-[#020611]/60" />
 
