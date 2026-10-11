@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { season1 } from "../../../data/seasons/season-1";
 
 import {
@@ -226,13 +227,15 @@ export default function Season1HistoryPage() {
       {/* HERO */}
 
       <section className="relative overflow-hidden border-b border-white/10">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{
-            backgroundImage:
-              "url('/stadium-bg.jpg')",
-          }}
-        />
+        <Image
+  src="/stadium-bg.jpg"
+  alt=""
+  fill
+  preload
+  sizes="100vw"
+  quality={70}
+  className="object-cover object-center opacity-20"
+/>
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/70" />
 

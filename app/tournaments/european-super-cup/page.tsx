@@ -1,3 +1,4 @@
+import StadiumBackground from "../../../components/StadiumBackground";
 import { players } from "../../../data/players";
 
 import { supabase } from "../../../lib/supabase";
@@ -237,13 +238,10 @@ export default async function EuropeanSuperCupPage({
       {/* HERO */}
 
       <section className="relative overflow-hidden border-b border-white/10">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-25"
-          style={{
-            backgroundImage:
-              "url('/stadium-bg.jpg')",
-          }}
-        />
+        <StadiumBackground
+  opacity="25"
+  preload
+/>
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/90 to-[#030711]/55" />
 

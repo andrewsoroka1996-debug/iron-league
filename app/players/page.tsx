@@ -1,3 +1,4 @@
+import StadiumBackground from "../../components/StadiumBackground";
 import { players } from "../../data/players";
 
 import { season1 } from "../../data/seasons/season-1";
@@ -423,13 +424,10 @@ export default async function PlayersPage({
       {/* HERO */}
 
       <section className="relative overflow-hidden border-b border-white/10">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{
-            backgroundImage:
-              "url('/stadium-bg.jpg')",
-          }}
-        />
+        <StadiumBackground
+  opacity="20"
+  preload
+/>
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/70" />
 

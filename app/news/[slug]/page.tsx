@@ -1,3 +1,4 @@
+import StadiumBackground from "../../../components/StadiumBackground";
 import { notFound } from "next/navigation";
 
 import { supabase } from "../../../lib/supabase";
@@ -161,16 +162,14 @@ export default async function NewsArticlePage({
             className="absolute inset-0 h-full w-full object-cover opacity-30"
           />
         ) : (
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-20"
-            style={{
-              backgroundImage:
-                "url('/stadium-bg.jpg')",
-            }}
+           <StadiumBackground
+            opacity="20"
+            preload
           />
         )}
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/92 to-[#030711]/70" />
+
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70" />
 

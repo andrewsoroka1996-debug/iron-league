@@ -1,3 +1,4 @@
+import StadiumBackground from "../../components/StadiumBackground";
 import { supabase } from "../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -185,13 +186,10 @@ export default async function NewsPage({
       {/* HERO */}
 
       <section className="relative overflow-hidden border-b border-white/10">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{
-            backgroundImage:
-              "url('/stadium-bg.jpg')",
-          }}
-        />
+        <StadiumBackground
+  opacity="20"
+  preload
+/>
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/70" />
 
@@ -325,13 +323,10 @@ export default async function NewsPage({
                     </>
                   ) : (
                     <>
-                      <div
-                        className="absolute inset-0 bg-cover bg-center opacity-30"
-                        style={{
-                          backgroundImage:
-                            "url('/stadium-bg.jpg')",
-                        }}
-                      />
+                      <StadiumBackground
+  opacity="30"
+  sizes="(max-width: 768px) 100vw, 50vw"
+/>
 
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-[#07101d]" />
 
