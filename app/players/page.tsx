@@ -1,4 +1,6 @@
 import StadiumBackground from "../../components/StadiumBackground";
+import SiteHeader from "../../components/public/SiteHeader";
+import SiteFooter from "../../components/public/SiteFooter";
 import { players } from "../../data/players";
 
 import { season1 } from "../../data/seasons/season-1";
@@ -387,196 +389,168 @@ export default async function PlayersPage({
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
+
       {/* HEADER */}
-
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a
-            href="/"
-            className="flex items-center gap-4"
-          >
-            <img
-              src="/iron-league-logo.jpg"
-              alt="Iron League"
-              className="h-14 w-auto object-contain"
-            />
-
-            <div>
-              <div className="font-black tracking-[0.18em]">
-                IRON LEAGUE
-              </div>
-
-              <div className="text-xs text-white/35">
-                Гравці
-              </div>
-            </div>
-          </a>
-
-          <a
-            href="/"
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/55 transition hover:bg-white/[0.07] hover:text-white"
-          >
-            ← Головна
-          </a>
-        </div>
-      </header>
+      <SiteHeader />
 
       {/* HERO */}
-
       <section className="relative overflow-hidden border-b border-white/10">
-        <StadiumBackground
-  opacity="20"
-  preload
-/>
+        <StadiumBackground opacity="20" preload />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/70" />
+        {/* BACKGROUND OVERLAYS */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/70" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70" />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70" />
+        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
+          {/* BACK LINK */}
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-blue-300 transition hover:text-blue-200 sm:text-sm"
+          >
+            <span aria-hidden="true">←</span>
+            На головну
+          </a>
 
-        <div className="relative mx-auto max-w-7xl px-6 py-16">
-          <div className="text-xs font-bold uppercase tracking-[0.27em] text-blue-400">
-            IRON LEAGUE • СЕЗОН{" "}
-            {season}
+          {/* TITLE */}
+          <div className="mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs">
+              IRON LEAGUE · PLAYERS
+            </div>
+
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+              Гравці
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              Учасники Iron League обраного сезону,
+              їхні дивізіони та персональні профілі.
+              Знаходь гравців і переглядай історію їхніх виступів.
+            </p>
           </div>
 
-          <h1 className="mt-4 text-5xl font-black sm:text-6xl">
-            Гравці
-          </h1>
-
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/55">
-            Учасники Iron League
-            обраного сезону, їхні
-            дивізіони та профілі.
-          </p>
-
           {/* SEASON SWITCHER */}
-
-          <div className="mt-8">
-            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
+          <div className="mt-6 sm:mt-8">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-white/50">
               Обрати сезон
             </div>
 
-            <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d]/90 p-1">
-              {(
-                [
-                  1,
-                  2,
-                  3,
-                  4,
-                ] as const
-              ).map(
-                (
-                  seasonNumber
-                ) => (
+            <nav
+              aria-label="Вибір сезону"
+              className="grid w-full max-w-lg grid-cols-4 gap-1 rounded-xl border border-white/10 bg-[#07101d]/90 p-1"
+            >
+              {([1, 2, 3, 4] as const).map(
+                (seasonNumber) => (
                   <a
-                    key={
-                      seasonNumber
-                    }
+                    key={seasonNumber}
                     href={`/players?season=${seasonNumber}`}
-                    className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
-                      season ===
-                      seasonNumber
-                        ? "bg-blue-500 text-white"
-                        : "text-white/45 hover:bg-white/[0.04] hover:text-white"
+                    aria-current={
+                      season === seasonNumber
+                        ? "page"
+                        : undefined
+                    }
+                    className={`flex min-h-10 items-center justify-center rounded-lg px-1 py-2 text-center text-[11px] font-bold transition-colors sm:text-sm ${
+                      season === seasonNumber
+                        ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                        : "text-white/55 hover:bg-white/5 hover:text-white"
                     }`}
                   >
-                    Сезон{" "}
-                    {
-                      seasonNumber
-                    }
+                    Сезон {seasonNumber}
                   </a>
                 )
               )}
-            </div>
+            </nav>
           </div>
 
-          {/* INFO */}
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
+          {/* SEASON INFORMATION */}
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-3 sm:gap-3">
+            {/* PLAYERS COUNT */}
+            <div className="min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 backdrop-blur-sm sm:px-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">
                 Гравців
-              </span>
+              </div>
 
-              <span className="ml-2 font-black text-white">
-                {
-                  seasonPlayers.length
-                }
-              </span>
+              <div className="mt-1 text-xl font-black text-white sm:text-2xl">
+                {seasonPlayers.length}
+              </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
+            {/* DIVISIONS COUNT */}
+            <div className="min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 backdrop-blur-sm sm:px-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">
                 Дивізіонів
-              </span>
+              </div>
 
-              <span className="ml-2 font-black text-blue-300">
-                {
-                  availableDivisions.length
-                }
-              </span>
+              <div className="mt-1 text-xl font-black text-blue-300 sm:text-2xl">
+                {availableDivisions.length}
+              </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
+            {/* SEASON STATUS */}
+            <div className="col-span-2 min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 backdrop-blur-sm sm:col-span-1 sm:px-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">
                 Статус
-              </span>
+              </div>
 
-              <span className="ml-2 font-black text-blue-300">
-                {
-                  seasonStatus
-                }
-              </span>
+              <div className="mt-1 break-words text-base font-black leading-6 text-blue-300 sm:text-lg">
+                {seasonStatus}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* DIVISION FILTER */}
-
       <section className="border-b border-white/10 bg-white/[0.015]">
-        <div className="mx-auto max-w-7xl px-6 py-7">
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/35">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
+          <div className="text-[11px] font-bold uppercase tracking-widest text-white/50">
             Фільтр за дивізіоном
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-3">
+          <nav
+            aria-label="Фільтр гравців за дивізіоном"
+            className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:flex sm:flex-wrap sm:gap-3"
+          >
+            {/* ALL PLAYERS */}
             <a
               href={`/players?season=${season}`}
-              className={`rounded-xl border px-5 py-2.5 text-sm font-black transition ${
-                divisionFilter ===
-                null
+              aria-current={
+                divisionFilter === null ? "page" : undefined
+              }
+              className={`flex min-h-10 items-center justify-center rounded-xl border px-3 py-2.5 text-center text-xs font-black transition sm:px-5 sm:text-sm ${
+                divisionFilter === null
                   ? "border-blue-400/40 bg-blue-500/15 text-blue-300"
-                  : "border-white/10 bg-white/[0.03] text-white/45 hover:bg-white/[0.06] hover:text-white"
+                  : "border-white/10 bg-white/[0.03] text-white/55 hover:bg-white/[0.06] hover:text-white"
               }`}
             >
-              Усі
+              Усі гравці
             </a>
 
-            {availableDivisions.map(
-              (division) => (
-                <a
-                  key={division}
-                  href={`/players?season=${season}&division=${division}`}
-                  className={`rounded-xl border px-5 py-2.5 text-sm font-black transition ${
-                    divisionFilter ===
-                    division
-                      ? "border-blue-400/40 bg-blue-500/15 text-blue-300"
-                      : "border-white/10 bg-white/[0.03] text-white/45 hover:bg-white/[0.06] hover:text-white"
-                  }`}
-                >
-                  {division}{" "}
-                  Дивізіон
-                </a>
-              )
-            )}
-          </div>
+            {/* DIVISIONS */}
+            {availableDivisions.map((division) => (
+              <a
+                key={division}
+                href={`/players?season=${season}&division=${division}`}
+                aria-current={
+                  divisionFilter === division
+                    ? "page"
+                    : undefined
+                }
+                className={`flex min-h-10 items-center justify-center rounded-xl border px-3 py-2.5 text-center text-xs font-black transition sm:px-5 sm:text-sm ${
+                  divisionFilter === division
+                    ? "border-blue-400/40 bg-blue-500/15 text-blue-300"
+                    : "border-white/10 bg-white/[0.03] text-white/55 hover:bg-white/[0.06] hover:text-white"
+                }`}
+              >
+                {division} Дивізіон
+              </a>
+            ))}
+          </nav>
         </div>
       </section>
 
       {/* PLAYERS */}
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -637,117 +611,80 @@ export default async function PlayersPage({
             </div>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visiblePlayers.map(
-              (player) => {
-                const initials =
-                  getInitials(
-                    player.nickname
-                  );
 
-                return (
-                  <a
-                    key={
-                      player.id
-                    }
-                    href={`/players/${player.id}`}
-                    className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] transition duration-300 hover:-translate-y-1 hover:border-blue-400/35 hover:shadow-[0_20px_50px_rgba(0,0,0,0.25)]"
-                  >
-                    {/* TOP */}
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+            {visiblePlayers.map((player) => {
+              const initials = getInitials(player.nickname);
 
-                    <div className="relative border-b border-white/10 bg-gradient-to-br from-blue-500/10 to-transparent px-6 py-6">
-                      <div className="absolute -right-4 -top-4 text-7xl font-black text-white/[0.025]">
-                        {
-                          player.division
-                        }
-                      </div>
-
-                      <div className="relative flex items-start justify-between gap-4">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-blue-400/25 bg-blue-500/10 text-xl font-black text-blue-300 transition group-hover:border-blue-400/45 group-hover:bg-blue-500/15">
-                          {
-                            initials
-                          }
-                        </div>
-
-                        <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold text-white/45">
-                          {
-                            player.division
-                          }{" "}
-                          Дивізіон
-                        </div>
-                      </div>
-
-                      <div className="relative mt-6 min-w-0">
-                        <h3 className="truncate text-xl font-black">
-                          {
-                            player.nickname
-                          }
-                        </h3>
-
-                        {player.account && (
-                          <div className="mt-2 truncate text-sm text-white/35">
-                            (
-                            {
-                              player.account
-                            }
-                            )
-                          </div>
-                        )}
-                      </div>
+              return (
+                <a
+                  key={player.id}
+                  href={`/players/${player.id}`}
+                  aria-label={`Відкрити профіль ${player.nickname}`}
+                  className="group relative block min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] p-4 transition duration-300 hover:-translate-y-0.5 hover:border-blue-400/35 hover:bg-[#0a1628] hover:shadow-[0_16px_40px_rgba(0,0,0,0.2)] sm:p-5"
+                >
+                  {/* PLAYER INFO */}
+                  <div className="relative flex min-w-0 items-center gap-3">
+                    {/* AVATAR */}
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-400/25 bg-blue-500/10 text-base font-black text-blue-300 transition group-hover:border-blue-400/45 group-hover:bg-blue-500/15">
+                      {initials}
                     </div>
 
-                    {/* STATUS */}
+                    {/* NICKNAME AND ACCOUNT */}
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        title={player.nickname}
+                        className="truncate text-base font-black leading-6 text-white sm:text-lg"
+                      >
+                        {player.nickname}
+                      </h3>
 
-                    <div className="px-6 py-5">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/25">
-                        Статус у Сезоні{" "}
-                        {season}
-                      </div>
-
-                      <div className="mt-2 text-sm font-bold text-blue-300">
-                        {
-                          playerStatus
-                        }
-                      </div>
-
-                      <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5">
-                        <span className="text-sm text-white/30">
-                          Відкрити
-                          профіль
-                        </span>
-
-                        <span className="text-blue-400 transition group-hover:translate-x-1">
-                          →
-                        </span>
-                      </div>
+                      {player.account && (
+                        <div
+                          title={player.account}
+                          className="mt-0.5 truncate text-xs font-medium text-white/40"
+                        >
+                          ({player.account})
+                        </div>
+                      )}
                     </div>
-                  </a>
-                );
-              }
-            )}
+                  </div>
+
+                  {/* DIVISION AND STATUS */}
+                  <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <span className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-[11px] font-bold text-blue-300">
+                      {player.division} Дивізіон
+                    </span>
+
+                    <span className="text-xs font-semibold text-white/65">
+                      {playerStatus}
+                    </span>
+                  </div>
+
+                  {/* PROFILE LINK */}
+                  <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                    <span className="text-[11px] font-semibold text-white/35">
+                      Сезон {season}
+                    </span>
+
+                    <span className="inline-flex items-center gap-2 text-xs font-bold text-blue-300 transition group-hover:text-blue-200">
+                      Відкрити профіль
+
+                      <span className="text-base leading-none transition group-hover:translate-x-1">
+                        →
+                      </span>
+                    </span>
+                  </div>
+                </a>
+              );
+            })}
           </div>
+
         )}
       </section>
 
-      {/* FOOTER */}
-
-      <footer className="border-t border-white/10 bg-[#02050b]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-6 py-10 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="font-black tracking-[0.16em]">
-              IRON LEAGUE
-            </div>
-
-            <div className="mt-1 text-xs text-white/30">
-              Більше ніж гра
-            </div>
-          </div>
-
-          <div className="text-sm text-white/30">
-            © 2026 Iron League
-          </div>
-        </div>
-      </footer>
+            {/* FOOTER */}
+      <SiteFooter />
     </main>
   );
 }
