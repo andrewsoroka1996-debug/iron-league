@@ -371,13 +371,15 @@ export default function AssociationCupPlayoffBracket({
     );
   }
 
-  return (
-    <div className="overflow-x-auto pb-3">
-      <div className="grid min-w-[950px] grid-cols-3 gap-6">
+
+return (
+  <div className="overflow-visible pb-0 xl:overflow-x-auto xl:pb-3">
+    <div className="grid grid-cols-1 gap-5 xl:min-w-[950px] xl:grid-cols-3 xl:gap-6">
+
         {/* QUARTERFINAL */}
 
         <div>
-          <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-center font-black text-blue-300">
+          <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2.5 text-center text-sm font-black text-blue-300 sm:text-base xl:mb-4 xl:py-3">
             1/4 фіналу
           </div>
 
@@ -407,11 +409,11 @@ export default function AssociationCupPlayoffBracket({
         {/* SEMIFINAL */}
 
         <div>
-          <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-center font-black text-blue-300">
+          <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2.5 text-center text-sm font-black text-blue-300 sm:text-base xl:mb-4 xl:py-3">
             1/2 фіналу
           </div>
 
-          <div className="space-y-8 pt-16">
+          <div className="space-y-4 xl:space-y-8 xl:pt-16">
             {[
               1,
               2,
@@ -492,11 +494,11 @@ export default function AssociationCupPlayoffBracket({
         {/* FINAL */}
 
         <div>
-          <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-center font-black text-blue-300">
+          <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2.5 text-center text-sm font-black text-blue-300 sm:text-base xl:mb-4 xl:py-3">
             Фінал
           </div>
 
-          <div className="pt-40">
+          <div className="xl:pt-40">
             {findSeries(
               data.final,
               1
@@ -538,7 +540,7 @@ export default function AssociationCupPlayoffBracket({
 
             {(season === 2 ||
   season === 3) && (
-              <div className="mt-8">
+              <div className="mt-4 xl:mt-8">
                 <div className="mb-3 text-center text-xs font-bold uppercase tracking-[0.2em] text-yellow-300">
                   Матч за 3
                   місце

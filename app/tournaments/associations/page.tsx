@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiteHeader from "../../../components/public/SiteHeader";
 
 import { players } from "../../../data/players";
 
@@ -116,6 +117,7 @@ function getPlaceStyle(
   ========================================
 */
 
+
 function Season2BaseRanking() {
   const rows = [
     ...season2AssociationLeague,
@@ -127,71 +129,56 @@ function Season2BaseRanking() {
 
   return (
     <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px] border-collapse">
-          <thead>
-            <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.14em] text-white/30">
-              <th className="px-5 py-4 text-center">
-                М
-              </th>
+      <table className="w-full table-fixed border-collapse sm:table-auto">
+        <thead>
+          <tr className="border-b border-white/10 bg-white/[0.03] text-[10px] font-black uppercase tracking-[0.08em] text-white/40 sm:text-[11px] sm:tracking-[0.14em]">
+            <th className="w-12 px-2 py-3 text-center sm:w-auto sm:px-5 sm:py-4">
+              М
+            </th>
 
-              <th className="px-5 py-4 text-left">
-                Асоціація
-              </th>
+            <th className="px-2 py-3 text-left sm:px-5 sm:py-4">
+              Асоціація
+            </th>
 
-              <th className="px-5 py-4 text-right">
-                Рейтинг
-              </th>
-            </tr>
-          </thead>
+            <th className="w-20 px-2 py-3 text-right sm:w-auto sm:px-5 sm:py-4">
+              Рейтинг
+            </th>
+          </tr>
+        </thead>
 
-          <tbody>
-            {rows.map(
-              (
-                row,
-                index
-              ) => {
-                const place =
-                  index + 1;
+        <tbody>
+          {rows.map((row, index) => {
+            const place = index + 1;
+            const styles = getPlaceStyle(place);
 
-                const styles =
-                  getPlaceStyle(
-                    place
-                  );
-
-                return (
-                  <tr
-                    key={
-                      row.associationId
-                    }
-                    className={`border-b border-white/[0.05] ${styles.row}`}
+            return (
+              <tr
+                key={row.associationId}
+                className={`border-b border-white/[0.05] last:border-b-0 ${styles.row}`}
+              >
+                {/* МІСЦЕ */}
+                <td className="px-2 py-3 text-center sm:px-5 sm:py-5">
+                  <span
+                    className={`inline-flex min-w-8 items-center justify-center rounded-lg border px-2 py-1.5 font-black sm:min-w-9 ${styles.place}`}
                   >
-                    <td className="px-5 py-5 text-center">
-                      <span
-                        className={`inline-flex min-w-9 items-center justify-center rounded-lg border px-2 py-1.5 font-black ${styles.place}`}
-                      >
-                        {place}
-                      </span>
-                    </td>
+                    {place}
+                  </span>
+                </td>
 
-                    <td className="px-5 py-5 font-black">
-                      {
-                        row.associationName
-                      }
-                    </td>
+                {/* АСОЦІАЦІЯ */}
+                <td className="min-w-0 break-words px-2 py-3 text-sm font-black text-white sm:px-5 sm:py-5 sm:text-base">
+                  {row.associationName}
+                </td>
 
-                    <td className="px-5 py-5 text-right text-xl font-black text-blue-300">
-                      {
-                        row.baseCoefficient
-                      }
-                    </td>
-                  </tr>
-                );
-              }
-            )}
-          </tbody>
-        </table>
-      </div>
+                {/* РЕЙТИНГ */}
+                <td className="px-2 py-3 text-right text-lg font-black tabular-nums text-blue-300 sm:px-5 sm:py-5 sm:text-xl">
+                  {row.baseCoefficient}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -203,104 +190,145 @@ function Season2BaseRanking() {
   ========================================
 */
 
+
 function Season2LeagueTable() {
   return (
     <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] border-collapse">
+        <table className="w-full table-fixed border-collapse lg:min-w-[900px] lg:table-auto">
           <thead>
-            <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.12em] text-white/30">
-              <th className="px-5 py-4 text-center">
+            <tr className="border-b border-white/10 bg-white/[0.03] text-[10px] font-black uppercase tracking-[0.06em] text-white/40 lg:text-[11px] lg:tracking-[0.12em]">
+              <th className="w-12 px-2 py-3 text-center lg:w-auto lg:px-5 lg:py-4">
                 М
               </th>
 
-              <th className="px-5 py-4 text-left">
+              <th className="px-2 py-3 text-left lg:px-5 lg:py-4">
                 Асоціація
               </th>
 
-              <th className="px-5 py-4 text-center">
+              <th className="hidden px-5 py-4 text-center lg:table-cell">
                 Рейтинг
               </th>
 
-              <th className="px-5 py-4 text-center">
+              <th className="hidden px-5 py-4 text-center lg:table-cell">
                 Кубок асоціацій
               </th>
 
-              <th className="px-5 py-4 text-center">
+              <th className="hidden px-5 py-4 text-center lg:table-cell">
                 Множник
               </th>
 
-              <th className="px-6 py-4 text-right">
-                Очки Ліги
+              <th className="w-20 px-2 py-3 text-right lg:w-auto lg:px-6 lg:py-4">
+                <span className="lg:hidden">
+                  Очки
+                </span>
+                <span className="hidden lg:inline">
+                  Очки Ліги
+                </span>
               </th>
             </tr>
           </thead>
 
           <tbody>
-            {season2AssociationLeague.map(
-              (row) => {
-                const styles =
-                  getPlaceStyle(
-                    row.place
-                  );
+            {season2AssociationLeague.map((row) => {
+              const styles = getPlaceStyle(
+                row.place
+              );
 
-                return (
-                  <tr
-                    key={
-                      row.associationId
-                    }
-                    className={`border-b border-white/[0.05] ${styles.row}`}
-                  >
-                    <td className="px-5 py-5 text-center">
-                      <span
-                        className={`inline-flex min-w-9 items-center justify-center rounded-lg border px-2 py-1.5 font-black ${styles.place}`}
-                      >
-                        {
-                          row.place
-                        }
-                      </span>
-                    </td>
+              return (
+                <tr
+                  key={row.associationId}
+                  className={`border-b border-white/[0.05] last:border-b-0 ${styles.row}`}
+                >
+                  {/* МІСЦЕ */}
+                  <td className="px-2 py-3 text-center align-top lg:px-5 lg:py-5 lg:align-middle">
+                    <span
+                      className={`inline-flex min-w-8 items-center justify-center rounded-lg border px-2 py-1.5 font-black lg:min-w-9 ${styles.place}`}
+                    >
+                      {row.place}
+                    </span>
+                  </td>
 
-                    <td className="px-5 py-5 font-black">
-                      {
-                        row.associationName
-                      }
-                    </td>
+                  {/* АСОЦІАЦІЯ */}
+                  <td className="min-w-0 px-2 py-3 align-top lg:px-5 lg:py-5 lg:align-middle">
+                    <div className="break-words text-sm font-black text-white lg:text-base">
+                      {row.associationName}
+                    </div>
 
-                    <td className="px-5 py-5 text-center font-bold text-white/60">
-                      {
-                        row.baseCoefficient
-                      }
-                    </td>
+                    {/* МОБІЛЬНА ДЕТАЛІЗАЦІЯ */}
+                    <details className="mt-2 lg:hidden">
+                      <summary className="cursor-pointer text-[11px] font-bold text-blue-300/80 transition hover:text-blue-200">
+                        Показати розрахунок
+                      </summary>
 
-                    <td className="px-5 py-5 text-center font-bold text-white/60">
-                      {
-                        row.cupPlacementLabel
-                      }
-                    </td>
+                      <div className="mt-2 grid grid-cols-2 gap-1.5">
 
-                    <td className="px-5 py-5 text-center font-black text-blue-300">
-                      ×
-                      {
-                        row.multiplier
-                      }
-                    </td>
+                        {/* БАЗОВИЙ РЕЙТИНГ */}
+                        <div className="min-w-0 rounded-lg border border-white/[0.07] bg-white/[0.025] p-2">
+                          <div className="text-[10px] text-white/45">
+                            Рейтинг
+                          </div>
 
-                    <td className="px-6 py-5 text-right text-2xl font-black text-blue-300">
-                      {formatPoints(
-                        row.totalPoints
-                      )}
-                    </td>
-                  </tr>
-                );
-              }
-            )}
+                          <div className="mt-1 text-sm font-black text-white/80">
+                            {row.baseCoefficient}
+                          </div>
+                        </div>
+
+                        {/* МНОЖНИК */}
+                        <div className="min-w-0 rounded-lg border border-white/[0.07] bg-white/[0.025] p-2">
+                          <div className="text-[10px] text-white/45">
+                            Множник
+                          </div>
+
+                          <div className="mt-1 text-sm font-black text-blue-300">
+                            ×{row.multiplier}
+                          </div>
+                        </div>
+
+                        {/* РЕЗУЛЬТАТ КУБКА */}
+                        <div className="col-span-2 min-w-0 rounded-lg border border-white/[0.07] bg-white/[0.025] p-2">
+                          <div className="text-[10px] text-white/45">
+                            Кубок асоціацій
+                          </div>
+
+                          <div className="mt-1 break-words text-xs font-bold text-white/80">
+                            {row.cupPlacementLabel}
+                          </div>
+                        </div>
+
+                      </div>
+                    </details>
+                  </td>
+
+                  {/* РЕЙТИНГ НА ПК */}
+                  <td className="hidden px-5 py-5 text-center font-bold text-white/60 lg:table-cell">
+                    {row.baseCoefficient}
+                  </td>
+
+                  {/* РЕЗУЛЬТАТ КУБКА НА ПК */}
+                  <td className="hidden px-5 py-5 text-center font-bold text-white/60 lg:table-cell">
+                    {row.cupPlacementLabel}
+                  </td>
+
+                  {/* МНОЖНИК НА ПК */}
+                  <td className="hidden px-5 py-5 text-center font-black text-blue-300 lg:table-cell">
+                    ×{row.multiplier}
+                  </td>
+
+                  {/* ПІДСУМКОВІ ОЧКИ */}
+                  <td className="px-2 py-3 text-right align-top text-lg font-black tabular-nums text-blue-300 lg:px-6 lg:py-5 lg:text-2xl lg:align-middle">
+                    {formatPoints(row.totalPoints)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
+
 
 /*
   ========================================
@@ -326,24 +354,23 @@ function Season3BaseRanking({
   return (
     <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[850px] border-collapse">
+        <table className="w-full border-collapse lg:min-w-[850px]">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.14em] text-white/30">
-              <th className="px-5 py-4 text-center">
-                М
-              </th>
+              <th className="px-2 py-2.5 text-center lg:px-5 lg:py-4">
+  М
+</th>
+              <th className="px-2 py-2.5 text-left lg:px-5 lg:py-4">
+  Асоціація
+</th>
 
-              <th className="px-5 py-4 text-left">
-                Асоціація
-              </th>
+              <th className="hidden px-5 py-4 text-center lg:table-cell">
+  Гравців
+</th>
 
-              <th className="px-5 py-4 text-center">
-                Гравців
-              </th>
-
-              <th className="px-6 py-4 text-right">
-                Рейтинг
-              </th>
+              <th className="px-2 py-2.5 text-right lg:px-6 lg:py-4">
+  Рейтинг
+</th>
             </tr>
           </thead>
 
@@ -368,7 +395,7 @@ function Season3BaseRanking({
                     }
                     className={`border-b border-white/[0.05] ${styles.row}`}
                   >
-                    <td className="px-5 py-5 text-center">
+                    <td className="px-2 py-3 text-center align-top lg:px-5 lg:py-5 lg:align-middle">
                       <span
                         className={`inline-flex min-w-9 items-center justify-center rounded-lg border px-2 py-1.5 font-black ${styles.place}`}
                       >
@@ -376,98 +403,84 @@ function Season3BaseRanking({
                       </span>
                     </td>
 
-                    <td className="px-5 py-5">
+                    <td className="min-w-0 px-2 py-3 lg:px-5 lg:py-5">
                       <div className="font-black">
                         {
                           row.associationName
                         }
                       </div>
+                      <div className="mt-1 text-[11px] text-white/45 lg:hidden">
+  Гравців: {row.members.length}
+</div>
 
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs font-bold text-white/25 transition hover:text-blue-300">
-                          Показати внесок
-                          гравців
-                        </summary>
 
-                        <div className="mt-4 space-y-2">
-                          {row.members.map(
-                            (
-                              member
-                            ) => {
-                              const isR1 =
-                                member.rank ===
-                                "R1";
+<details className="mt-2">
+  <summary className="cursor-pointer text-xs font-bold text-white/40 transition hover:text-blue-300">
+    Показати внесок гравців
+  </summary>
 
-                              return (
-                                <div
-                                  key={
-                                    member.playerId
-                                  }
-                                  className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2"
-                                >
-                                  <Link
-                                    href={`/players/${member.playerId}`}
-                                    className="min-w-0 truncate text-xs font-bold text-white/60 transition hover:text-blue-300"
-                                  >
-                                    {
-                                      member.playerName
-                                    }
-                                  </Link>
+  <div className="mt-3 space-y-1.5">
+    {row.members.map((member) => {
+      const isR1 = member.rank === "R1";
 
-                                  <span
-                                    className={`rounded-md border px-2 py-1 text-[10px] font-black ${
-                                      isR1
-                                        ? "border-red-400/20 bg-red-500/10 text-red-300"
-                                        : "border-blue-400/15 bg-blue-500/[0.07] text-blue-300"
-                                    }`}
-                                  >
-                                    {
-                                      member.rank ??
-                                      "—"
-                                    }
-                                  </span>
+      return (
+        <div
+          key={member.playerId}
+          className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg border border-white/[0.05] bg-white/[0.02] px-2 py-1.5 lg:gap-3 lg:px-3 lg:py-2"
+        >
+          {/* ГРАВЕЦЬ */}
+          <Link
+            href={`/players/${member.playerId}`}
+            title={member.playerName}
+            className="min-w-0 truncate text-xs font-bold text-white/60 transition hover:text-blue-300"
+          >
+            {member.playerName}
+          </Link>
 
-                                  <div className="min-w-[75px] text-right text-xs font-black">
-                                    {isR1 ? (
-                                      <span>
-                                        <span className="text-white/30 line-through">
-                                          {
-                                            member.coefficient
-                                          }
-                                        </span>
+          {/* РАНГ */}
+          <span
+            className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-black ${
+              isR1
+                ? "border-red-400/20 bg-red-500/10 text-red-300"
+                : "border-blue-400/15 bg-blue-500/[0.07] text-blue-300"
+            }`}
+          >
+            {member.rank ?? "—"}
+          </span>
 
-                                        <span className="ml-2 text-red-300">
-                                          → 0
-                                        </span>
-                                      </span>
-                                    ) : (
-                                      <span className="text-white/70">
-                                        {
-                                          member.associationCoefficient
-                                        }
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            }
-                          )}
-                        </div>
-                      </details>
+          {/* КОЕФІЦІЄНТ */}
+          <div className="shrink-0 whitespace-nowrap text-right text-xs font-black tabular-nums lg:min-w-[75px]">
+            {isR1 ? (
+              <span>
+                <span className="text-white/30 line-through">
+                  {member.coefficient}
+                </span>
+
+                <span className="ml-1 text-red-300">
+                  → 0
+                </span>
+              </span>
+            ) : (
+              <span className="text-white/70">
+                {member.associationCoefficient}
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</details>
+
                     </td>
 
-                    <td className="px-5 py-5 text-center text-white/45">
-                      {
-                        row.members
-                          .length
-                      }
-                    </td>
+                    <td className="hidden px-5 py-5 text-center text-white/45 lg:table-cell">
+  {row.members.length}
+</td>
 
-                    <td className="px-6 py-5 text-right text-2xl font-black text-blue-300">
-                      {
-                        row.baseCoefficient
-                      }
-                    </td>
+                    <td className="px-2 py-3 text-right align-top text-xl font-black text-blue-300 lg:px-6 lg:py-5 lg:text-2xl lg:align-middle">
+  {row.baseCoefficient}
+</td>
                   </tr>
                 );
               }
@@ -486,161 +499,191 @@ function Season3BaseRanking({
   ========================================
 */
 
+
 function Season3LeagueTable({
   rows,
   cupComplete,
 }: {
-  rows:
-    AssociationLeagueRow[];
-
+  rows: AssociationLeagueRow[];
   cupComplete: boolean;
 }) {
-  const sorted =
-    cupComplete
-      ? [...rows].sort(
-          (a, b) =>
-            (a.leaguePlace ??
-              999) -
-            (b.leaguePlace ??
-              999)
-        )
-      : [...rows].sort(
-          (a, b) =>
-            b.baseCoefficient -
-            a.baseCoefficient
-        );
+  const sorted = cupComplete
+    ? [...rows].sort(
+        (a, b) =>
+          (a.leaguePlace ?? 999) -
+          (b.leaguePlace ?? 999)
+      )
+    : [...rows].sort(
+        (a, b) =>
+          b.baseCoefficient -
+          a.baseCoefficient
+      );
 
   return (
     <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[950px] border-collapse">
+        <table className="w-full border-collapse lg:min-w-[950px]">
           <thead>
-            <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.12em] text-white/30">
-              <th className="px-5 py-4 text-center">
+            <tr className="border-b border-white/10 bg-white/[0.03] text-[10px] font-black uppercase tracking-[0.08em] text-white/40 lg:text-[11px] lg:tracking-[0.12em]">
+              <th className="px-2 py-3 text-center lg:px-5 lg:py-4">
                 М
               </th>
 
-              <th className="px-5 py-4 text-left">
+              <th className="px-2 py-3 text-left lg:px-5 lg:py-4">
                 Асоціація
               </th>
 
-              <th className="px-5 py-4 text-center">
+              <th className="px-2 py-3 text-right lg:px-5 lg:py-4 lg:text-center">
                 Рейтинг
               </th>
 
-              <th className="px-5 py-4 text-center">
+              <th className="hidden px-5 py-4 text-center lg:table-cell">
                 Кубок
               </th>
 
-              <th className="px-5 py-4 text-center">
+              <th className="hidden px-5 py-4 text-center lg:table-cell">
                 Множник
               </th>
 
-              <th className="px-6 py-4 text-right">
+              <th className="hidden px-6 py-4 text-right lg:table-cell">
                 Очки Ліги
               </th>
             </tr>
           </thead>
 
           <tbody>
-            {sorted.map(
-              (
-                row,
-                index
-              ) => {
-                const displayedPlace =
-                  cupComplete
-                    ? row.leaguePlace ??
-                      index + 1
-                    : index + 1;
+            {sorted.map((row, index) => {
+              const displayedPlace = cupComplete
+                ? row.leaguePlace ?? index + 1
+                : index + 1;
 
-                const styles =
-                  getPlaceStyle(
-                    displayedPlace
-                  );
+              const styles =
+                getPlaceStyle(displayedPlace);
 
-                return (
-                  <tr
-                    key={
-                      row.associationId
-                    }
-                    className={`border-b border-white/[0.05] ${
-                      cupComplete
-                        ? styles.row
-                        : ""
-                    }`}
-                  >
-                    <td className="px-5 py-5 text-center">
-                      {cupComplete ? (
-                        <span
-                          className={`inline-flex min-w-9 items-center justify-center rounded-lg border px-2 py-1.5 font-black ${styles.place}`}
-                        >
-                          {
-                            displayedPlace
-                          }
-                        </span>
-                      ) : (
-                        <span className="text-white/25">
-                          —
-                        </span>
-                      )}
-                    </td>
+              return (
+                <tr
+                  key={row.associationId}
+                  className={`border-b border-white/[0.05] ${
+                    cupComplete
+                      ? styles.row
+                      : ""
+                  }`}
+                >
+                  {/* PLACE */}
+                  <td className="px-2 py-3 text-center align-top lg:px-5 lg:py-5 lg:align-middle">
+                    {cupComplete ? (
+                      <span
+                        className={`inline-flex min-w-8 items-center justify-center rounded-lg border px-2 py-1 font-black lg:min-w-9 lg:py-1.5 ${styles.place}`}
+                      >
+                        {displayedPlace}
+                      </span>
+                    ) : (
+                      <span className="text-white/25">
+                        —
+                      </span>
+                    )}
+                  </td>
 
-                    <td className="px-5 py-5 font-black">
-                      {
-                        row.associationName
-                      }
-                    </td>
+                  {/* ASSOCIATION */}
+                  <td className="min-w-0 px-2 py-3 align-top lg:px-5 lg:py-5 lg:align-middle">
+                    <div className="break-words text-sm font-black lg:text-base">
+                      {row.associationName}
+                    </div>
 
-                    <td className="px-5 py-5 text-center font-bold text-white/60">
-                      {
-                        row.baseCoefficient
-                      }
-                    </td>
+                    {/* MOBILE DETAILS */}
+                    <details className="group mt-2 lg:hidden">
+                      <summary className="cursor-pointer text-[11px] font-bold text-blue-300/75 transition hover:text-blue-200">
+                        Показати розрахунок
+                      </summary>
 
-                    <td className="px-5 py-5 text-center font-bold text-white/50">
-                      {
-                        row.cupPlacementLabel
-                      }
-                    </td>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {/* CUP RESULT */}
+                        <div className="min-w-0 rounded-lg border border-white/[0.07] bg-white/[0.025] p-2">
+                          <div className="text-[10px] text-white/45">
+                            Кубок
+                          </div>
 
-                    <td className="px-5 py-5 text-center font-black text-blue-300">
-                      {row.multiplier ===
-                      null
-                        ? "—"
-                        : `×${row.multiplier}`}
-                    </td>
+                          <div className="mt-1 break-words text-xs font-bold text-white/80">
+                            {row.cupPlacementLabel}
+                          </div>
+                        </div>
 
-                    <td className="px-6 py-5 text-right text-2xl font-black text-blue-300">
-                      {row.leaguePoints ===
-                      null
-                        ? "—"
-                        : formatPoints(
-                            row.leaguePoints
-                          )}
-                    </td>
-                  </tr>
-                );
-              }
-            )}
+                        {/* MULTIPLIER */}
+                        <div className="min-w-0 rounded-lg border border-white/[0.07] bg-white/[0.025] p-2">
+                          <div className="text-[10px] text-white/45">
+                            Множник
+                          </div>
+
+                          <div className="mt-1 text-sm font-black text-blue-300">
+                            {row.multiplier === null
+                              ? "—"
+                              : `×${row.multiplier}`}
+                          </div>
+                        </div>
+
+                        {/* LEAGUE POINTS */}
+                        <div className="col-span-2 min-w-0 rounded-lg border border-white/[0.07] bg-white/[0.025] p-2">
+                          <div className="text-[10px] text-white/45">
+                            Очки Ліги
+                          </div>
+
+                          <div className="mt-1 text-lg font-black text-blue-300">
+                            {row.leaguePoints === null
+                              ? "—"
+                              : formatPoints(
+                                  row.leaguePoints
+                                )}
+                          </div>
+                        </div>
+                      </div>
+                    </details>
+                  </td>
+
+                  {/* BASE RATING */}
+                  <td className="px-2 py-3 text-right align-top text-base font-black tabular-nums text-white/65 lg:px-5 lg:py-5 lg:text-center lg:align-middle">
+                    {row.baseCoefficient}
+                  </td>
+
+                  {/* DESKTOP CUP RESULT */}
+                  <td className="hidden px-5 py-5 text-center font-bold text-white/50 lg:table-cell">
+                    {row.cupPlacementLabel}
+                  </td>
+
+                  {/* DESKTOP MULTIPLIER */}
+                  <td className="hidden px-5 py-5 text-center font-black text-blue-300 lg:table-cell">
+                    {row.multiplier === null
+                      ? "—"
+                      : `×${row.multiplier}`}
+                  </td>
+
+                  {/* DESKTOP LEAGUE POINTS */}
+                  <td className="hidden px-6 py-5 text-right text-2xl font-black text-blue-300 lg:table-cell">
+                    {row.leaguePoints === null
+                      ? "—"
+                      : formatPoints(
+                          row.leaguePoints
+                        )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
+      {/* LEAGUE STATUS */}
       {!cupComplete && (
-        <div className="border-t border-white/10 bg-blue-500/[0.035] px-6 py-5 text-sm leading-6 text-white/45">
-          Остаточна таблиця
-          Ліги Асоціацій буде
-          сформована після
-          завершення Кубка
-          асоціацій і визначення
-          множника для кожної
-          Асоціації.
+        <div className="border-t border-white/10 bg-blue-500/[0.035] px-4 py-4 text-sm leading-6 text-white/45 sm:px-6 sm:py-5">
+          Остаточна таблиця Ліги Асоціацій
+          буде сформована після завершення
+          Кубка асоціацій і визначення
+          множника для кожної Асоціації.
         </div>
       )}
     </div>
   );
 }
+
 
 /*
   ========================================
@@ -688,119 +731,103 @@ export default async function AssociationsPage({
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
-      {/* HEADER */}
 
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      {/* HEADER */}
+      <SiteHeader />
+
+      {/* HERO */}
+      <section className="relative overflow-hidden border-b border-white/10">
+
+        {/* BACKGROUND */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.16),transparent_45%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#030711]/60 to-transparent" />
+
+        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
+
+          {/* BACK LINK */}
           <Link
             href="/"
-            className="flex items-center gap-4"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-blue-300 transition hover:text-blue-200 sm:text-sm"
           >
-            <img
-              src="/iron-league-logo.jpg"
-              alt="Iron League"
-              className="h-14 w-auto object-contain"
-            />
-
-            <div>
-              <div className="font-black tracking-[0.18em]">
-                IRON LEAGUE
-              </div>
-
-              <div className="text-xs text-white/35">
-                Ліга Асоціацій
-              </div>
-            </div>
+            <span aria-hidden="true">←</span>
+            На головну
           </Link>
 
-          <div className="flex items-center gap-5">
-            <Link
-              href="/"
-              className="text-sm font-bold text-white/40 transition hover:text-white"
-            >
-              Головна
-            </Link>
+          {/* TITLE */}
+          <div className="mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs">
+              IRON LEAGUE ASSOCIATIONS
+            </div>
 
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+              Ліга Асоціацій
+            </h1>
+
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              Головне командне змагання Асоціацій.
+              Базовий рейтинг формується з особистих
+              коефіцієнтів членів Асоціації, а результат
+              Кубка асоціацій визначає підсумковий множник.
+            </p>
+          </div>
+
+          {/* SECTION NAVIGATION */}
+          <nav
+            aria-label="Розділи асоціацій"
+            className="mt-5 flex flex-wrap gap-2"
+          >
             <a
               href="#league"
-              className="text-sm font-bold text-blue-300"
+              className="inline-flex min-h-9 items-center rounded-lg border border-blue-400/25 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-300 transition hover:bg-blue-500/20 sm:text-sm"
             >
-              Ліга Асоціацій
+              Ліга асоціацій
             </a>
 
             <a
               href="#cup"
-              className="hidden text-sm font-bold text-white/40 transition hover:text-white md:block"
+              className="inline-flex min-h-9 items-center rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-bold text-white/65 transition hover:bg-white/[0.07] hover:text-white sm:text-sm"
             >
-              Кубок
+              Кубок асоціацій
             </a>
-          </div>
-        </div>
-      </header>
+          </nav>
 
-      {/* HERO */}
+          {/* SEASON SWITCHER */}
+          <div className="mt-6 sm:mt-8">
 
-      <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.16),transparent_45%)]" />
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-white/50">
+              Обрати сезон
+            </div>
 
-        <div className="relative mx-auto max-w-7xl px-6 py-16">
-          <div className="text-xs font-black uppercase tracking-[0.28em] text-blue-400">
-            Iron League
-          </div>
-
-          <h1 className="mt-3 text-5xl font-black">
-            Ліга Асоціацій
-          </h1>
-
-          <p className="mt-5 max-w-3xl text-lg leading-8 text-white/50">
-            Головне командне
-            змагання Асоціацій.
-            Базовий рейтинг
-            формується з особистих
-            коефіцієнтів членів
-            Асоціації, а результат
-            Кубка асоціацій визначає
-            підсумковий множник.
-          </p>
-
-          {/* SEASONS */}
-
-          <div className="mt-8 flex gap-2">
-            <Link
-              href="/tournaments/associations?season=2"
-              className={`rounded-xl border px-5 py-3 text-sm font-black transition ${
-                season === 2
-                  ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
-                  : "border-white/10 bg-white/[0.025] text-white/45 hover:text-white"
-              }`}
+            <nav
+              aria-label="Вибір сезону"
+              className="grid w-full max-w-md grid-cols-3 gap-1 rounded-xl border border-white/10 bg-[#07101d] p-1"
             >
-              Сезон 2
-            </Link>
-
-            <Link
-              href="/tournaments/associations?season=3"
-              className={`rounded-xl border px-5 py-3 text-sm font-black transition ${
-                season === 3
-                  ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
-                  : "border-white/10 bg-white/[0.025] text-white/45 hover:text-white"
-              }`}
-            >
-              Сезон 3
-            </Link>
-
-            <Link
-              href="/tournaments/associations?season=4"
-              className={`rounded-xl border px-5 py-3 text-sm font-black transition ${
-                season === 4
-                  ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
-                  : "border-white/10 bg-white/[0.025] text-white/45 hover:text-white"
-              }`}
-            >
-              Сезон 4
-            </Link>
+              {([2, 3, 4] as const).map(
+                (seasonNumber) => (
+                  <Link
+                    key={seasonNumber}
+                    href={`/tournaments/associations?season=${seasonNumber}`}
+                    aria-current={
+                      season === seasonNumber
+                        ? "page"
+                        : undefined
+                    }
+                    className={`flex min-h-10 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-bold transition-colors sm:text-sm ${
+                      season === seasonNumber
+                        ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                        : "text-white/55 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    Сезон {seasonNumber}
+                  </Link>
+                )
+              )}
+            </nav>
           </div>
+
         </div>
       </section>
+
 
       {/* BASE RANKING */}
 
@@ -846,7 +873,7 @@ export default async function AssociationsPage({
             </h2>
           </div>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid gap-3 sm:mt-10 sm:gap-6 md:grid-cols-2 xl:grid-cols-4">
             {associations.map(
               (association) => (
                 <div
@@ -855,14 +882,14 @@ export default async function AssociationsPage({
                   }
                   className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]"
                 >
-                  <div className="border-b border-white/10 bg-blue-500/[0.07] p-6">
+                  <div className="border-b border-white/10 bg-blue-500/[0.07] p-4 sm:p-6">
                     <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">
                       {
                         association.id
                       }
                     </div>
 
-                    <div className="mt-2 text-2xl font-black">
+                    <div className="mt-2 text-xl font-black sm:text-2xl">
                       {
                         association.name
                       }
@@ -877,7 +904,7 @@ export default async function AssociationsPage({
                     </div>
                   </div>
 
-                  <div className="space-y-2 p-5">
+                  <div className="space-y-1.5 p-3 sm:space-y-2 sm:p-5">
                     {association.players.map(
                       (
                         playerId,
@@ -888,7 +915,7 @@ export default async function AssociationsPage({
                             playerId
                           }
                           href={`/players/${playerId}`}
-                          className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] px-4 py-3 transition hover:border-blue-400/20 hover:bg-blue-500/[0.04]"
+                          className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-2 transition hover:border-blue-400/20 hover:bg-blue-500/[0.04] sm:gap-3 sm:px-4 sm:py-3"
                         >
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-xs font-black text-blue-300">
                             {index +
@@ -960,7 +987,7 @@ export default async function AssociationsPage({
             Результат Кубка
           </h2>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:mt-8 sm:gap-3 lg:grid-cols-5">
             {[
               [
                 "Переможець",
@@ -989,13 +1016,13 @@ export default async function AssociationsPage({
               ]) => (
                 <div
                   key={label}
-                  className="rounded-2xl border border-white/10 bg-[#07101d] p-5"
+                  className="rounded-xl border border-white/10 bg-[#07101d] p-3 last:col-span-2 sm:p-5 lg:last:col-span-1"
                 >
-                  <div className="text-sm font-bold text-white/45">
+                  <div className="text-xs font-bold text-white/45 sm:text-sm">
                     {label}
                   </div>
 
-                  <div className="mt-2 text-3xl font-black text-blue-300">
+                  <div className="mt-1 text-2xl font-black text-blue-300 sm:mt-2 sm:text-3xl">
                     {
                       multiplier
                     }
@@ -1049,7 +1076,7 @@ export default async function AssociationsPage({
       {/* CUP MATCHES */}
 
       <section className="border-t border-white/10 bg-white/[0.01]">
-        <div className="mx-auto max-w-7xl px-6 py-16">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
           <div className="mb-8">
             <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-400">
               Кубок асоціацій
