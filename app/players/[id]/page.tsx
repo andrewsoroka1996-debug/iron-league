@@ -1,4 +1,6 @@
 import StadiumBackground from "../../../components/StadiumBackground";
+import SiteHeader from "../../../components/public/SiteHeader";
+import SiteFooter from "../../../components/public/SiteFooter";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
@@ -64,9 +66,10 @@ type PlayerStatsMatch = {
   home_goals: number | null;
   away_goals: number | null;
 
-  status: string;
+      status: string;
 
   played_at: string | null;
+  created_at: string | null;
 };
 
 type CoopTeamRow = {
@@ -832,6 +835,88 @@ async function PlayerProfileData({
           [] as AssociationSquads
         );
 
+  /*
+    ========================================
+    ЗАВАНТАЖЕННЯ ВСІХ МАТЧІВ
+    ========================================
+  */
+
+  async function loadFinishedMatchPages(
+    mode: "direct" | "coop"
+  ) {
+    const pageSize = 500;
+    const allMatches: PlayerStatsMatch[] = [];
+
+    for (let from = 0; ; from += pageSize) {
+      let query = supabase
+        .from("matches")
+        .select(`
+          id,
+          season,
+          competition,
+          division,
+          participant_type,
+          home_id,
+          away_id,
+                    home_goals,
+          away_goals,
+          status,
+          played_at,
+          created_at
+        `)
+        .eq("status", "finished")
+        .not("home_goals", "is", null)
+        .not("away_goals", "is", null);
+
+      if (mode === "direct") {
+        query = query.or(
+          `home_id.eq.${playerId},away_id.eq.${playerId}`
+        );
+      } else {
+        query = query.eq(
+          "competition",
+          "iron-coop-cup"
+        );
+      }
+
+      const { data, error } = await query
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error(
+          mode === "direct"
+            ? "PLAYER MATCHES ERROR:"
+            : "PLAYER COOP MATCHES ERROR:",
+          error
+        );
+
+        throw new Error(
+          "Не вдалося завантажити всі матчі гравця."
+        );
+      }
+
+      const page = (data ?? []) as PlayerStatsMatch[];
+
+      allMatches.push(...page);
+
+      if (page.length < pageSize) {
+        break;
+      }
+    }
+
+    return {
+      data: allMatches,
+      error: null,
+    };
+  }
+
+  /*
+    ========================================
+    ПАРАЛЕЛЬНІ ЗАПИТИ
+    ========================================
+  */
+
   const [
     honours,
     coopTeamsResult,
@@ -839,92 +924,21 @@ async function PlayerProfileData({
     coopMatchesResult,
     associationSquads,
   ] = await Promise.all([
-    getPlayerHonours(
-      playerId
-    ),
+    getPlayerHonours(playerId),
 
     supabase
       .from("coop_teams")
-      .select(
-        `
-          id,
-          name,
-          season,
-          player_1_id,
-          player_2_id
-        `
-      ),
+      .select(`
+        id,
+        name,
+        season,
+        player_1_id,
+        player_2_id
+      `),
 
-    supabase
-      .from("matches")
-      .select(
-        `
-          id,
-          season,
-          competition,
-          division,
-          participant_type,
-          home_id,
-          away_id,
-          home_goals,
-          away_goals,
-          status,
-          played_at
-        `
-      )
-      .eq(
-        "status",
-        "finished"
-      )
-      .not(
-        "home_goals",
-        "is",
-        null
-      )
-      .not(
-        "away_goals",
-        "is",
-        null
-      )
-      .or(
-        `home_id.eq.${playerId},away_id.eq.${playerId}`
-      ),
+    loadFinishedMatchPages("direct"),
 
-    supabase
-      .from("matches")
-      .select(
-        `
-          id,
-          season,
-          competition,
-          division,
-          participant_type,
-          home_id,
-          away_id,
-          home_goals,
-          away_goals,
-          status,
-          played_at
-        `
-      )
-      .eq(
-        "competition",
-        "iron-coop-cup"
-      )
-      .eq(
-        "status",
-        "finished"
-      )
-      .not(
-        "home_goals",
-        "is",
-        null
-      )
-      .not(
-        "away_goals",
-        "is",
-        null
-      ),
+    loadFinishedMatchPages("coop"),
 
     associationSquadsPromise,
   ]);
@@ -1084,52 +1098,37 @@ async function PlayerProfileData({
 
   /*
     ========================================
-    ОСТАННІ 10 МАТЧІВ
+    ОСТАННІ 10 ДОДАНИХ МАТЧІВ
     ========================================
   */
 
-  const recentMatches =
-    [...careerMatches]
-      .sort(
-        (a, b) => {
-          if (
-            a.played_at &&
-            b.played_at
-          ) {
-            return (
-              new Date(
-                b.played_at
-              ).getTime() -
-              new Date(
-                a.played_at
-              ).getTime()
-            );
-          }
+  const recentMatches = [...careerMatches]
+    .sort((a, b) => {
+      const aTime = a.created_at
+        ? Date.parse(a.created_at)
+        : NaN;
 
-          if (
-            a.played_at &&
-            !b.played_at
-          ) {
-            return -1;
-          }
+      const bTime = b.created_at
+        ? Date.parse(b.created_at)
+        : NaN;
 
-          if (
-            !a.played_at &&
-            b.played_at
-          ) {
-            return 1;
-          }
+      const aHasDate = Number.isFinite(aTime);
+      const bHasDate = Number.isFinite(bTime);
 
-          return (
-            b.season -
-            a.season
-          );
-        }
-      )
-      .slice(
-        0,
-        10
-      );
+      // Новіші записи першими.
+      if (aHasDate && bHasDate && aTime !== bTime) {
+        return bTime - aTime;
+      }
+
+      // Записи з відомою датою додавання першими.
+      if (aHasDate !== bHasDate) {
+        return aHasDate ? -1 : 1;
+      }
+
+      // Стабільний порядок за однакового часу.
+      return a.id.localeCompare(b.id);
+    })
+    .slice(0, 10);
 
   /*
     ========================================
@@ -1488,12 +1487,12 @@ async function PlayerProfileData({
     <>
       {/* SEASON CAREER */}
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
           Кар&apos;єра
         </div>
 
-        <h2 className="mt-3 text-3xl font-black">
+        <h2 className="mt-2 text-2xl font-black sm:text-3xl">
           Сезон {season}
         </h2>
 
@@ -1515,41 +1514,41 @@ async function PlayerProfileData({
             </p>
           </div>
         ) : (
-          <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {uniqueCards.map(
-              (card) => (
-                <div
-                  key={
-                    card.key
-                  }
-                  className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] p-7"
-                >
-                  <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-blue-500/[0.06] blur-3xl" />
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+            {uniqueCards.map((card) => (
+              <div
+                key={card.key}
+                className="group relative min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] p-4 transition-colors duration-300 hover:border-blue-400/30 hover:bg-[#0a1729] sm:p-5"
+              >
+                {/* BACKGROUND ACCENT */}
+                <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-blue-500/[0.07] blur-2xl" />
 
-                  <div className="relative">
-                    <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-400">
-                      {
-                        card.eyebrow
-                      }
+                <div className="relative flex min-w-0 items-start gap-3">
+                  {/* BLUE ACCENT */}
+                  <div
+                    aria-hidden="true"
+                    className="mt-0.5 h-11 w-1 shrink-0 rounded-full bg-blue-400/70"
+                  />
+
+                  {/* TOURNAMENT INFO */}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-400 sm:text-[11px]">
+                      {card.eyebrow}
                     </div>
 
-                    <div className="mt-5 text-2xl font-black">
-                      {
-                        card.title
-                      }
-                    </div>
+                    <h3 className="mt-1.5 break-words text-lg font-black leading-snug text-white sm:text-xl">
+                      {card.title}
+                    </h3>
 
                     {card.subtitle && (
-                      <div className="mt-3 text-sm text-white/35">
-                        {
-                          card.subtitle
-                        }
+                      <div className="mt-1.5 break-words text-xs leading-5 text-white/45 sm:text-sm">
+                        {card.subtitle}
                       </div>
                     )}
                   </div>
                 </div>
-              )
-            )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -1591,128 +1590,113 @@ async function PlayerProfileData({
       </section>
 
       {/* GENERAL STATS */}
-
       <section className="border-t border-white/10 bg-white/[0.02]">
-        <div className="mx-auto max-w-7xl px-6 py-16">
-          <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-            Кар&apos;єра Iron
-            League
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
+          {/* SECTION HEADER */}
+          <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-400 sm:text-xs">
+            Кар&apos;єра Iron League
           </div>
 
-          <h2 className="mt-3 text-3xl font-black">
+          <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
             Загальна статистика
           </h2>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
-              <div className="text-sm text-white/35">
-                Сезонів
-              </div>
-
-              <div className="mt-4 text-4xl font-black">
-                {
-                  careerSeasons
-                }
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
-              <div className="text-sm text-white/35">
-                Матчів
-              </div>
-
-              <div className="mt-4 text-4xl font-black">
-                {
-                  careerStats.matches
-                }
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-6">
-              <div className="text-sm text-white/35">
-                Перемог
-              </div>
-
-              <div className="mt-4 text-4xl font-black text-blue-300">
-                {
-                  careerStats.wins
-                }
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-yellow-400/15 bg-yellow-500/[0.03] p-6">
-              <div className="text-sm text-white/35">
-                Трофеїв
-              </div>
-
-              <div className="mt-4 text-4xl font-black text-yellow-300">
-                {
-                  trophyCount
-                }
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-5">
-              <div className="text-xs uppercase tracking-[0.16em] text-white/30">
-                Нічиї
-              </div>
-
-              <div className="mt-3 text-3xl font-black">
-                {
-                  careerStats.draws
-                }
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-5">
-              <div className="text-xs uppercase tracking-[0.16em] text-white/30">
-                Поразки
-              </div>
-
-              <div className="mt-3 text-3xl font-black">
-                {
-                  careerStats.losses
-                }
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-5">
-              <div className="text-xs uppercase tracking-[0.16em] text-white/30">
-                Забито
-              </div>
-
-              <div className="mt-3 text-3xl font-black">
-                {
-                  careerStats.goalsFor
-                }
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-5">
-              <div className="text-xs uppercase tracking-[0.16em] text-white/30">
-                Пропущено
-              </div>
-
-              <div className="mt-3 text-3xl font-black">
-                {
-                  careerStats.goalsAgainst
-                }
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-[#07101d] p-5">
-              <div className="text-xs uppercase tracking-[0.16em] text-white/30">
-                Різниця
-              </div>
-
-              <div className="mt-3 text-3xl font-black text-blue-300">
-                {formatGoalDifference(
+          {/* STATISTICS GRID */}
+          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+            {[
+              {
+                label: "Сезонів",
+                value: careerSeasons,
+                tone: "default",
+              },
+              {
+                label: "Матчів",
+                value: careerStats.matches,
+                tone: "default",
+              },
+              {
+                label: "Перемог",
+                value: careerStats.wins,
+                tone: "blue",
+              },
+              {
+                label: "Трофеїв",
+                value: trophyCount,
+                tone: "gold",
+              },
+              {
+                label: "Нічиїх",
+                value: careerStats.draws,
+                tone: "default",
+              },
+              {
+                label: "Поразок",
+                value: careerStats.losses,
+                tone: "default",
+              },
+              {
+                label: "Забито",
+                value: careerStats.goalsFor,
+                tone: "default",
+              },
+              {
+                label: "Пропущено",
+                value: careerStats.goalsAgainst,
+                tone: "default",
+              },
+              {
+                label: "Різниця м'ячів",
+                value: formatGoalDifference(
                   careerStats.goalDifference
+                ),
+                tone: "blue",
+              },
+            ].map((stat, index) => (
+              <div
+                key={stat.label}
+                className={`relative flex min-h-[100px] min-w-0 flex-col justify-between overflow-hidden rounded-2xl border p-4 sm:min-h-[112px] sm:p-5 ${
+                  index === 8
+                    ? "col-span-2 md:col-span-1"
+                    : ""
+                } ${
+                  stat.tone === "gold"
+                    ? "border-yellow-400/20 bg-yellow-500/[0.05]"
+                    : "border-white/10 bg-[#07101d]"
+                }`}
+              >
+                {/* LABEL */}
+                <div
+                  className={`text-[11px] font-bold uppercase tracking-[0.08em] sm:text-xs ${
+                    stat.tone === "gold"
+                      ? "text-yellow-300/70"
+                      : "text-white/45"
+                  }`}
+                >
+                  {stat.label}
+                </div>
+
+                {/* VALUE */}
+                <div
+                  className={`mt-3 break-words text-2xl font-black leading-none tabular-nums sm:text-3xl ${
+                    stat.tone === "gold"
+                      ? "text-yellow-300"
+                      : stat.tone === "blue"
+                        ? "text-blue-300"
+                        : "text-white"
+                  }`}
+                >
+                  {stat.value}
+                </div>
+
+                {/* DECORATIVE ACCENT */}
+                {stat.tone === "gold" && (
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-yellow-400/[0.06] blur-2xl"
+                  />
                 )}
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1720,7 +1704,7 @@ async function PlayerProfileData({
       {/* RECENT MATCHES */}
 
       <section className="border-t border-white/10">
-        <div className="mx-auto max-w-7xl px-6 py-16">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
           <div className="flex flex-wrap items-end justify-between gap-5">
             <div>
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -1763,137 +1747,89 @@ async function PlayerProfileData({
               </p>
             </div>
           ) : (
-            <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]">
-              <div className="hidden grid-cols-[120px_80px_1fr_120px_1fr_120px] gap-4 border-b border-white/10 bg-white/[0.025] px-6 py-4 text-xs font-bold uppercase tracking-[0.12em] text-white/30 lg:grid">
-                <div>
-                  Дата
-                </div>
-
-                <div>
-                  Сезон
-                </div>
-
-                <div>
-                  Суперник
-                </div>
-
-                <div className="text-center">
-                  Рахунок
-                </div>
-
-                <div>
-                  Турнір
-                </div>
-
-                <div className="text-right">
-                  Результат
-                </div>
+            <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] sm:mt-8 sm:rounded-3xl">
+              {/* DESKTOP TABLE HEADER */}
+              <div className="hidden grid-cols-[110px_70px_minmax(0,1.2fr)_105px_minmax(0,1fr)_100px] items-center gap-4 border-b border-white/10 bg-white/[0.025] px-6 py-4 text-[11px] font-bold uppercase tracking-[0.1em] text-white/35 lg:grid">
+                <div>Додано</div>
+                <div>Сезон</div>
+                <div>Суперник</div>
+                <div className="text-center">Рахунок</div>
+                <div>Турнір</div>
+                <div className="text-right">Результат</div>
               </div>
 
+              {/* MATCHES */}
               <div className="divide-y divide-white/5">
-                {recentMatches.map(
-                  (match) => {
-                    const result =
-                      getMatchResult(
-                        match
-                      );
+                {recentMatches.map((match) => {
+                  const result = getMatchResult(match);
 
-                    return (
-                      <div
-                        key={
-                          match.id
-                        }
-                        className="grid gap-4 px-6 py-5 transition hover:bg-white/[0.025] lg:grid-cols-[120px_80px_1fr_120px_1fr_120px] lg:items-center"
-                      >
-                        <div>
-                          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
-                            Дата
-                          </div>
+                  return (
+                    <div
+                      key={match.id}
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 transition hover:bg-white/[0.025] sm:px-5 sm:py-4 lg:grid-cols-[110px_70px_minmax(0,1.2fr)_105px_minmax(0,1fr)_100px] lg:gap-4 lg:px-6"
+                    >
+                      {/* DATE */}
+                      <div className="col-start-1 row-start-1 min-w-0 text-[11px] font-medium text-white/45 sm:text-xs lg:col-start-1 lg:row-start-1">
+                        <span>
+                          {formatMatchDate(match.created_at)}
+                        </span>
 
-                          <div className="text-sm text-white/45">
-                            {formatMatchDate(
-                              match.played_at
-                            )}
-                          </div>
+                        <span className="ml-2 text-white/25 lg:hidden">
+                          • Сезон {match.season}
+                        </span>
+                      </div>
+
+                      {/* SEASON — DESKTOP */}
+                      <div className="hidden text-sm font-bold text-white/55 lg:col-start-2 lg:row-start-1 lg:block">
+                        {match.season}
+                      </div>
+
+                      {/* OPPONENT */}
+                      <div className="col-start-1 row-start-2 min-w-0 lg:col-start-3 lg:row-start-1">
+                        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/30 lg:hidden">
+                          Суперник
                         </div>
 
-                        <div>
-                          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
-                            Сезон
-                          </div>
-
-                          <div className="text-sm font-black text-white/55">
-                            {
-                              match.season
-                            }
-                          </div>
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
-                            Суперник
-                          </div>
-
-                          <div className="truncate font-black">
-                            {getOpponentName(
-                              match
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
-                            Рахунок
-                          </div>
-
-                          <div className="inline-flex rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-lg font-black lg:flex lg:justify-center">
-                            {getPlayerScore(
-                              match
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
-                            Турнір
-                          </div>
-
-                          <div className="truncate text-sm font-semibold text-blue-300">
-                            {getCompetitionName(
-                              match.competition,
-                              match.division
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="lg:text-right">
-                          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/20 lg:hidden">
-                            Результат
-                          </div>
-
-                          <span
-                            title={
-                              result.label
-                            }
-                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${result.className}`}
-                          >
-                            <span className="lg:hidden">
-                              {
-                                result.label
-                              }
-                            </span>
-
-                            <span className="hidden lg:inline">
-                              {
-                                result.short
-                              }
-                            </span>
-                          </span>
+                        <div className="break-words text-sm font-black leading-5 text-white sm:text-base">
+                          {getOpponentName(match)}
                         </div>
                       </div>
-                    );
-                  }
-                )}
+
+                      {/* SCORE */}
+                      <div className="col-start-2 row-start-2 min-w-[78px] text-center lg:col-start-4 lg:row-start-1">
+                        <div className="whitespace-nowrap rounded-xl border border-blue-400/15 bg-blue-500/10 px-3 py-2 text-base font-black tabular-nums text-blue-300 sm:text-lg">
+                          {getPlayerScore(match)}
+                        </div>
+                      </div>
+
+                      {/* COMPETITION */}
+                      <div className="col-span-2 row-start-3 min-w-0 lg:col-span-1 lg:col-start-5 lg:row-start-1">
+                        <div className="break-words text-xs font-semibold leading-5 text-blue-300/85 sm:text-sm">
+                          {getCompetitionName(
+                            match.competition,
+                            match.division
+                          )}
+                        </div>
+                      </div>
+
+                      {/* RESULT */}
+                      <div className="col-start-2 row-start-1 min-w-0 justify-self-end lg:col-start-6 lg:row-start-1">
+                        <span
+                          title={result.label}
+                          className={`inline-flex max-w-full items-center justify-center rounded-full border px-2.5 py-1 text-[10px] font-black leading-tight sm:px-3 sm:text-xs ${result.className}`}
+                        >
+                          <span className="lg:hidden">
+                            {result.label}
+                          </span>
+
+                          <span className="hidden lg:inline">
+                            {result.short}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1901,92 +1837,103 @@ async function PlayerProfileData({
       </section>
 
       {/* HONOURS */}
-
       <section className="border-t border-white/10 bg-white/[0.02]">
-        <div className="mx-auto max-w-7xl px-6 py-16">
-          <div className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
-            Hall of honours
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
+          {/* SECTION HEADER */}
+          <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-yellow-300 sm:text-xs">
+            HALL OF HONOURS
           </div>
 
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-            <h2 className="text-3xl font-black">
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
               Досягнення
             </h2>
 
-            <div className="text-sm text-white/35">
-              Трофеїв:{" "}
-              <span className="font-black text-yellow-300">
-                {
-                  trophyCount
-                }
+            <div className="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-500/[0.06] px-3 py-1.5">
+              <span
+                aria-hidden="true"
+                className="text-sm text-yellow-300"
+              >
+                ★
+              </span>
+
+              <span className="text-xs font-semibold text-yellow-300/80">
+                Трофеїв
+              </span>
+
+              <span className="text-sm font-black tabular-nums text-yellow-300">
+                {trophyCount}
               </span>
             </div>
           </div>
 
-          {honours.length ===
-          0 ? (
-            <div className="mt-8 relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] p-10">
-              <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-yellow-500/[0.04] blur-[70px]" />
+          {/* EMPTY STATE */}
+          {honours.length === 0 ? (
+            <div className="relative mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] px-5 py-8 sm:px-8 sm:py-10">
+              <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-yellow-500/[0.04] blur-3xl" />
 
-              <div className="relative">
-                <div className="text-xl font-black">
-                  Трофеїв поки
-                  немає
+              <div className="relative flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-yellow-400/15 bg-yellow-500/[0.05] text-xl text-yellow-300/60">
+                  ★
                 </div>
 
-                <p className="mt-3 max-w-2xl leading-7 text-white/35">
-                  Після завершення
-                  турнірів виграні
-                  трофеї автоматично
-                  з&apos;являться у
-                  профілі.
-                </p>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-black text-white sm:text-xl">
+                    Трофеїв поки немає
+                  </h3>
+
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-white/45">
+                    Після завершення турнірів виграні трофеї
+                    автоматично з&apos;являться у профілі.
+                  </p>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {honours.map(
-                (honour) => (
-                  <article
-                    key={
-                      honour.key
-                    }
-                    className="relative overflow-hidden rounded-3xl border border-yellow-400/15 bg-[#07101d] p-7"
-                  >
-                    <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-yellow-500/[0.06] blur-3xl" />
+            /* HONOURS GRID */
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {honours.map((honour) => (
+                <article
+                  key={honour.key}
+                  className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-yellow-400/20 bg-[#07101d] p-4 transition-colors duration-300 hover:border-yellow-400/40 hover:bg-[#101723] sm:p-5"
+                >
+                  {/* GOLDEN BACKGROUND ACCENT */}
+                  <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-yellow-500/[0.06] blur-2xl" />
 
-                    <div className="relative">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="text-xs font-black uppercase tracking-[0.22em] text-yellow-300">
-                          {getHonourCategoryName(
-                            honour
-                          )}
-                        </div>
-
-                        <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold text-white/40">
-                          Сезон{" "}
-                          {
-                            honour.season
-                          }
-                        </div>
+                  <div className="relative flex flex-1 flex-col">
+                    {/* CATEGORY AND SEASON */}
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0 break-words text-[10px] font-black uppercase leading-5 tracking-[0.13em] text-yellow-300 sm:text-[11px]">
+                        {getHonourCategoryName(honour)}
                       </div>
 
-                      <div className="mt-6 text-2xl font-black">
-                        {
-                          honour.title
-                        }
+                      <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-bold text-white/50 sm:text-xs">
+                        Сезон {honour.season}
+                      </span>
+                    </div>
+
+                    {/* TROPHY NAME */}
+                    <div className="mt-4 flex min-w-0 items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-yellow-400/20 bg-yellow-500/[0.07] text-xl text-yellow-300">
+                        ★
                       </div>
 
-                      <div className="mt-5 h-px bg-gradient-to-r from-yellow-400/20 to-transparent" />
+                      <h3 className="min-w-0 break-words pt-1 text-base font-black leading-snug text-white sm:text-lg">
+                        {honour.title}
+                      </h3>
+                    </div>
 
-                      <div className="mt-5 text-sm font-bold text-yellow-300/70">
-                        ★ Трофей Iron
-                        League
+                    {/* FOOTER */}
+                    <div className="mt-auto pt-4">
+                      <div className="h-px bg-gradient-to-r from-yellow-400/20 to-transparent" />
+
+                      <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-yellow-300/60">
+                        Трофей Iron League
                       </div>
                     </div>
-                  </article>
-                )
-              )}
+                  </div>
+                </article>
+              ))}
             </div>
           )}
         </div>
@@ -2116,114 +2063,88 @@ export default async function PlayerPage({
   return (
     <main className="min-h-screen bg-[#030711] text-white">
       {/* HEADER */}
-
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a
-            href="/"
-            className="flex items-center gap-4"
-          >
-            <img
-              src="/iron-league-logo.jpg"
-              alt="Iron League"
-              className="h-14 w-auto object-contain"
-            />
-
-            <div>
-              <div className="font-black tracking-[0.18em]">
-                IRON LEAGUE
-              </div>
-
-              <div className="text-xs text-white/35">
-                Профіль гравця
-              </div>
-            </div>
-          </a>
-
-          <a
-            href={`/players?season=${season}`}
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
-          >
-            ← Усі гравці
-          </a>
-        </div>
-      </header>
+      <SiteHeader />
 
       {/* HERO */}
-
       <section className="relative overflow-hidden border-b border-white/10">
-        <StadiumBackground
-          opacity="20"
-          preload
-        />
+        <StadiumBackground opacity="20" preload />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/75" />
+        {/* BACKGROUND OVERLAYS */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/75" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/80" />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/80" />
+        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
+          {/* BACK LINK */}
+          <a
+            href={`/players?season=${season}`}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-blue-300 transition hover:text-blue-200 sm:text-sm"
+          >
+            <span aria-hidden="true">←</span>
+            Усі гравці
+          </a>
 
-        <div className="relative mx-auto max-w-7xl px-6 py-20">
-          <div className="flex flex-col gap-8 sm:flex-row sm:items-center">
-            <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-[30px] border border-blue-400/30 bg-blue-500/10 text-4xl font-black text-blue-300 shadow-[0_0_40px_rgba(59,130,246,0.08)]">
-              {initials}
+          {/* PLAYER HEADER */}
+          <div className="mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs">
+              IRON LEAGUE · PLAYER PROFILE
             </div>
 
-            <div className="min-w-0">
-              <div className="text-xs font-black uppercase tracking-[0.28em] text-blue-400">
-                Iron League
+            <div className="mt-5 flex min-w-0 items-center gap-4 sm:gap-6">
+              {/* AVATAR */}
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-blue-400/30 bg-blue-500/10 text-xl font-black text-blue-300 shadow-[0_0_40px_rgba(59,130,246,0.08)] sm:h-24 sm:w-24 sm:rounded-3xl sm:text-3xl">
+                {initials}
               </div>
 
-              <h1 className="mt-3 break-words text-5xl font-black sm:text-6xl">
-                {player.nickname}
-              </h1>
+              {/* PLAYER NAME */}
+              <div className="min-w-0 flex-1">
+                <h1 className="break-words text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
+                  {player.nickname}
+                </h1>
 
-              {player.account && (
-                <div className="mt-3 text-lg text-white/35">
-                  ({player.account})
+                {player.account && (
+                  <div className="mt-2 break-words text-xs font-medium text-white/45 sm:text-base">
+                    ({player.account})
+                  </div>
+                )}
+
+                <div className="mt-3 inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-[11px] font-bold text-blue-300 sm:text-xs">
+                  Учасник Iron League
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
-          {/* SEASONS */}
-
-          <div className="mt-10">
-            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
-              Кар&apos;єра за
-              сезонами
+          {/* SEASON SWITCHER */}
+          <div className="mt-7 sm:mt-9">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-white/50">
+              Кар&apos;єра за сезонами
             </div>
 
-            <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d]/90 p-1">
-              {(
-                [
-                  1,
-                  2,
-                  3,
-                  4,
-                ] as const
-              ).map(
-                (
-                  seasonNumber
-                ) => (
+            <nav
+              aria-label="Вибір сезону гравця"
+              className="grid w-full max-w-lg grid-cols-4 gap-1 rounded-xl border border-white/10 bg-[#07101d]/90 p-1"
+            >
+              {([1, 2, 3, 4] as const).map(
+                (seasonNumber) => (
                   <a
-                    key={
-                      seasonNumber
-                    }
+                    key={seasonNumber}
                     href={`/players/${playerId}?season=${seasonNumber}`}
-                    className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
-                      season ===
-                      seasonNumber
-                        ? "bg-blue-500 text-white"
-                        : "text-white/45 hover:bg-white/[0.04] hover:text-white"
+                    aria-current={
+                      season === seasonNumber
+                        ? "page"
+                        : undefined
+                    }
+                    className={`flex min-h-10 items-center justify-center rounded-lg px-1 py-2 text-center text-[11px] font-bold transition-colors sm:text-sm ${
+                      season === seasonNumber
+                        ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                        : "text-white/55 hover:bg-white/5 hover:text-white"
                     }`}
                   >
-                    Сезон{" "}
-                    {
-                      seasonNumber
-                    }
+                    Сезон {seasonNumber}
                   </a>
                 )
               )}
-            </div>
+            </nav>
           </div>
         </div>
       </section>
@@ -2244,23 +2165,8 @@ export default async function PlayerPage({
 
       {/* FOOTER */}
 
-      <footer className="border-t border-white/10 bg-[#02050b]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-6 py-10 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="font-black tracking-[0.16em]">
-              IRON LEAGUE
-            </div>
-
-            <div className="mt-1 text-xs text-white/30">
-              Більше ніж гра
-            </div>
-          </div>
-
-          <div className="text-sm text-white/30">
-            © 2026 Iron League
-          </div>
-        </div>
-      </footer>
+            {/* FOOTER */}
+      <SiteFooter />
     </main>
   );
 }
