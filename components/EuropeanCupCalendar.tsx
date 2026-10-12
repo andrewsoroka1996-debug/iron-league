@@ -222,6 +222,7 @@ export default async function EuropeanCupCalendar({
     ========================================
   */
 
+
   function MatchCard({
     match,
     showGroup = false,
@@ -230,77 +231,68 @@ export default async function EuropeanCupCalendar({
     showGroup?: boolean;
   }) {
     const finished =
-      match.status ===
-        "finished" &&
-      match.home_goals !==
-        null &&
-      match.away_goals !==
-        null;
+      match.status === "finished" &&
+      match.home_goals !== null &&
+      match.away_goals !== null;
 
     return (
-      <div className="rounded-xl border border-white/10 bg-[#081321] px-4 py-4 text-white shadow-sm transition hover:border-blue-400/30 hover:bg-[#0b192a]">
-        {showGroup &&
-          match.group_name && (
-            <div className="mb-3 text-center text-[11px] font-black uppercase tracking-[0.2em] text-blue-400">
-              Група{" "}
-              {
-                match.group_name
-              }
-            </div>
-          )}
+      <div className="rounded-xl border border-white/10 bg-[#081321] px-3 py-3 text-white shadow-sm transition hover:border-blue-400/30 hover:bg-[#0b192a] sm:px-4 sm:py-4">
 
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+        {/* GROUP LABEL */}
+        {showGroup && match.group_name && (
+          <div className="mb-2 text-center text-[10px] font-black uppercase tracking-[0.16em] text-blue-400 sm:mb-3 sm:text-[11px]">
+            Група {match.group_name}
+          </div>
+        )}
+
+        {/* MATCH */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-4">
+
+          {/* HOME PLAYER */}
           <div className="min-w-0 text-right">
             <a
               href={`/players/${match.home_id}?season=${season}`}
-              className="font-bold text-white transition hover:text-blue-300"
+              className="block break-words text-xs font-bold leading-4 text-white transition hover:text-blue-300 sm:text-base sm:leading-normal"
             >
-              {getPlayerName(
-                match.home_id
-              )}
+              {getPlayerName(match.home_id)}
             </a>
           </div>
 
-          <div className="min-w-[82px] text-center">
+          {/* SCORE */}
+          <div className="min-w-[58px] text-center sm:min-w-[82px]">
             {finished ? (
-              <div className="rounded-lg border border-white/15 bg-white/[0.08] px-3 py-2 text-lg font-black text-white shadow-inner">
-                {
-                  match.home_goals
-                }
+              <div className="rounded-lg border border-white/15 bg-white/[0.08] px-2 py-1.5 text-sm font-black text-white shadow-inner sm:px-3 sm:py-2 sm:text-lg">
+                {match.home_goals}
 
-                <span className="mx-2 text-white/40">
+                <span className="mx-1 text-white/40 sm:mx-2">
                   :
                 </span>
 
-                {
-                  match.away_goals
-                }
+                {match.away_goals}
               </div>
             ) : (
-              <div className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-white/45">
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-xs font-black text-white/45 sm:px-3 sm:py-2">
                 VS
               </div>
             )}
           </div>
 
-          <div className="min-w-0">
+          {/* AWAY PLAYER */}
+          <div className="min-w-0 text-left">
             <a
               href={`/players/${match.away_id}?season=${season}`}
-              className="font-bold text-white transition hover:text-blue-300"
+              className="block break-words text-xs font-bold leading-4 text-white transition hover:text-blue-300 sm:text-base sm:leading-normal"
             >
-              {getPlayerName(
-                match.away_id
-              )}
+              {getPlayerName(match.away_id)}
             </a>
           </div>
         </div>
 
-        {match.stage !==
-          "group" &&
-          match.stage !==
-            "final" &&
+        {/* PLAYOFF LEG */}
+        {match.stage !== "group" &&
+          match.stage !== "final" &&
           match.leg && (
-            <div className="mt-3 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
+            <div className="mt-2 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-white/40 sm:mt-3">
               {match.leg === 1
                 ? "1-й матч"
                 : "Матч-відповідь"}
@@ -309,6 +301,7 @@ export default async function EuropeanCupCalendar({
       </div>
     );
   }
+
 
   return (
     <section
@@ -385,7 +378,7 @@ export default async function EuropeanCupCalendar({
                       }
                       className="group overflow-hidden rounded-2xl border border-white/10 bg-[#07101d]"
                     >
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 transition hover:bg-white/[0.04]">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition hover:bg-white/[0.04] sm:gap-4 sm:px-6 sm:py-5">
                         <div>
                           <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">
                             Груповий
@@ -414,8 +407,8 @@ export default async function EuropeanCupCalendar({
                         </div>
                       </summary>
 
-                      <div className="border-t border-white/10 bg-[#050c16] p-4 md:p-6">
-                        <div className="grid gap-3 lg:grid-cols-2">
+                      <div className="border-t border-white/10 bg-[#050c16] p-2 sm:p-4 md:p-6">
+                        <div className="grid gap-2 sm:gap-3 lg:grid-cols-2">
                           {sortedMatches.map(
                             (
                               match

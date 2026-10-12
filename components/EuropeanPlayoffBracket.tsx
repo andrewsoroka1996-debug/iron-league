@@ -122,7 +122,7 @@ export default async function EuropeanPlayoffBracket({
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-6 pb-16">
+    <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 sm:pb-16">
       <div className="mb-10">
         <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
           Плей-оф
@@ -133,7 +133,7 @@ export default async function EuropeanPlayoffBracket({
         </h2>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-4">
+      <div className="grid gap-4 xl:grid-cols-4">
         {stages.map(
           (stage) => {
             const stageMatches =
@@ -193,17 +193,17 @@ export default async function EuropeanPlayoffBracket({
                 key={
                   stage.id
                 }
-                className="space-y-4"
+                className="space-y-2.5 sm:space-y-3"
               >
                 {/* STAGE HEADER */}
 
-                <div className="rounded-2xl border border-white/10 bg-[#07101d] px-5 py-4">
-                  <div className="text-center text-lg font-black text-blue-300">
-                    {
-                      stage.name
-                    }
-                  </div>
-                </div>
+
+<div className="rounded-xl border border-white/10 bg-[#07101d] px-3 py-2.5 sm:px-4 sm:py-3">
+  <div className="text-center text-base font-black text-blue-300 sm:text-lg">
+    {stage.name}
+  </div>
+</div>
+
 
                 {/* TWO LEG SERIES */}
 
@@ -286,16 +286,16 @@ export default async function EuropeanPlayoffBracket({
                         key={
                           seriesId
                         }
-                        className="overflow-hidden rounded-2xl border border-white/10 bg-[#07101d]"
+                        className="overflow-hidden rounded-xl border border-white/10 bg-[#07101d]"
                       >
                         <div
-                          className={`flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3 ${
+                          className={`flex items-center justify-between gap-2 border-b border-white/5 px-3 py-2.5 sm:px-4 sm:py-3 ${
                             homeWinner
                               ? "bg-blue-500/10"
                               : ""
                           }`}
                         >
-                          <span className="truncate font-bold">
+                          <span className="truncate text-sm font-bold sm:text-base">
                             {
                               homeName
                             }
@@ -309,13 +309,13 @@ export default async function EuropeanPlayoffBracket({
                         </div>
 
                         <div
-                          className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                          className={`flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3 ${
                             awayWinner
                               ? "bg-blue-500/10"
                               : ""
                           }`}
                         >
-                          <span className="truncate font-bold">
+                          <span className="truncate text-sm font-bold sm:text-base">
                             {
                               awayName
                             }
@@ -328,7 +328,7 @@ export default async function EuropeanPlayoffBracket({
                           </span>
                         </div>
 
-                        <div className="border-t border-white/5 px-4 py-2 text-center text-[11px] text-white/30">
+                        <div className="border-t border-white/5 px-3 py-1.5 text-center text-[10px] text-white/40">
                           {
                             summary.matchesPlayed
                           }
@@ -366,16 +366,16 @@ export default async function EuropeanPlayoffBracket({
                         key={
                           match.id
                         }
-                        className="overflow-hidden rounded-2xl border border-white/10 bg-[#07101d]"
+                        className="overflow-hidden rounded-xl border border-white/10 bg-[#07101d]"
                       >
                         <div
-                          className={`flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3 ${
+                          className={`flex items-center justify-between gap-2 border-b border-white/5 px-3 py-2.5 sm:px-4 sm:py-3 ${
                             homeWinner
                               ? "bg-blue-500/10"
                               : ""
                           }`}
                         >
-                          <span className="truncate font-bold">
+                          <span className="truncate text-sm font-bold sm:text-base">
                             {getPlayerName(
                               match.home_id
                             )}
@@ -389,13 +389,13 @@ export default async function EuropeanPlayoffBracket({
                         </div>
 
                         <div
-                          className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                          className={`flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3 ${
                             awayWinner
                               ? "bg-blue-500/10"
                               : ""
                           }`}
                         >
-                          <span className="truncate font-bold">
+                          <span className="truncate text-sm font-bold sm:text-base">
                             {getPlayerName(
                               match.away_id
                             )}

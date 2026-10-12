@@ -1,4 +1,5 @@
 import StadiumBackground from "./StadiumBackground";
+import SiteHeader from "./public/SiteHeader";
 import { connection } from "next/server";
 
 import { players } from "../data/players";
@@ -333,179 +334,185 @@ export default async function GroupStagePage({
       ? `Групи турніру «${competitionName}» Сезону 4 будуть сформовані перед стартом турніру.`
       : `Для турніру «${competitionName}» Сезону ${season} групи поки не налаштовані.`;
 
+        // ВІЗУАЛЬНА ТЕМА ЄВРОКУБКА
+  const visualTheme = {
+    championsLeague: {
+      accent: "text-blue-400",
+      accentSoft: "text-blue-300",
+      active: "bg-blue-600 shadow-blue-500/20",
+    },
+
+    europaLeague: {
+      accent: "text-orange-400",
+      accentSoft: "text-orange-300",
+      active: "bg-orange-600 shadow-orange-500/20",
+    },
+
+    conferenceLeague: {
+      accent: "text-emerald-400",
+      accentSoft: "text-emerald-300",
+      active: "bg-emerald-600 shadow-emerald-500/20",
+    },
+  }[competition];
+
   return (
     <main className="min-h-screen bg-[#030711] text-white">
+
       {/* HEADER */}
-
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a
-            href="/"
-            className="flex items-center gap-4"
-          >
-            <img
-              src="/iron-league-logo.jpg"
-              alt="Iron League"
-              className="h-14 w-auto object-contain"
-            />
-
-            <div>
-              <div className="font-black tracking-[0.18em]">
-                IRON LEAGUE
-              </div>
-
-              <div className="text-xs text-white/40">
-                {competitionName}
-              </div>
-            </div>
-          </a>
-
-          <a
-            href="/"
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
-          >
-            ← На головну
-          </a>
-        </div>
-      </header>
+      <SiteHeader />
 
       {/* HERO */}
-
       <section className="relative overflow-hidden border-b border-white/10">
-        <StadiumBackground
-  opacity="25"
-  preload
-/>
+        <StadiumBackground opacity="25" preload />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/65" />
-
+        {/* BACKGROUND */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/60" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70" />
 
-        <div className="relative mx-auto max-w-7xl px-6 py-20">
-          <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
-            Iron League
+        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
+
+          {/* BACK LINK */}
+          <a
+            href="/"
+            className={`inline-flex items-center gap-2 text-xs font-semibold transition hover:text-white sm:text-sm ${visualTheme.accentSoft}`}
+          >
+            <span aria-hidden="true">←</span>
+            На головну
+          </a>
+
+          {/* TITLE */}
+          <div className="mt-5">
+
+            <div
+              className={`text-[10px] font-bold uppercase tracking-[0.2em] sm:text-xs ${visualTheme.accent}`}
+            >
+              IRON LEAGUE EUROPEAN CUPS
+            </div>
+
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+              {competitionName}
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              Груповий етап, результати та турнірні таблиці
+              за сезонами Iron League.
+            </p>
           </div>
 
-          <h1 className="mt-4 text-5xl font-black sm:text-6xl">
-            {competitionName}
-          </h1>
-
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/55">
-            Груповий етап,
-            результати та
-            турнірні таблиці
-            за сезонами
-            Iron League.
-          </p>
-
           {/* SEASON SWITCHER */}
+          <div className="mt-6 sm:mt-8">
 
-          <div className="mt-8">
-            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/35">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-white/50">
               Обрати сезон
             </div>
 
-            <div className="inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d] p-1">
-              {(
-                [1, 2, 3, 4] as const
-              ).map(
-                (
-                  seasonNumber
-                ) => (
+            <nav
+              aria-label="Вибір сезону"
+              className="grid w-full max-w-lg grid-cols-4 gap-1 rounded-xl border border-white/10 bg-[#07101d] p-1"
+            >
+              {([1, 2, 3, 4] as const).map(
+                (seasonNumber) => (
                   <a
-                    key={
-                      seasonNumber
-                    }
+                    key={seasonNumber}
                     href={`/tournaments/${competitionRoute}?season=${seasonNumber}`}
-                    className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
-                      season ===
-                      seasonNumber
-                        ? "bg-blue-500 text-white"
-                        : "text-white/45 hover:text-white"
+                    aria-current={
+                      season === seasonNumber
+                        ? "page"
+                        : undefined
+                    }
+                    className={`flex min-h-10 items-center justify-center rounded-lg px-1 py-2 text-center text-[11px] font-bold transition-colors sm:text-sm ${
+                      season === seasonNumber
+                        ? `${visualTheme.active} text-white shadow-lg`
+                        : "text-white/55 hover:bg-white/5 hover:text-white"
                     }`}
                   >
-                    Сезон{" "}
-                    {
-                      seasonNumber
-                    }
+                    Сезон {seasonNumber}
                   </a>
                 )
               )}
-            </div>
+            </nav>
           </div>
 
-          {/* INFO */}
+          {/* COMPETITION STATISTICS */}
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
+            {/* SEASON */}
+            <div className="min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 backdrop-blur-sm sm:px-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">
                 Сезон
-              </span>
+              </div>
 
-              <span className="ml-2 font-black text-blue-300">
+              <div
+                className={`mt-1 text-xl font-black sm:text-2xl ${visualTheme.accentSoft}`}
+              >
                 {season}
-              </span>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
+            {/* GROUPS */}
+            <div className="min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 backdrop-blur-sm sm:px-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">
                 Груп
-              </span>
+              </div>
 
-              <span className="ml-2 font-black">
-                {
-                  groupNames.length
-                }
-              </span>
+              <div className="mt-1 text-xl font-black text-white sm:text-2xl">
+                {groupNames.length}
+              </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
+            {/* PARTICIPANTS */}
+            <div className="min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 backdrop-blur-sm sm:px-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">
                 Учасників
-              </span>
+              </div>
 
-              <span className="ml-2 font-black">
+              <div className="mt-1 text-xl font-black text-white sm:text-2xl">
                 {totalPlayers}
-              </span>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
+            {/* PLAYED MATCHES */}
+            <div className="min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 backdrop-blur-sm sm:px-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">
                 Зіграно матчів
-              </span>
+              </div>
 
-              <span className="ml-2 font-black">
-                {
-                  totalPlayedMatches
-                }
-              </span>
+              <div className="mt-1 text-xl font-black text-white sm:text-2xl">
+                {totalPlayedMatches}
+              </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3">
-              <span className="text-sm text-white/40">
+            {/* STATUS */}
+            <div className="col-span-2 min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 backdrop-blur-sm sm:col-span-1 sm:px-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">
                 Статус
-              </span>
+              </div>
 
-              <span className="ml-2 font-black text-blue-300">
+              <div
+                className={`mt-1 break-words text-sm font-black leading-6 sm:text-base ${visualTheme.accentSoft}`}
+              >
                 {seasonStatus}
-              </span>
+              </div>
             </div>
           </div>
 
+          {/* DATABASE ERROR */}
           {error && (
-            <div className="mt-6 rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-sm text-red-200">
-              Не вдалося
-              завантажити
-              результати з бази
-              даних.
+            <div
+              role="alert"
+              className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+            >
+              Не вдалося завантажити результати з бази даних.
             </div>
           )}
+
         </div>
       </section>
 
+
       {/* GROUPS */}
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
         <div className="mb-10">
           <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
             Груповий етап
@@ -535,7 +542,7 @@ export default async function GroupStagePage({
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="grid gap-4 sm:gap-5 xl:grid-cols-2">
             {groups.map(
               (group) => (
                 <div
@@ -546,32 +553,164 @@ export default async function GroupStagePage({
                 >
                   {/* GROUP HEADER */}
 
-                  <div className="flex items-end justify-between border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-6 py-5">
-                    <div>
-                      <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                        Група
-                      </div>
 
-                      <div className="mt-1 text-4xl font-black">
-                        {
-                          group.name
-                        }
-                      </div>
-                    </div>
+{/* COMPACT GROUP HEADER */}
+<div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-4 py-2.5 sm:px-5 sm:py-3">
 
-                    <div className="text-xs text-white/35">
-                      {
-                        group.playedMatches
-                      }{" "}
-                      матчів
-                    </div>
-                  </div>
+  {/* GROUP NAME */}
+  <div className="flex min-w-0 items-baseline gap-2">
+    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-400 sm:text-xs">
+      Група
+    </span>
+
+    <h3 className="text-[22px] font-black leading-none tracking-tight text-white sm:text-2xl">
+      {group.name}
+    </h3>
+  </div>
+
+  {/* MATCH COUNT */}
+  <span className="shrink-0 text-[11px] text-white/40">
+    {group.playedMatches} матчів
+  </span>
+
+</div>
+
 
                   {/* TABLE */}
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[690px]">
-                      <thead className="border-b border-white/10 bg-white/[0.025]">
+
+{/* MOBILE GROUP STANDINGS */}
+<div className="lg:hidden">
+
+  {/* TABLE HEADER */}
+
+<div className="grid grid-cols-[28px_minmax(0,1fr)_26px_34px_14px] items-center gap-2 border-b border-white/10 bg-white/[0.035] px-3 py-1.5 text-[10px] font-bold uppercase text-white/45">
+    <span className="text-center">#</span>
+    <span className="text-[9px] tracking-tight">
+  Гравець
+</span>
+    <span className="text-center">І</span>
+    <span className="text-center">О</span>
+    <span />
+  </div>
+
+  {/* PLAYERS */}
+  {group.table.map((row, index) => (
+    <details
+      key={row.playerId}
+      className="group border-b border-white/5 last:border-b-0"
+    >
+      <summary className="grid cursor-pointer list-none grid-cols-[28px_minmax(0,1fr)_26px_34px_14px] items-center gap-2 px-3 py-2.5 transition-colors hover:bg-white/[0.04] [&::-webkit-details-marker]:hidden">
+
+        {/* POSITION */}
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-black ${
+            index < 2
+              ? "bg-blue-500/15 text-blue-300"
+              : "bg-white/[0.05] text-white/55"
+          }`}
+        >
+          {index + 1}
+        </span>
+
+        {/* PLAYER */}
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-bold text-white">
+            {row.player.nickname}
+          </span>
+
+          {row.player.account && (
+            <span className="mt-0.5 block truncate text-[10px] text-white/35">
+              ({row.player.account})
+            </span>
+          )}
+        </span>
+
+        {/* PLAYED */}
+        <span className="text-center text-xs tabular-nums text-white/60">
+          {row.played}
+        </span>
+
+        {/* POINTS */}
+        <span className="text-center text-base font-black tabular-nums text-white">
+          {row.points}
+        </span>
+
+        {/* EXPAND ICON */}
+        <span
+          aria-hidden="true"
+          className="text-center text-xs text-blue-300/70 transition-transform group-open:rotate-180"
+        >
+          ⌄
+        </span>
+      </summary>
+
+      {/* EXPANDED STATISTICS */}
+      <div className="border-t border-white/5 bg-[#0a1526] px-2 pb-2 pt-2">
+
+        <dl className="grid grid-cols-3 gap-1.5">
+          {[
+            {
+              label: "Перемоги",
+              value: row.wins,
+            },
+            {
+              label: "Нічиї",
+              value: row.draws,
+            },
+            {
+              label: "Поразки",
+              value: row.losses,
+            },
+            {
+              label: "Забиті",
+              value: row.goalsFor,
+            },
+            {
+              label: "Пропущені",
+              value: row.goalsAgainst,
+            },
+            {
+              label: "Різниця",
+              value:
+                row.goalDifference > 0
+                  ? `+${row.goalDifference}`
+                  : row.goalDifference,
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="min-w-0 rounded-md border border-white/5 bg-white/[0.025] px-2 py-1.5"
+            >
+              <dt className="text-[10px] text-white/45">
+                {stat.label}
+              </dt>
+
+              <dd className="mt-0.5 text-sm font-black leading-5 tabular-nums text-white">
+                {stat.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        {/* PLAYER PROFILE */}
+        <a
+          href={`/players/${row.player.id}?season=${season}`}
+          className={`mt-3 inline-flex items-center gap-1 text-xs font-bold transition hover:text-white ${visualTheme.accentSoft}`}
+        >
+          Профіль гравця
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </details>
+  ))}
+</div>
+
+
+                  <div className="hidden overflow-x-auto lg:block">
+                    <table className="w-full min-w-[590px]">
+
+<thead className="border-b border-white/10 bg-white/[0.025] [&_th]:py-1.5">
                         <tr className="text-[11px] font-bold uppercase text-white/35">
                           <th className="px-3 py-3 text-center">
                             #
@@ -740,10 +879,25 @@ export default async function GroupStagePage({
           </div>
         )}
 
+
+{/* MOBILE LEGEND */}
+{totalPlayers > 0 && (
+  <div className="mt-4 flex flex-wrap gap-5 px-1 text-xs text-white/45 lg:hidden">
+    <span>
+      <b className="text-white/70">І</b> — ігри
+    </span>
+
+    <span>
+      <b className="text-white/70">О</b> — очки
+    </span>
+  </div>
+)}
+
+
         {/* LEGEND */}
 
         {totalPlayers > 0 && (
-          <div className="mt-8 flex flex-wrap gap-5 text-xs text-white/35">
+            <div className="mt-8 hidden flex-wrap gap-5 text-xs text-white/35 lg:flex">
             <span>
               <b className="text-white/60">
                 І
