@@ -1023,10 +1023,14 @@ export default async function Home() {
       </section>
 
       
-{/* RECENT RESULTS */}
+
+{/* =====================================
+    RECENT RESULTS
+===================================== */}
+
 <section
   id="matches"
-  className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-14"
+  className="mx-auto max-w-7xl scroll-mt-24 px-4 py-8 sm:px-6 sm:py-14"
 >
   {/* SECTION HEADER */}
   <div className="mb-5 flex items-end justify-between gap-3">
@@ -1042,7 +1046,7 @@ export default async function Home() {
 
     <a
       href="/matches"
-      className="hidden text-sm font-semibold text-blue-300 hover:text-blue-200 sm:block"
+      className="hidden text-sm font-semibold text-blue-300 transition hover:text-blue-200 sm:block"
     >
       Усі матчі →
     </a>
@@ -1064,31 +1068,62 @@ export default async function Home() {
       results.map((match) => (
         <div
           key={match.id}
-          className="rounded-xl border border-white/10 bg-[#07101d] px-3 py-3 transition hover:border-blue-400/30 sm:px-4"
+          className="rounded-xl border border-white/10 bg-[#07101d] px-3 py-3 transition hover:border-blue-400/30 sm:px-4 lg:py-3"
         >
-          {/* TOURNAMENT */}
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-blue-300 sm:text-xs">
-              {match.tournament}
-            </span>
+          {/* MOBILE AND TABLET VERSION */}
+          <div className="lg:hidden">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-blue-300 sm:text-xs">
+                {match.tournament}
+              </span>
 
-            <span className="shrink-0 text-[10px] text-white/45 sm:text-xs">
-              Завершено
-            </span>
+              <span className="shrink-0 text-[10px] text-white/45 sm:text-xs">
+                Завершено
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1 break-words text-right text-xs font-bold leading-4 text-white sm:text-sm">
+                {match.home}
+              </div>
+
+              <div className="flex min-w-16 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 px-2 py-2 text-base font-black tabular-nums text-blue-300 sm:text-lg">
+                {match.score}
+              </div>
+
+              <div className="min-w-0 flex-1 break-words text-left text-xs font-bold leading-4 text-white sm:text-sm">
+                {match.away}
+              </div>
+            </div>
           </div>
 
-          {/* PLAYERS AND SCORE */}
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1 break-words text-right text-xs font-bold leading-4 text-white sm:text-sm">
+          {/* DESKTOP VERSION */}
+          <div className="hidden lg:grid lg:grid-cols-12 lg:items-center lg:gap-3">
+            {/* TOURNAMENT */}
+            <div className="col-span-2 text-xs font-bold uppercase tracking-wide text-blue-300">
+              {match.tournament}
+            </div>
+
+            {/* HOME PLAYER */}
+            <div className="col-span-3 min-w-0 break-words text-right text-sm font-bold text-white xl:text-base">
               {match.home}
             </div>
 
-            <div className="flex min-w-16 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 px-2 py-2 text-base font-black tabular-nums text-blue-300 sm:text-lg">
-              {match.score}
+            {/* SCORE */}
+            <div className="col-span-2 flex justify-center">
+              <div className="min-w-20 rounded-lg border border-blue-400/10 bg-blue-500/15 px-3 py-2 text-center text-lg font-black tabular-nums text-blue-300">
+                {match.score}
+              </div>
             </div>
 
-            <div className="min-w-0 flex-1 break-words text-left text-xs font-bold leading-4 text-white sm:text-sm">
+            {/* AWAY PLAYER */}
+            <div className="col-span-3 min-w-0 break-words text-left text-sm font-bold text-white xl:text-base">
               {match.away}
+            </div>
+
+            {/* MATCH STATUS */}
+            <div className="col-span-2 text-right text-xs font-medium text-white/45">
+              Завершено
             </div>
           </div>
         </div>
@@ -1105,6 +1140,7 @@ export default async function Home() {
     <span aria-hidden="true">→</span>
   </a>
 </section>
+
 
 
       
