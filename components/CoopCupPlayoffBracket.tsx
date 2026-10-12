@@ -931,59 +931,48 @@ export default async function CoopCupPlayoffBracket({
     ========================================
   */
 
-  return (
-    <div className="overflow-x-auto pb-4">
-      <div className="grid min-w-[1180px] grid-cols-4 gap-5">
-        {stages.map(
-          (stage) => (
-            <div
-              key={
-                stage.id
-              }
-            >
-              <div className="mb-5 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-center">
-                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">
-                  Iron Co-op Cup
-                </div>
 
-                <div className="mt-1 font-black">
-                  {stage.label}
-                </div>
+  return (
+    <div className="overflow-visible pb-0 xl:overflow-x-auto xl:pb-4">
+      <div className="grid grid-cols-1 gap-6 xl:min-w-[1180px] xl:grid-cols-4 xl:gap-5">
+        {stages.map((stage) => (
+          <div
+            key={stage.id}
+            className="min-w-0"
+          >
+            {/* STAGE HEADER */}
+            <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-center xl:mb-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">
+                Iron Co-op Cup
               </div>
 
-              <div
-                className={
-                  stage.id ===
-                  "round-of-16"
-                    ? "space-y-4"
-                    : stage.id ===
-                        "quarterfinal"
-                      ? "space-y-12 pt-16"
-                      : stage.id ===
-                          "semifinal"
-                        ? "space-y-28 pt-40"
-                        : "pt-80"
-                }
-              >
-                {bracket[
-                  stage.id
-                ].map(
-                  (slot) => (
-                    <MatchCard
-                      key={`${stage.id}-${slot.number}`}
-                      slot={
-                        slot
-                      }
-                      stage={
-                        stage.id
-                      }
-                    />
-                  )
-                )}
+              <div className="mt-1 text-sm font-black text-blue-300 sm:text-base">
+                {stage.label}
               </div>
             </div>
-          )
-        )}
+
+            {/* STAGE MATCHES */}
+            <div
+              className={
+                stage.id === "round-of-16"
+                  ? "space-y-3 sm:space-y-4"
+                  : stage.id === "quarterfinal"
+                    ? "space-y-3 sm:space-y-4 xl:space-y-12 xl:pt-16"
+                    : stage.id === "semifinal"
+                      ? "space-y-3 sm:space-y-4 xl:space-y-28 xl:pt-40"
+                      : "xl:pt-80"
+              }
+            >
+              {bracket[stage.id].map((slot) => (
+                <MatchCard
+                  key={`${stage.id}-${slot.number}`}
+                  slot={slot}
+                  stage={stage.id}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
