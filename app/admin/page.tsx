@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { players } from "../../data/players";
+import ResultRestoreButton from "./ResultRestoreButton";
 
 import { season1 } from "../../data/seasons/season-1";
 import { season2 } from "../../data/seasons/season-2";
@@ -954,6 +955,254 @@ export default function AdminPage() {
     }
   }
 
+    /*
+    ========================================
+    CANCEL RESULT
+    ========================================
+
+    1. Preview перевіряє,
+       чи можна безпечно
+       скасувати результат.
+
+    2. Якщо можна —
+       просимо підтвердження.
+
+    3. Реальний Revert API
+       повторно виконує
+       ту саму safety-перевірку.
+    ========================================
+  */
+
+  async function cancelResult() {
+    if (!password) {
+      setMessage(
+        "Enter administrator password"
+      );
+
+      return;
+    }
+
+    if (!selectedMatch) {
+      setMessage(
+        "Select a match"
+      );
+
+      return;
+    }
+
+    if (
+      selectedMatch.status !==
+        "finished" ||
+      selectedMatch.home_goals ===
+        null ||
+      selectedMatch.away_goals ===
+        null
+    ) {
+      setMessage(
+        "This match has no result to cancel"
+      );
+
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      /*
+        ========================================
+        PREVIEW
+        ========================================
+      */
+
+      const previewResponse =
+        await fetch(
+          "/api/admin/match-result-revert-preview",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                password,
+
+                match_id:
+                  selectedMatch.id,
+              }),
+          }
+        );
+
+      const preview =
+        await previewResponse.json();
+
+      /*
+        Preview може повернути
+        blocker із поясненням.
+      */
+
+      if (
+        !previewResponse.ok ||
+        !preview.can_revert
+      ) {
+        const blockerText =
+          Array.isArray(
+            preview.blockers
+          ) &&
+          preview.blockers.length >
+            0
+            ? preview.blockers.join(
+                " | "
+              )
+            : "";
+
+        setMessage(
+          blockerText ||
+            preview.error ||
+            "This result cannot be cancelled"
+        );
+
+        return;
+      }
+
+      /*
+        ========================================
+        CONFIRMATION
+        ========================================
+      */
+
+      const confirmed =
+        window.confirm(
+          [
+            "Cancel this result?",
+            "",
+            `${getNickname(
+              selectedMatch.home_id
+            )} ${selectedMatch.home_goals} : ${selectedMatch.away_goals} ${getNickname(
+              selectedMatch.away_id
+            )}`,
+            "",
+            "The match will return to scheduled status.",
+          ].join("\n")
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      /*
+        ========================================
+        REAL REVERT
+        ========================================
+      */
+
+      const response =
+        await fetch(
+          "/api/admin/match-result-revert",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                password,
+
+                match_id:
+                  selectedMatch.id,
+              }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      /*
+        Навіть після Preview
+        Revert API повторно
+        перевіряє blockers.
+
+        Це захищає від зміни
+        стану між двома запитами.
+      */
+
+      if (!response.ok) {
+        const blockerText =
+          Array.isArray(
+            result.blockers
+          ) &&
+          result.blockers.length >
+            0
+            ? result.blockers.join(
+                " | "
+              )
+            : "";
+
+        setMessage(
+          blockerText ||
+            result.error ||
+            "Failed to cancel result"
+        );
+
+        return;
+      }
+
+      /*
+        ========================================
+        SUCCESS
+        ========================================
+      */
+
+      setMessage(
+        "✅ Result cancelled"
+      );
+
+      const revertedMatchId =
+  selectedMatch.id;
+
+const revertedRound =
+  selectedMatch.round;
+
+setHomeGoals("");
+setAwayGoals("");
+
+await loadCalendar();
+
+/*
+  Після reload залишаємо
+  скасований матч обраним,
+  щоб Restore result
+  з'явився одразу.
+*/
+
+if (
+  revertedRound !== null
+) {
+  setRound(
+    revertedRound
+  );
+}
+
+setMatchId(
+  revertedMatchId
+);
+    } catch {
+      setMessage(
+        "Connection error"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   /*
     ========================================
     РУЧНЕ ДОДАВАННЯ МАТЧУ
@@ -1578,7 +1827,7 @@ export default function AdminPage() {
   href="/admin/player-replacements"
   className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
 >
-  Player Replacements
+  Заміни гравців
 </a>
 
   <a
@@ -2019,6 +2268,74 @@ export default function AdminPage() {
                       ? "Оновити результат"
                       : "Зберегти результат"}
                 </button>
+                                {selectedMatch?.status ===
+                  "finished" &&
+                  selectedMatch.home_goals !==
+                    null &&
+                  selectedMatch.away_goals !==
+                    null && (
+                    <button
+                      type="button"
+                      onClick={
+                        cancelResult
+                      }
+                      disabled={
+                        loading
+                      }
+                      className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-4 font-black text-red-300 transition hover:bg-red-500/20 disabled:opacity-40"
+                    >
+                      {loading
+                        ? "Processing..."
+                        : "Cancel result"}
+                    </button>
+                  )}
+
+                  <ResultRestoreButton
+  password={
+    password
+  }
+  match={
+    selectedMatch
+  }
+  disabled={
+    loading
+  }
+  onMessage={
+    setMessage
+  }
+  onRestored={
+    async () => {
+      if (
+        !selectedMatch
+      ) {
+        await loadCalendar();
+
+        return;
+      }
+
+      const restoredMatchId =
+        selectedMatch.id;
+
+      const restoredRound =
+        selectedMatch.round;
+
+      await loadCalendar();
+
+      if (
+        restoredRound !==
+        null
+      ) {
+        setRound(
+          restoredRound
+        );
+      }
+
+      setMatchId(
+        restoredMatchId
+      );
+    }
+  }
+/>
               </>
             )}
           </form>

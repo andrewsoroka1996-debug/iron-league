@@ -13,7 +13,7 @@ import { buildStandings } from "../../../../lib/standings";
 
 import {
   applyPlayerReplacements,
-  getDivisionReplacements,
+  getSeasonPlayerReplacements,
   resolveReplacementPlayerId,
   type PlayerReplacement,
 } from "../../../../lib/player-replacements";
@@ -43,15 +43,54 @@ type PreviewBody = {
 type MatchRow = {
   id: string;
 
-  round: number | null;
+  season: number;
+
+  competition: string;
+
+  division:
+    | number
+    | null;
+
+  round:
+    | number
+    | null;
+
+  stage:
+    | string
+    | null;
+
+  group_name:
+    | string
+    | null;
+
+  participant_type: string;
 
   home_id: string;
   away_id: string;
 
-  home_goals: number | null;
-  away_goals: number | null;
+  home_goals:
+    | number
+    | null;
+
+  away_goals:
+    | number
+    | null;
 
   status: string;
+};
+
+type CoopTeamRow = {
+  id: string;
+
+  name: string;
+
+  player_1_id:
+    | string
+    | null;
+
+  player_2_id:
+    | string
+    | null;
 };
 
 /*
@@ -129,6 +168,95 @@ function getDivisionPlayers(
 
 /*
   ========================================
+  SEASON DIVISIONS
+  ========================================
+*/
+
+function getSeasonDivisions(
+  season: SeasonNumber
+): DivisionNumber[] {
+  if (season === 1) {
+    return [
+      1,
+      2,
+      3,
+    ];
+  }
+
+  return [
+    1,
+    2,
+    3,
+    4,
+  ];
+}
+
+/*
+  ========================================
+  CURRENT DIVISION SLOT OWNERS
+  ACROSS THE WHOLE SEASON
+  ========================================
+
+  Це захищає систему навіть тоді,
+  коли календар нового сезону
+  ще не створений.
+
+  Наприклад:
+
+  Division 2 player не може стати
+  replacement у Division 1 тільки
+  тому, що ще не зіграв жодного матчу.
+
+  Replacement chains враховуються.
+  ========================================
+*/
+
+function getCurrentSeasonDivisionPlayerIds(
+  season: SeasonNumber,
+  replacements:
+    readonly PlayerReplacement[]
+): string[] {
+  const playerIds =
+    new Set<string>();
+
+  const divisions =
+    getSeasonDivisions(
+      season
+    );
+
+  for (
+    const division
+    of divisions
+  ) {
+    const basePlayerIds =
+      getDivisionPlayers(
+        season,
+        division
+      );
+
+    const currentPlayerIds =
+      applyPlayerReplacements(
+        basePlayerIds,
+        replacements
+      );
+
+    for (
+      const playerId
+      of currentPlayerIds
+    ) {
+      playerIds.add(
+        playerId
+      );
+    }
+  }
+
+  return [
+    ...playerIds,
+  ];
+}
+
+/*
+  ========================================
   PLAYER NAME
   ========================================
 */
@@ -139,7 +267,8 @@ function getNickname(
   return (
     players.find(
       (player) =>
-        player.id === playerId
+        player.id ===
+        playerId
     )?.nickname ??
     playerId
   );
@@ -156,7 +285,8 @@ export async function POST(
 ) {
   try {
     const body =
-      (await request.json()) as PreviewBody;
+      (await request.json()) as
+        PreviewBody;
 
     const {
       password,
@@ -182,6 +312,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Invalid administrator password",
         },
@@ -198,14 +329,18 @@ export async function POST(
     */
 
     if (
-      !Number.isInteger(season) ||
-      season === undefined ||
+      season ===
+        undefined ||
+      !Number.isInteger(
+        season
+      ) ||
       season < 1 ||
       season > 4
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Invalid season",
         },
@@ -222,14 +357,18 @@ export async function POST(
     */
 
     if (
-      !Number.isInteger(division) ||
-      division === undefined ||
+      division ===
+        undefined ||
+      !Number.isInteger(
+        division
+      ) ||
       division < 1 ||
       division > 4
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Invalid division",
         },
@@ -246,6 +385,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Division 4 did not exist in Season 1",
         },
@@ -271,6 +411,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Outgoing player is required",
         },
@@ -290,6 +431,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Incoming player is required",
         },
@@ -306,11 +448,13 @@ export async function POST(
       incoming_player_id.trim();
 
     if (
-      outgoingId === incomingId
+      outgoingId ===
+      incomingId
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Outgoing and incoming players must be different",
         },
@@ -344,6 +488,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             `Player ${outgoingId} was not found`,
         },
@@ -357,6 +502,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             `Player ${incomingId} was not found`,
         },
@@ -374,19 +520,18 @@ export async function POST(
 
     /*
       ========================================
-      EXISTING REPLACEMENTS
+      ALL SEASON REPLACEMENTS
       ========================================
     */
 
     const existingReplacements =
-      await getDivisionReplacements(
-        seasonNumber,
-        divisionNumber
+      await getSeasonPlayerReplacements(
+        seasonNumber
       );
 
     /*
       ========================================
-      CURRENT ROSTER
+      CURRENT SELECTED DIVISION ROSTER
       ========================================
     */
 
@@ -403,8 +548,23 @@ export async function POST(
       );
 
     /*
-      Outgoing must currently own
-      a division slot.
+      ========================================
+      ALL CURRENT DIVISION SLOT OWNERS
+      IN THIS SEASON
+      ========================================
+    */
+
+    const currentSeasonDivisionPlayerIds =
+      getCurrentSeasonDivisionPlayerIds(
+        seasonNumber,
+        existingReplacements
+      );
+
+    /*
+      ========================================
+      OUTGOING MUST CURRENTLY OWN
+      SELECTED DIVISION SLOT
+      ========================================
     */
 
     if (
@@ -415,6 +575,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             `${getNickname(
               outgoingId
@@ -427,22 +588,28 @@ export async function POST(
     }
 
     /*
-      Incoming cannot already own
-      another active slot.
+      ========================================
+      INCOMING MUST NOT OWN ANY
+      DIVISION SLOT IN THIS SEASON
+      ========================================
+
+      Не тільки вибраний Division.
+
+      Перевіряємо всі дивізіони сезону.
+      ========================================
     */
 
     if (
-      currentPlayerIds.includes(
+      currentSeasonDivisionPlayerIds.includes(
         incomingId
       )
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
-            `${getNickname(
-              incomingId
-            )} is already an active player in this division`,
+            `${incomingPlayer.nickname} already owns a division slot in Season ${seasonNumber}`,
         },
         {
           status: 400,
@@ -452,64 +619,181 @@ export async function POST(
 
     /*
       ========================================
-      DIVISION MATCHES
+      ALL PLAYER MATCHES OF SEASON
+      ========================================
+
+      Завантажуємо сторінками,
+      тому що матчів може бути > 1000.
       ========================================
     */
 
-    const {
-      data,
-      error,
-    } = await supabaseAdmin
-      .from("matches")
-      .select(
-        `
-          id,
-          round,
-          home_id,
-          away_id,
-          home_goals,
-          away_goals,
-          status
-        `
-      )
-      .eq(
-        "season",
-        seasonNumber
-      )
-      .eq(
-        "competition",
-        "division"
-      )
-      .eq(
-        "division",
-        divisionNumber
-      )
-      .order(
-        "round",
-        {
-          ascending: true,
-        }
+    const matches:
+      MatchRow[] = [];
+
+    const pageSize =
+      1000;
+
+    let from =
+      0;
+
+    while (true) {
+      const {
+        data:
+          matchPageData,
+
+        error:
+          matchPageError,
+      } =
+        await supabaseAdmin
+          .from("matches")
+          .select(
+            `
+              id,
+              season,
+              competition,
+              division,
+              round,
+              stage,
+              group_name,
+              participant_type,
+              home_id,
+              away_id,
+              home_goals,
+              away_goals,
+              status
+            `
+          )
+          .eq(
+            "season",
+            seasonNumber
+          )
+          .eq(
+            "participant_type",
+            "player"
+          )
+          .order(
+            "id",
+            {
+              ascending:
+                true,
+            }
+          )
+          .range(
+            from,
+            from +
+              pageSize -
+              1
+          );
+
+      if (
+        matchPageError
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+
+            error:
+              matchPageError.message,
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      const page =
+        (
+          matchPageData ??
+          []
+        ) as MatchRow[];
+
+      matches.push(
+        ...page
       );
 
-    if (error) {
+      if (
+        page.length <
+        pageSize
+      ) {
+        break;
+      }
+
+      from +=
+        pageSize;
+    }
+
+    /*
+      ========================================
+      INCOMING PLAYER GLOBAL MATCH SAFETY
+      ========================================
+
+      Incoming не повинен мати
+      ЖОДНОГО player-match у сезоні:
+
+      - finished
+      - scheduled
+      - будь-якого іншого status
+      ========================================
+    */
+
+    const incomingHasSeasonMatches =
+      matches.some(
+        (match) =>
+          match.home_id ===
+            incomingId ||
+          match.away_id ===
+            incomingId
+      );
+
+    if (
+      incomingHasSeasonMatches
+    ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
-            error.message,
+            `${incomingPlayer.nickname} already has match history in Season ${seasonNumber}`,
         },
         {
-          status: 500,
+          status: 400,
         }
       );
     }
 
-    const matches =
-      (data ?? []) as MatchRow[];
+    /*
+      ========================================
+      OUTGOING ALREADY REPLACED
+      ========================================
+    */
+
+    const outgoingAlreadyReplaced =
+      existingReplacements.some(
+        (replacement) =>
+          replacement
+            .outgoing_player_id ===
+          outgoingId
+      );
+
+    if (
+      outgoingAlreadyReplaced
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          error:
+            `${outgoingPlayer.nickname} already has a replacement in Season ${seasonNumber}`,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
     /*
       ========================================
-      ALL MATCHES OF OUTGOING PLAYER
+      OUTGOING MATCHES
       ========================================
     */
 
@@ -526,11 +810,6 @@ export async function POST(
       ========================================
       ALL UNFINISHED MATCHES TO TRANSFER
       ========================================
-
-      Round number DOES NOT matter.
-
-      finished  -> stays historical
-      unfinished -> moves to incoming player
     */
 
     const affectedMatches =
@@ -540,15 +819,136 @@ export async function POST(
           "finished"
       );
 
+    /*
+      ========================================
+      COUNTS BY COMPETITION
+      ========================================
+    */
+
+    const competitionCountMap =
+      new Map<
+        string,
+        number
+      >();
+
+    for (
+      const match
+      of affectedMatches
+    ) {
+      competitionCountMap.set(
+        match.competition,
+        (
+          competitionCountMap.get(
+            match.competition
+          ) ?? 0
+        ) + 1
+      );
+    }
+
+    const affectedByCompetition =
+      Array.from(
+        competitionCountMap.entries()
+      )
+        .map(
+          ([
+            competition,
+            count,
+          ]) => ({
+            competition,
+
+            matches:
+              count,
+          })
+        )
+        .sort(
+          (a, b) =>
+            a.competition.localeCompare(
+              b.competition
+            )
+        );
+
+    /*
+      ========================================
+      IRON CO-OP CUP TEAM
+      ========================================
+
+      Co-op matches are not
+      player-vs-player.
+
+      Membership is stored separately
+      in public.coop_teams.
+      ========================================
+    */
+
+    const {
+      data:
+        coopData,
+
+      error:
+        coopError,
+    } =
+      await supabaseAdmin
+        .from("coop_teams")
+        .select(
+          `
+            id,
+            name,
+            player_1_id,
+            player_2_id
+          `
+        )
+        .eq(
+          "season",
+          seasonNumber
+        );
+
     if (
-      affectedMatches.length ===
-      0
+      coopError
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
-            `${outgoingPlayer.nickname} has no unfinished matches to transfer`,
+            coopError.message,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    const coopTeams =
+      (
+        coopData ??
+        []
+      ) as CoopTeamRow[];
+
+    const outgoingCoopTeams =
+      coopTeams.filter(
+        (team) =>
+          team.player_1_id ===
+            outgoingId ||
+          team.player_2_id ===
+            outgoingId
+      );
+
+    /*
+      ========================================
+      CO-OP DUPLICATE SAFETY
+      ========================================
+    */
+
+    if (
+      outgoingCoopTeams.length >
+      1
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          error:
+            `${outgoingPlayer.nickname} exists in more than one Iron Co-op Cup team`,
         },
         {
           status: 400,
@@ -556,11 +956,59 @@ export async function POST(
       );
     }
 
+    const coopTeam =
+      outgoingCoopTeams[0] ??
+      null;
+
+    let coopSlot:
+      | 1
+      | 2
+      | null =
+      null;
+
+    let coopTeammateId:
+      | string
+      | null =
+      null;
+
+    if (
+      coopTeam
+    ) {
+      if (
+        coopTeam.player_1_id ===
+        outgoingId
+      ) {
+        coopSlot =
+          1;
+
+        coopTeammateId =
+          coopTeam.player_2_id;
+      } else if (
+        coopTeam.player_2_id ===
+        outgoingId
+      ) {
+        coopSlot =
+          2;
+
+        coopTeammateId =
+          coopTeam.player_1_id;
+      }
+    }
+
     /*
       ========================================
-      CURRENT STANDINGS
+      CURRENT DIVISION STANDINGS
       ========================================
     */
+
+    const divisionMatches =
+      matches.filter(
+        (match) =>
+          match.competition ===
+            "division" &&
+          match.division ===
+            divisionNumber
+      );
 
     const currentStandings =
       buildStandings({
@@ -568,7 +1016,7 @@ export async function POST(
           currentPlayerIds,
 
         matches:
-          matches.map(
+          divisionMatches.map(
             (match) => ({
               home_id:
                 resolveReplacementPlayerId(
@@ -602,14 +1050,13 @@ export async function POST(
         (row) =>
           row.playerId ===
           outgoingId
-      ) ?? null;
+      ) ??
+      null;
 
     /*
       ========================================
-      VIRTUAL REPLACEMENT
+      VIRTUAL GLOBAL REPLACEMENT
       ========================================
-
-      It no longer controls replacement logic.
     */
 
     const previewReplacement:
@@ -632,6 +1079,13 @@ export async function POST(
         inherit_standings:
           true,
 
+        coop_removed_team_id:
+          coopTeam?.id ??
+          null,
+
+        coop_removed_slot:
+          coopSlot,
+
         created_at:
           new Date().toISOString(),
       };
@@ -643,7 +1097,7 @@ export async function POST(
 
     /*
       ========================================
-      CHAIN SAFETY
+      PREVIEW DIVISION ROSTER
       ========================================
     */
 
@@ -660,6 +1114,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             error instanceof Error
               ? error.message
@@ -671,6 +1126,12 @@ export async function POST(
       );
     }
 
+    /*
+      ========================================
+      SLOT COUNT SAFETY
+      ========================================
+    */
+
     if (
       previewPlayerIds.length !==
       currentPlayerIds.length
@@ -678,6 +1139,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Replacement would create a duplicate or invalid player chain",
         },
@@ -687,6 +1149,12 @@ export async function POST(
       );
     }
 
+    /*
+      ========================================
+      INCOMING MUST BECOME SLOT OWNER
+      ========================================
+    */
+
     if (
       !previewPlayerIds.includes(
         incomingId
@@ -695,8 +1163,9 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
-            "Incoming player cannot become the current owner of this division slot",
+            "Incoming player cannot become the current owner of this slot",
         },
         {
           status: 400,
@@ -706,7 +1175,7 @@ export async function POST(
 
     /*
       ========================================
-      PREVIEW STANDINGS
+      PREVIEW DIVISION STANDINGS
       ========================================
     */
 
@@ -716,7 +1185,7 @@ export async function POST(
           previewPlayerIds,
 
         matches:
-          matches.map(
+          divisionMatches.map(
             (match) => ({
               home_id:
                 resolveReplacementPlayerId(
@@ -750,7 +1219,8 @@ export async function POST(
         (row) =>
           row.playerId ===
           incomingId
-      ) ?? null;
+      ) ??
+      null;
 
     /*
       ========================================
@@ -760,13 +1230,14 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
+
       preview: true,
 
       message:
         "Preview only. No database changes have been made.",
 
       replacement_mode:
-        "all_unfinished_matches",
+        "global_season",
 
       season:
         seasonNumber,
@@ -791,15 +1262,19 @@ export async function POST(
       },
 
       /*
-        Keep this field temporarily for
-        compatibility with the current UI.
+        ======================================
+        GLOBAL MATCH SUMMARY
+        ======================================
       */
+
+      affected_unfinished_matches:
+        affectedMatches.length,
 
       affected_future_matches:
         affectedMatches.length,
 
-      affected_unfinished_matches:
-        affectedMatches.length,
+      affected_by_competition:
+        affectedByCompetition,
 
       affected_match_ids:
         affectedMatches.map(
@@ -813,8 +1288,20 @@ export async function POST(
             id:
               match.id,
 
+            competition:
+              match.competition,
+
+            division:
+              match.division,
+
             round:
               match.round,
+
+            stage:
+              match.stage,
+
+            group_name:
+              match.group_name,
 
             status:
               match.status,
@@ -855,6 +1342,14 @@ export async function POST(
           })
         ),
 
+      /*
+        ======================================
+        HISTORICAL MATCHES
+
+        Physical DB rows stay unchanged.
+        ======================================
+      */
+
       finished_historical_matches:
         outgoingMatches
           .filter(
@@ -867,8 +1362,20 @@ export async function POST(
               id:
                 match.id,
 
+              competition:
+                match.competition,
+
+              division:
+                match.division,
+
               round:
                 match.round,
+
+              stage:
+                match.stage,
+
+              group_name:
+                match.group_name,
 
               home_id:
                 match.home_id,
@@ -883,6 +1390,12 @@ export async function POST(
                 match.away_goals,
             })
           ),
+
+      /*
+        ======================================
+        DIVISION STANDINGS INHERITANCE
+        ======================================
+      */
 
       standings_before:
         outgoingCurrentRow,
@@ -899,6 +1412,51 @@ export async function POST(
 
       preview_player_count:
         previewPlayerIds.length,
+
+      /*
+        ======================================
+        IRON CO-OP CUP
+
+        Outgoing disappears.
+
+        Incoming is NOT inserted.
+        ======================================
+      */
+
+      coop_removal: {
+        required:
+          coopTeam !==
+          null,
+
+        team_id:
+          coopTeam?.id ??
+          null,
+
+        team_name:
+          coopTeam?.name ??
+          null,
+
+        slot:
+          coopSlot,
+
+        teammate_id:
+          coopTeammateId,
+
+        teammate_nickname:
+          coopTeammateId
+            ? getNickname(
+                coopTeammateId
+              )
+            : null,
+
+        incoming_player_added:
+          false,
+
+        action:
+          coopTeam
+            ? "remove_outgoing_and_leave_slot_empty"
+            : "none",
+      },
     });
   } catch (error) {
     console.error(
@@ -909,6 +1467,7 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
+
         error:
           error instanceof Error
             ? error.message

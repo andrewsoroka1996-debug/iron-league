@@ -60,6 +60,36 @@ type PlayoffResponse = {
   error?: string;
 };
 
+type ExistingFinalMatch = {
+  id: string;
+
+  season: number;
+  competition: string;
+
+  stage: string | null;
+
+  round: number | null;
+  leg: number | null;
+
+  participant_type: string;
+
+  home_id: string;
+  away_id: string;
+
+  home_goals: number | null;
+  away_goals: number | null;
+
+  status: string;
+
+  played_at: string | null;
+};
+
+type MatchesResponse = {
+  matches?: ExistingFinalMatch[];
+
+  error?: string;
+};
+
 function getPlayerName(
   playerId: string | null
 ) {
@@ -90,6 +120,14 @@ export default function EuropeanFinalForm({
     );
 
   const [
+    existingFinal,
+    setExistingFinal,
+  ] =
+    useState<ExistingFinalMatch | null>(
+      null
+    );
+
+  const [
     loadingFinalists,
     setLoadingFinalists,
   ] = useState(true);
@@ -114,59 +152,151 @@ export default function EuropeanFinalForm({
     setMessage,
   ] = useState("");
 
+  const [
+    finalCheckFailed,
+    setFinalCheckFailed,
+  ] = useState(false);
+
+  const [
+    refreshKey,
+    setRefreshKey,
+  ] = useState(0);
+
   /*
     ========================================
-    ЗАВАНТАЖУЄМО ПІВФІНАЛИ
+    ЗАВАНТАЖЕННЯ ФІНАЛІСТІВ
+    + ПЕРЕВІРКА ІСНУЮЧОГО ФІНАЛУ
+    ========================================
+
+    Робимо дві незалежні перевірки:
+
+    1. playoff-qualifiers
+       визначає переможців
+       двох півфіналів.
+
+    2. /api/admin/match
+       перевіряє, чи фінальний
+       матч уже існує.
+
+    Це важливо для історичних
+    сезонів і захисту від
+    повторного створення фіналу.
     ========================================
   */
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled =
+      false;
 
-    async function loadFinalists() {
-      setLoadingFinalists(true);
+    async function loadFinalData() {
+      setLoadingFinalists(
+        true
+      );
 
       setMessage("");
 
+      setFinalCheckFailed(
+        false
+      );
+
       try {
-        const params =
+        /*
+          ====================================
+          ПІВФІНАЛИ
+          ====================================
+        */
+
+        const playoffParams =
           new URLSearchParams();
 
-        params.set(
+        playoffParams.set(
           "season",
           String(season)
         );
 
-        params.set(
+        playoffParams.set(
           "competition",
           competition
         );
 
-        params.set(
+        playoffParams.set(
           "stage",
           "semifinal"
         );
 
-        const response =
-          await fetch(
-            `/api/admin/playoff-qualifiers?${params.toString()}`,
-            {
-              cache: "no-store",
-            }
-          );
+        /*
+          ====================================
+          УСІ МАТЧІ ТУРНІРУ
+          ====================================
+        */
 
-        const result =
-          (await response.json()) as PlayoffResponse;
+        const matchParams =
+          new URLSearchParams();
+
+        matchParams.set(
+          "season",
+          String(season)
+        );
+
+        matchParams.set(
+          "competition",
+          competition
+        );
+
+        /*
+          Обидва запити можна
+          виконати одночасно.
+        */
+
+        const [
+          playoffResponse,
+          matchesResponse,
+        ] =
+          await Promise.all([
+            fetch(
+              `/api/admin/playoff-qualifiers?${playoffParams.toString()}`,
+              {
+                cache:
+                  "no-store",
+              }
+            ),
+
+            fetch(
+              `/api/admin/match?${matchParams.toString()}`,
+              {
+                cache:
+                  "no-store",
+              }
+            ),
+          ]);
+
+        const playoffResult =
+          (await playoffResponse.json()) as
+            PlayoffResponse;
+
+        const matchesResult =
+          (await matchesResponse.json()) as
+            MatchesResponse;
 
         if (cancelled) {
           return;
         }
 
-        if (!response.ok) {
-          setFinalSlot(null);
+        /*
+          ====================================
+          ПЕРЕВІРКА ПІВФІНАЛІВ
+          ====================================
+        */
+
+        if (
+          !playoffResponse.ok
+        ) {
+          setFinalSlot(
+            null
+          );
 
           setMessage(
-            result.error ??
+            playoffResult.error ??
               "Не вдалося визначити фіналістів"
           );
 
@@ -174,37 +304,89 @@ export default function EuropeanFinalForm({
         }
 
         setCompletedSemifinals(
-          result.completed_series ??
+          playoffResult.completed_series ??
             0
         );
 
         setExpectedSemifinals(
-          result.expected_series ??
+          playoffResult.expected_series ??
             2
         );
 
         /*
-          Для півфіналу
+          Для semifinal
           next_round_slots
-          містить один слот:
-
-          півфінал №1
-             +
-          півфінал №2
-             ↓
-          фінал
+          повинен містити
+          один фінальний слот.
         */
 
         setFinalSlot(
-          result.next_round_slots?.[0] ??
+          playoffResult
+            .next_round_slots?.[0] ??
             null
+        );
+
+        /*
+          ====================================
+          ПЕРЕВІРКА ІСНУЮЧОГО ФІНАЛУ
+          ====================================
+
+          Якщо цей запит не вдався,
+          створення фіналу блокуємо.
+
+          Краще не дозволити створення,
+          ніж випадково створити дубль.
+          ====================================
+        */
+
+        if (
+          !matchesResponse.ok
+        ) {
+          setExistingFinal(
+            null
+          );
+
+          setFinalCheckFailed(
+            true
+          );
+
+          setMessage(
+            matchesResult.error ??
+              "Не вдалося перевірити, чи фінальний матч уже існує"
+          );
+
+          return;
+        }
+
+        const foundFinal =
+          (
+            matchesResult.matches ??
+            []
+          ).find(
+            (match) =>
+              match.stage ===
+              "final"
+          ) ?? null;
+
+        setExistingFinal(
+          foundFinal
         );
       } catch {
         if (!cancelled) {
-          setFinalSlot(null);
+          setFinalSlot(
+            null
+          );
+
+          setExistingFinal(
+            null
+          );
+
+          setFinalCheckFailed(
+            true
+          );
 
           setMessage(
-            "Помилка завантаження фіналістів"
+            "Помилка завантаження даних фіналу"
           );
         }
       } finally {
@@ -216,7 +398,7 @@ export default function EuropeanFinalForm({
       }
     }
 
-    void loadFinalists();
+    void loadFinalData();
 
     return () => {
       cancelled = true;
@@ -224,6 +406,7 @@ export default function EuropeanFinalForm({
   }, [
     season,
     competition,
+    refreshKey,
   ]);
 
   /*
@@ -241,6 +424,36 @@ export default function EuropeanFinalForm({
       return;
     }
 
+    /*
+      Додатковий UI-захист.
+
+      Якщо фінал уже є,
+      навіть функція створення
+      не повинна виконувати запит.
+    */
+
+    if (existingFinal) {
+      setMessage(
+        "Фінальний матч уже створено"
+      );
+
+      return;
+    }
+
+    /*
+      Якщо нам не вдалося
+      перевірити БД,
+      теж нічого не створюємо.
+    */
+
+    if (finalCheckFailed) {
+      setMessage(
+        "Спочатку потрібно успішно перевірити існуючі матчі"
+      );
+
+      return;
+    }
+
     if (
       !finalSlot?.player_a ||
       !finalSlot.player_b
@@ -252,7 +465,18 @@ export default function EuropeanFinalForm({
       return;
     }
 
+    if (
+      !finalSlot.ready
+    ) {
+      setMessage(
+        "Фінальний слот ще не готовий"
+      );
+
+      return;
+    }
+
     setCreating(true);
+
     setMessage("");
 
     try {
@@ -260,59 +484,62 @@ export default function EuropeanFinalForm({
         await fetch(
           "/api/admin/match",
           {
-            method: "PUT",
+            method:
+              "PUT",
 
             headers: {
               "Content-Type":
                 "application/json",
             },
 
-            body: JSON.stringify({
-              password,
+            body:
+              JSON.stringify({
+                password,
 
-              season,
+                season,
 
-              competition,
+                competition,
 
-              division: null,
+                division:
+                  null,
 
-              stage:
-                "final",
+                stage:
+                  "final",
 
-              group_name:
-                null,
+                group_name:
+                  null,
 
-              /*
-                Фінал —
-                єдина пара,
-                тому слот №1.
-              */
+                /*
+                  Фінал —
+                  одна пара,
+                  тому slot №1.
+                */
 
-              round: 1,
+                round: 1,
 
-              leg: 1,
+                leg: 1,
 
-              participant_type:
-                "player",
+                participant_type:
+                  "player",
 
-              home_id:
-                finalSlot.player_a,
+                home_id:
+                  finalSlot.player_a,
 
-              away_id:
-                finalSlot.player_b,
+                away_id:
+                  finalSlot.player_b,
 
-              series_id:
-                null,
+                series_id:
+                  null,
 
-              series_home_id:
-                null,
+                series_home_id:
+                  null,
 
-              series_away_id:
-                null,
+                series_away_id:
+                  null,
 
-              is_tiebreak:
-                false,
-            }),
+                is_tiebreak:
+                  false,
+              }),
           }
         );
 
@@ -330,6 +557,18 @@ export default function EuropeanFinalForm({
 
       setMessage(
         "✅ Фінальний матч створено"
+      );
+
+      /*
+        Перезавантажуємо
+        власний стан форми,
+        щоб кнопка одразу
+        зникла після створення.
+      */
+
+      setRefreshKey(
+        (current) =>
+          current + 1
       );
 
       if (onCreated) {
@@ -373,6 +612,7 @@ export default function EuropeanFinalForm({
         ) : (
           <div className="mt-3">
             Завершено:{" "}
+
             <b>
               {completedSemifinals}
               /
@@ -477,25 +717,79 @@ export default function EuropeanFinalForm({
               )}
             </div>
 
-            {/* CREATE */}
+            {/* EXISTING FINAL */}
 
-            <button
-              type="button"
-              onClick={
-                createFinal
-              }
-              disabled={
-                creating ||
-                !finalSlot.ready
-              }
-              className="mt-6 w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              {creating
-                ? "Створення..."
-                : finalSlot.ready
-                  ? "Створити фінальний матч"
-                  : "Очікуємо другого фіналіста"}
-            </button>
+            {existingFinal ? (
+              <div className="mt-6 rounded-xl border border-green-400/20 bg-green-500/10 p-5">
+                <div className="text-xs font-bold uppercase tracking-[0.2em] text-green-300">
+                  Фінальний матч уже створено
+                </div>
+
+                <div className="mt-3 text-lg font-black">
+                  {getPlayerName(
+                    existingFinal.home_id
+                  )}
+
+                  {" — "}
+
+                  {getPlayerName(
+                    existingFinal.away_id
+                  )}
+                </div>
+
+                {existingFinal.status ===
+                  "finished" &&
+                  existingFinal.home_goals !==
+                    null &&
+                  existingFinal.away_goals !==
+                    null && (
+                    <div className="mt-3 text-3xl font-black">
+                      {
+                        existingFinal.home_goals
+                      }
+                      {" : "}
+                      {
+                        existingFinal.away_goals
+                      }
+                    </div>
+                  )}
+
+                {existingFinal.status !==
+                  "finished" && (
+                  <div className="mt-3 text-sm text-green-100/70">
+                    Матч створений,
+                    результат ще
+                    не внесено.
+                  </div>
+                )}
+              </div>
+            ) : finalCheckFailed ? (
+              <div className="mt-6 rounded-xl border border-red-400/20 bg-red-500/10 p-5 text-red-200">
+                Не вдалося
+                перевірити
+                існуючий фінал.
+                Створення нового
+                матчу заблоковано.
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={
+                  createFinal
+                }
+                disabled={
+                  creating ||
+                  !finalSlot.ready
+                }
+                className="mt-6 w-full rounded-xl bg-blue-500 px-6 py-4 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                {creating
+                  ? "Створення..."
+                  : finalSlot.ready
+                    ? "Створити фінальний матч"
+                    : "Очікуємо другого фіналіста"}
+              </button>
+            )}
           </div>
         )}
 

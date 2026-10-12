@@ -11,7 +11,7 @@ import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 import {
   applyPlayerReplacements,
-  getDivisionReplacements,
+  getSeasonPlayerReplacements,
   type PlayerReplacement,
 } from "../../../../lib/player-replacements";
 
@@ -112,13 +112,123 @@ function getDivisionPlayers(
 
 /*
   ========================================
-  GET
+  SEASON DIVISIONS
   ========================================
 
-  Завантажує актуальний склад дивізіону
-  та історію замін.
+  Season 1:
+  Divisions 1-3
 
-  Нічого в БД не змінює.
+  Seasons 2-4:
+  Divisions 1-4
+  ========================================
+*/
+
+function getSeasonDivisions(
+  season: SeasonNumber
+): DivisionNumber[] {
+  if (season === 1) {
+    return [
+      1,
+      2,
+      3,
+    ];
+  }
+
+  return [
+    1,
+    2,
+    3,
+    4,
+  ];
+}
+
+/*
+  ========================================
+  CURRENT DIVISION SLOT OWNERS
+  ACROSS THE WHOLE SEASON
+  ========================================
+
+  This is important even before
+  a season calendar exists.
+
+  Example:
+
+  Division 1:
+  Player A
+
+  Division 2:
+  Player B
+
+  Player B cannot be selected as
+  incoming replacement for Division 1,
+  even if Player B has not played
+  any matches yet.
+
+  Replacement chains are also applied:
+
+  A -> B
+  B -> C
+
+  Final owner:
+  C
+  ========================================
+*/
+
+function getCurrentSeasonDivisionPlayerIds(
+  season: SeasonNumber,
+  replacements:
+    readonly PlayerReplacement[]
+): string[] {
+  const playerIds =
+    new Set<string>();
+
+  const divisions =
+    getSeasonDivisions(
+      season
+    );
+
+  for (
+    const division
+    of divisions
+  ) {
+    const basePlayerIds =
+      getDivisionPlayers(
+        season,
+        division
+      );
+
+    const currentPlayerIds =
+      applyPlayerReplacements(
+        basePlayerIds,
+        replacements
+      );
+
+    for (
+      const playerId
+      of currentPlayerIds
+    ) {
+      playerIds.add(
+        playerId
+      );
+    }
+  }
+
+  return [
+    ...playerIds,
+  ];
+}
+
+/*
+  ========================================
+  GET
+
+  Loads:
+
+  - current selected division roster
+  - all season replacement history
+  - eligible incoming players
+
+  Nothing is written to the database.
   ========================================
 */
 
@@ -145,6 +255,7 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Invalid administrator password",
         },
@@ -162,7 +273,10 @@ export async function GET(
 
     const {
       searchParams,
-    } = new URL(request.url);
+    } =
+      new URL(
+        request.url
+      );
 
     const season =
       Number(
@@ -185,13 +299,16 @@ export async function GET(
     */
 
     if (
-      !Number.isInteger(season) ||
+      !Number.isInteger(
+        season
+      ) ||
       season < 1 ||
       season > 4
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Invalid season",
         },
@@ -208,13 +325,16 @@ export async function GET(
     */
 
     if (
-      !Number.isInteger(division) ||
+      !Number.isInteger(
+        division
+      ) ||
       division < 1 ||
       division > 4
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Invalid division",
         },
@@ -231,6 +351,7 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Division 4 did not exist in Season 1",
         },
@@ -248,19 +369,18 @@ export async function GET(
 
     /*
       ========================================
-      REPLACEMENTS
+      ALL REPLACEMENTS OF SEASON
       ========================================
     */
 
     const replacements =
-      await getDivisionReplacements(
-        seasonNumber,
-        divisionNumber
+      await getSeasonPlayerReplacements(
+        seasonNumber
       );
 
     /*
       ========================================
-      CURRENT ROSTER
+      CURRENT SELECTED DIVISION ROSTER
       ========================================
     */
 
@@ -275,6 +395,226 @@ export async function GET(
         basePlayerIds,
         replacements
       );
+
+    /*
+      ========================================
+      CURRENT SLOT OWNERS
+      ACROSS ALL DIVISIONS OF SEASON
+      ========================================
+    */
+
+    const currentSeasonDivisionPlayerIds =
+      getCurrentSeasonDivisionPlayerIds(
+        seasonNumber,
+        replacements
+      );
+
+    const currentSeasonDivisionPlayerSet =
+      new Set(
+        currentSeasonDivisionPlayerIds
+      );
+
+    /*
+      ========================================
+      ALL PLAYERS WITH MATCH HISTORY
+      IN THIS SEASON
+      ========================================
+
+      Incoming player must have no
+      player-match history at all:
+
+      - finished
+      - scheduled
+      - any other status
+
+      We use pagination because one season
+      can contain more than 1000 matches.
+      ========================================
+    */
+
+    const seasonMatchPlayerIds =
+      new Set<string>();
+
+    const pageSize =
+      1000;
+
+    let from =
+      0;
+
+    while (true) {
+      const {
+        data:
+          matchPageData,
+
+        error:
+          matchPageError,
+      } =
+        await supabaseAdmin
+          .from("matches")
+          .select(
+            `
+              id,
+              home_id,
+              away_id
+            `
+          )
+          .eq(
+            "season",
+            seasonNumber
+          )
+          .eq(
+            "participant_type",
+            "player"
+          )
+          .order(
+            "id",
+            {
+              ascending:
+                true,
+            }
+          )
+          .range(
+            from,
+            from +
+              pageSize -
+              1
+          );
+
+      if (
+        matchPageError
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+
+            error:
+              matchPageError.message,
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      const page =
+        matchPageData ??
+        [];
+
+      for (
+        const match
+        of page
+      ) {
+        if (
+          typeof match.home_id ===
+            "string" &&
+          match.home_id
+        ) {
+          seasonMatchPlayerIds.add(
+            match.home_id
+          );
+        }
+
+        if (
+          typeof match.away_id ===
+            "string" &&
+          match.away_id
+        ) {
+          seasonMatchPlayerIds.add(
+            match.away_id
+          );
+        }
+      }
+
+      if (
+        page.length <
+        pageSize
+      ) {
+        break;
+      }
+
+      from +=
+        pageSize;
+    }
+
+    /*
+      ========================================
+      PLAYERS USED IN REPLACEMENT CHAINS
+      ========================================
+
+      Example:
+
+      A -> B
+      B -> C
+
+      Previous replacement participants
+      are not offered as fresh incoming
+      players.
+
+      Returning a previous player is done
+      through Revert.
+      ========================================
+    */
+
+    const replacementPlayerIds =
+      new Set<string>();
+
+    for (
+      const replacement
+      of replacements
+    ) {
+      replacementPlayerIds.add(
+        replacement
+          .outgoing_player_id
+      );
+
+      replacementPlayerIds.add(
+        replacement
+          .incoming_player_id
+      );
+    }
+
+    /*
+      ========================================
+      ELIGIBLE INCOMING PLAYERS
+      ========================================
+
+      Candidate must:
+
+      1. Have no player-match history
+         in this season.
+
+      2. Not own a division slot
+         anywhere in this season.
+
+      3. Not already participate
+         in replacement history.
+
+      Final validation is repeated by:
+
+      - Preview API
+      - POST API
+      - SQL RPC
+      ========================================
+    */
+
+    const eligibleIncomingPlayerIds =
+      players
+        .filter(
+          (player) =>
+            !seasonMatchPlayerIds.has(
+              player.id
+            ) &&
+            !currentSeasonDivisionPlayerSet.has(
+              player.id
+            ) &&
+            !replacementPlayerIds.has(
+              player.id
+            )
+        )
+        .map(
+          (player) =>
+            player.id
+        );
 
     /*
       ========================================
@@ -297,6 +637,12 @@ export async function GET(
       current_player_ids:
         currentPlayerIds,
 
+      current_season_division_player_ids:
+        currentSeasonDivisionPlayerIds,
+
+      eligible_incoming_player_ids:
+        eligibleIncomingPlayerIds,
+
       replacements,
     });
   } catch (error) {
@@ -308,6 +654,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
+
         error:
           error instanceof Error
             ? error.message
@@ -323,17 +670,26 @@ export async function GET(
 /*
   ========================================
   POST
-  ========================================
 
-  Реальна заміна гравця.
+  Performs real GLOBAL SEASON replacement.
 
-  Правило:
+  Rules:
 
   finished
-  -> історичний матч не змінюється
+  -> historical match is never rewritten
 
-  unfinished
-  -> переходить новому гравцеві
+  unfinished player-match
+  -> transferred to incoming player
+
+  Iron Co-op
+  -> outgoing is removed
+  -> slot becomes NULL
+  -> incoming is NOT inserted automatically
+
+  Incoming player:
+  -> must have no player-match history
+  -> must not own any division slot
+     in this season
   ========================================
 */
 
@@ -342,7 +698,8 @@ export async function POST(
 ) {
   try {
     const body =
-      (await request.json()) as ReplacementBody;
+      (await request.json()) as
+        ReplacementBody;
 
     const {
       password,
@@ -368,6 +725,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Invalid administrator password",
         },
@@ -384,14 +742,18 @@ export async function POST(
     */
 
     if (
-      !Number.isInteger(season) ||
-      season === undefined ||
+      season ===
+        undefined ||
+      !Number.isInteger(
+        season
+      ) ||
       season < 1 ||
       season > 4
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Invalid season",
         },
@@ -408,14 +770,18 @@ export async function POST(
     */
 
     if (
-      !Number.isInteger(division) ||
-      division === undefined ||
+      division ===
+        undefined ||
+      !Number.isInteger(
+        division
+      ) ||
       division < 1 ||
       division > 4
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Invalid division",
         },
@@ -425,11 +791,6 @@ export async function POST(
       );
     }
 
-    /*
-      Season 1 had only
-      three divisions.
-    */
-
     if (
       season === 1 &&
       division === 4
@@ -437,6 +798,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Division 4 did not exist in Season 1",
         },
@@ -462,6 +824,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Outgoing player is required",
         },
@@ -481,6 +844,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Incoming player is required",
         },
@@ -497,11 +861,13 @@ export async function POST(
       incoming_player_id.trim();
 
     if (
-      outgoingId === incomingId
+      outgoingId ===
+      incomingId
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Outgoing and incoming players must be different",
         },
@@ -528,6 +894,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             `Player ${outgoingId} was not found`,
         },
@@ -548,6 +915,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             `Player ${incomingId} was not found`,
         },
@@ -557,23 +925,28 @@ export async function POST(
       );
     }
 
-    /*
-      ========================================
-      CURRENT DIVISION ROSTER
-      ========================================
-    */
-
     const seasonNumber =
       season as SeasonNumber;
 
     const divisionNumber =
       division as DivisionNumber;
 
+    /*
+      ========================================
+      ALL EXISTING SEASON REPLACEMENTS
+      ========================================
+    */
+
     const existingReplacements =
-      await getDivisionReplacements(
-        seasonNumber,
-        divisionNumber
+      await getSeasonPlayerReplacements(
+        seasonNumber
       );
+
+    /*
+      ========================================
+      CURRENT SELECTED DIVISION ROSTER
+      ========================================
+    */
 
     const basePlayerIds =
       getDivisionPlayers(
@@ -588,8 +961,22 @@ export async function POST(
       );
 
     /*
-      Outgoing player must currently
-      own a division slot.
+      ========================================
+      CURRENT DIVISION SLOT OWNERS
+      ACROSS WHOLE SEASON
+      ========================================
+    */
+
+    const currentSeasonDivisionPlayerIds =
+      getCurrentSeasonDivisionPlayerIds(
+        seasonNumber,
+        existingReplacements
+      );
+
+    /*
+      ========================================
+      OUTGOING MUST OWN CURRENT SLOT
+      ========================================
     */
 
     if (
@@ -600,6 +987,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             `${outgoingPlayer.nickname} is not an active player in this division`,
         },
@@ -610,20 +998,137 @@ export async function POST(
     }
 
     /*
-      Incoming player cannot already
-      own another division slot.
+      ========================================
+      INCOMING MUST NOT OWN ANY
+      DIVISION SLOT IN THIS SEASON
+      ========================================
+
+      This protects future seasons
+      before calendars are generated.
+
+      Example:
+
+      Incoming belongs to Division 2,
+      but Division 2 has no matches yet.
+
+      Match-history validation alone
+      would not detect that.
+
+      This check does.
+      ========================================
     */
 
     if (
-      currentPlayerIds.includes(
+      currentSeasonDivisionPlayerIds.includes(
         incomingId
       )
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
-            `${incomingPlayer.nickname} is already an active player in this division`,
+            `${incomingPlayer.nickname} already owns a division slot in Season ${seasonNumber}`,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+      ========================================
+      INCOMING MUST BE CLEAN THIS SEASON
+      ========================================
+
+      No finished matches.
+      No scheduled matches.
+      No other player-match statuses.
+      ========================================
+    */
+
+    const {
+      data:
+        incomingSeasonMatches,
+
+      error:
+        incomingSeasonMatchesError,
+    } =
+      await supabaseAdmin
+        .from("matches")
+        .select("id")
+        .eq(
+          "season",
+          seasonNumber
+        )
+        .eq(
+          "participant_type",
+          "player"
+        )
+        .or(
+          `home_id.eq.${incomingId},away_id.eq.${incomingId}`
+        )
+        .limit(1);
+
+    if (
+      incomingSeasonMatchesError
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          error:
+            incomingSeasonMatchesError.message,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    if (
+      (
+        incomingSeasonMatches ??
+        []
+      ).length > 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          error:
+            `${incomingPlayer.nickname} already has match history in Season ${seasonNumber}`,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+      ========================================
+      OUTGOING CANNOT ALREADY HAVE
+      ITS OWN REPLACEMENT
+      ========================================
+    */
+
+    const outgoingAlreadyReplaced =
+      existingReplacements.some(
+        (replacement) =>
+          replacement
+            .outgoing_player_id ===
+          outgoingId
+      );
+
+    if (
+      outgoingAlreadyReplaced
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          error:
+            `${outgoingPlayer.nickname} already has a replacement in Season ${seasonNumber}`,
         },
         {
           status: 400,
@@ -634,6 +1139,17 @@ export async function POST(
     /*
       ========================================
       REPLACEMENT CHAIN SAFETY
+      ========================================
+
+      Virtually apply replacement before
+      writing anything.
+
+      Supports:
+
+      A -> B
+      B -> C
+
+      Also detects invalid cycles.
       ========================================
     */
 
@@ -654,15 +1170,14 @@ export async function POST(
         incoming_player_id:
           incomingId,
 
-        /*
-          Legacy field.
-
-          Round no longer controls
-          replacement behavior.
-        */
-
         inherit_standings:
           true,
+
+        coop_removed_team_id:
+          null,
+
+        coop_removed_slot:
+          null,
 
         created_at:
           new Date().toISOString(),
@@ -684,6 +1199,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             error instanceof Error
               ? error.message
@@ -696,8 +1212,9 @@ export async function POST(
     }
 
     /*
-      Number of division slots
-      must stay unchanged.
+      ========================================
+      DIVISION SLOT COUNT MUST STAY SAME
+      ========================================
     */
 
     if (
@@ -707,8 +1224,9 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
-            "Replacement would create a duplicate or invalid player chain",
+            "Replacement would create a duplicate or invalid player slot",
         },
         {
           status: 400,
@@ -717,8 +1235,9 @@ export async function POST(
     }
 
     /*
-      Incoming player must become
-      the real owner of the slot.
+      ========================================
+      INCOMING MUST BECOME SLOT OWNER
+      ========================================
     */
 
     if (
@@ -729,6 +1248,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Incoming player resolves to another existing replacement and cannot own this slot",
         },
@@ -741,10 +1261,22 @@ export async function POST(
     /*
       ========================================
       DATABASE FUNCTION
-      ========================================
 
-      SQL no longer uses the round
-      to determine which matches move.
+      Real global replacement.
+
+      SQL RPC:
+
+      - updates all unfinished
+        participant_type = player matches
+
+      - preserves finished matches
+
+      - saves replacement history
+
+      - removes outgoing from Co-op
+        if necessary
+
+      - does NOT add incoming to Co-op
       ========================================
     */
 
@@ -753,21 +1285,21 @@ export async function POST(
       error,
     } =
       await supabaseAdmin.rpc(
-  "replace_player_in_division",
-  {
-    p_season:
-      seasonNumber,
+        "replace_player_in_season",
+        {
+          p_season:
+            seasonNumber,
 
-    p_division:
-      divisionNumber,
+          p_division:
+            divisionNumber,
 
-    p_outgoing_player_id:
-      outgoingId,
+          p_outgoing_player_id:
+            outgoingId,
 
-    p_incoming_player_id:
-      incomingId,
-  }
-);
+          p_incoming_player_id:
+            incomingId,
+        }
+      );
 
     if (error) {
       console.error(
@@ -778,6 +1310,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             error.message,
         },
@@ -800,7 +1333,7 @@ export async function POST(
         `${outgoingPlayer.nickname} -> ${incomingPlayer.nickname}`,
 
       replacement_mode:
-        "all_unfinished_matches",
+        "global_season",
 
       replacement:
         data,
@@ -830,6 +1363,7 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
+
         error:
           error instanceof Error
             ? error.message

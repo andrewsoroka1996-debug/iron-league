@@ -990,33 +990,69 @@ export async function PUT(
     */
 
     let duplicateQuery =
-      supabaseAdmin
-        .from("matches")
-        .select("id")
-        .eq(
-          "season",
-          season
-        )
-        .eq(
-          "competition",
-          competition
-        )
-        .eq(
-          "home_id",
-          home_id
-        )
-        .eq(
-          "away_id",
-          away_id
-        )
-        .eq(
-          "leg",
-          leg
-        )
-        .eq(
-          "is_tiebreak",
-          is_tiebreak
-        );
+  supabaseAdmin
+    .from("matches")
+    .select("id")
+    .eq(
+      "season",
+      season
+    )
+    .eq(
+      "competition",
+      competition
+    )
+    .eq(
+      "home_id",
+      home_id
+    )
+    .eq(
+      "away_id",
+      away_id
+    )
+    .eq(
+      "is_tiebreak",
+      is_tiebreak
+    );
+
+/*
+  ========================================
+  LEG
+  ========================================
+
+  Історичні матчі кваліфікації
+  Season 3 мають leg = NULL.
+
+  Нові одноматчеві матчі
+  створюються з leg = 1.
+
+  Тільки для qualification:
+  NULL і 1 вважаємо одним
+  і тим самим матчем при
+  перевірці дубліката.
+
+  Інші турніри залишаються
+  без змін.
+  ========================================
+*/
+
+if (
+  (
+    competition === "qualification" ||
+    competition === "division"
+  ) &&
+  leg === 1
+) {
+  duplicateQuery =
+    duplicateQuery.or(
+      "leg.eq.1,leg.is.null"
+    );
+} else {
+  duplicateQuery =
+    duplicateQuery.eq(
+      "leg",
+      leg
+    );
+}
 
     /*
       Дивізіон

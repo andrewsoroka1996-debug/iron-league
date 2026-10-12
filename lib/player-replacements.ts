@@ -13,24 +13,33 @@ export type PlayerReplacement = {
 
   inherit_standings: boolean;
 
+  coop_removed_team_id:
+    | string
+    | null;
+
+  coop_removed_slot:
+    | number
+    | null;
+
   created_at: string;
 };
 
 /*
   ========================================
-  LOAD DIVISION REPLACEMENTS
+  LOAD ALL REPLACEMENTS OF SEASON
   ========================================
 */
 
-export async function getDivisionReplacements(
-  season: number,
-  division: number
+export async function getSeasonPlayerReplacements(
+  season: number
 ): Promise<PlayerReplacement[]> {
   const {
     data,
     error,
   } = await supabaseAdmin
-    .from("player_replacements")
+    .from(
+      "player_replacements"
+    )
     .select(
       `
         id,
@@ -39,16 +48,14 @@ export async function getDivisionReplacements(
         outgoing_player_id,
         incoming_player_id,
         inherit_standings,
+        coop_removed_team_id,
+        coop_removed_slot,
         created_at
       `
     )
     .eq(
       "season",
       season
-    )
-    .eq(
-      "division",
-      division
     )
     .order(
       "created_at",
@@ -70,10 +77,40 @@ export async function getDivisionReplacements(
 
 /*
   ========================================
-  FINAL OWNER OF TOURNAMENT SLOT
+  LOAD REPLACEMENTS OF DIVISION
   ========================================
 
-  Supports replacement chains:
+  Залишаємо функцію для сумісності
+  з поточним кодом.
+
+  Пізніше поступово переведемо
+  всі standings/statistics на
+  getSeasonPlayerReplacements().
+  ========================================
+*/
+
+export async function getDivisionReplacements(
+  season: number,
+  division: number
+): Promise<PlayerReplacement[]> {
+  const replacements =
+    await getSeasonPlayerReplacements(
+      season
+    );
+
+  return replacements.filter(
+    (replacement) =>
+      replacement.division ===
+      division
+  );
+}
+
+/*
+  ========================================
+  FINAL OWNER OF PLAYER SLOT
+  ========================================
+
+  Supports chains:
 
   A -> B
   B -> C
@@ -106,8 +143,10 @@ export function resolveReplacementPlayerId(
     }
 
     replacementMap.set(
-      replacement.outgoing_player_id,
-      replacement.incoming_player_id
+      replacement
+        .outgoing_player_id,
+      replacement
+        .incoming_player_id
     );
   }
 
@@ -147,24 +186,7 @@ export function resolveReplacementPlayerId(
 
 /*
   ========================================
-  CURRENT DIVISION ROSTER
-  ========================================
-
-  Base roster:
-
-  A
-  X
-  Y
-
-  After:
-
-  A -> B
-
-  Current roster:
-
-  B
-  X
-  Y
+  CURRENT PLAYER LIST
   ========================================
 */
 
@@ -182,8 +204,8 @@ export function applyPlayerReplacements(
     );
 
   /*
-    Protection against accidental
-    duplicate active slots.
+    Protection against duplicate
+    active slots.
   */
 
   return Array.from(

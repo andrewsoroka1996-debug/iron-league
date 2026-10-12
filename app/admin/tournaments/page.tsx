@@ -27,6 +27,7 @@ import EuropeanFinalForm from "./EuropeanFinalForm";
 import CoopTeamsForm from "./CoopTeamsForm";
 import DivisionCupBracketForm from "./DivisionCupBracketForm";
 import CoopSeriesForm from "./CoopSeriesForm";
+import ResultRestoreButton from "../ResultRestoreButton";
 
 type TournamentMatch = {
   id: string;
@@ -142,6 +143,40 @@ function isTwoLeggedCompetition(
   }
 
   return false;
+}
+
+/*
+  ========================================
+  DATABASE COMPETITION ID
+  ========================================
+
+  У конфігурації сайту:
+  season-qualification
+
+  У таблиці matches:
+  qualification
+  ========================================
+*/
+
+function getDatabaseCompetitionId(
+  competitionId: string
+) {
+  if (
+    competitionId ===
+    "season-qualification"
+  ) {
+    return "qualification";
+  }
+
+  if (
+    /^division-[1-4]$/.test(
+      competitionId
+    )
+  ) {
+    return "division";
+  }
+
+  return competitionId;
 }
 
 export default function TournamentAdminPage() {
@@ -492,12 +527,6 @@ export default function TournamentAdminPage() {
     ========================================
     АСОЦІАЦІЇ
     ========================================
-
-    Сезони 2–3:
-    історичні склади.
-
-    Сезон 4:
-    association_seed_ranks.
   */
 
   useEffect(() => {
@@ -711,7 +740,9 @@ export default function TournamentAdminPage() {
 
         params.set(
           "competition",
-          competitionId
+          getDatabaseCompetitionId(
+            competitionId
+          )
         );
 
         if (
@@ -987,7 +1018,9 @@ export default function TournamentAdminPage() {
                 season,
 
                 competition:
-                  competitionId,
+                  getDatabaseCompetitionId(
+                    competitionId
+                  ),
 
                 division,
 
@@ -1184,6 +1217,215 @@ export default function TournamentAdminPage() {
     } catch {
       setMessage(
         "Помилка з'єднання із сервером"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /*
+    ========================================
+    CANCEL RESULT
+    ========================================
+
+    1. Preview перевіряє,
+       чи можна безпечно
+       скасувати результат.
+
+    2. Якщо можна —
+       просимо підтвердження.
+
+    3. Revert API ще раз
+       виконує shared safety check.
+    ========================================
+  */
+
+  async function cancelResult() {
+    if (!password) {
+      setMessage(
+        "Enter administrator password"
+      );
+
+      return;
+    }
+
+    if (!selectedMatch) {
+      setMessage(
+        "Select a match"
+      );
+
+      return;
+    }
+
+    if (
+      selectedMatch.status !==
+        "finished" ||
+      selectedMatch.home_goals ===
+        null ||
+      selectedMatch.away_goals ===
+        null
+    ) {
+      setMessage(
+        "This match has no result to cancel"
+      );
+
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      /*
+        ========================================
+        PREVIEW
+        ========================================
+      */
+
+      const previewResponse =
+        await fetch(
+          "/api/admin/match-result-revert-preview",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                password,
+
+                match_id:
+                  selectedMatch.id,
+              }),
+          }
+        );
+
+      const preview =
+        await previewResponse.json();
+
+      if (
+        !previewResponse.ok ||
+        !preview.can_revert
+      ) {
+        const blockerText =
+          Array.isArray(
+            preview.blockers
+          ) &&
+          preview.blockers.length >
+            0
+            ? preview.blockers.join(
+                " | "
+              )
+            : "";
+
+        setMessage(
+          blockerText ||
+            preview.error ||
+            "This result cannot be cancelled"
+        );
+
+        return;
+      }
+
+      /*
+        ========================================
+        CONFIRMATION
+        ========================================
+      */
+
+      const confirmed =
+        window.confirm(
+          [
+            "Cancel this result?",
+            "",
+            `${getParticipantName(
+              selectedMatch.home_id,
+              selectedMatch.participant_type
+            )} ${selectedMatch.home_goals} : ${selectedMatch.away_goals} ${getParticipantName(
+              selectedMatch.away_id,
+              selectedMatch.participant_type
+            )}`,
+            "",
+            "The match will return to scheduled status.",
+          ].join("\n")
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      /*
+        ========================================
+        REAL REVERT
+        ========================================
+      */
+
+      const response =
+        await fetch(
+          "/api/admin/match-result-revert",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                password,
+
+                match_id:
+                  selectedMatch.id,
+              }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        const blockerText =
+          Array.isArray(
+            result.blockers
+          ) &&
+          result.blockers.length >
+            0
+            ? result.blockers.join(
+                " | "
+              )
+            : "";
+
+        setMessage(
+          blockerText ||
+            result.error ||
+            "Failed to cancel result"
+        );
+
+        return;
+      }
+
+      setMessage(
+        "✅ Result cancelled"
+      );
+
+      setHomeGoals("");
+      setAwayGoals("");
+
+      await loadMatches();
+
+      setSummaryRefreshKey(
+        (current) =>
+          current + 1
+      );
+    } catch {
+      setMessage(
+        "Connection error"
       );
     } finally {
       setLoading(false);
@@ -1485,8 +1727,6 @@ export default function TournamentAdminPage() {
         {competitionId ===
           "iron-coop-cup" && (
           <div className="mt-8 space-y-8">
-            {/* TEAMS */}
-
             <div className="space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
               <div>
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -1519,8 +1759,6 @@ export default function TournamentAdminPage() {
                 }
               />
             </div>
-
-            {/* PLAYOFF */}
 
             <div className="space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7">
               <div>
@@ -1829,8 +2067,6 @@ export default function TournamentAdminPage() {
                 </h2>
               </div>
 
-              {/* STAGE */}
-
               <div>
                 <label className="text-sm font-bold">
                   Стадія
@@ -1880,8 +2116,6 @@ export default function TournamentAdminPage() {
                   )}
                 </select>
               </div>
-
-              {/* GROUP */}
 
               {stage ===
                 "group" &&
@@ -1941,8 +2175,6 @@ export default function TournamentAdminPage() {
                   </div>
                 )}
 
-              {/* ROUND */}
-
               <div>
                 <label className="text-sm font-bold">
                   Тур
@@ -1964,8 +2196,6 @@ export default function TournamentAdminPage() {
                   className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                 />
               </div>
-
-              {/* PLAYERS */}
 
               {stage ===
                 "group" &&
@@ -2294,6 +2524,53 @@ export default function TournamentAdminPage() {
                   ? "Оновити результат"
                   : "Зберегти результат"}
             </button>
+
+            {selectedMatch.status ===
+              "finished" &&
+              selectedMatch.home_goals !==
+                null &&
+              selectedMatch.away_goals !==
+                null && (
+                <button
+                  type="button"
+                  onClick={
+                    cancelResult
+                  }
+                  disabled={
+                    loading
+                  }
+                  className="mt-3 w-full rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-4 font-black text-red-300 transition hover:bg-red-500/20 disabled:opacity-40"
+                >
+                  {loading
+                    ? "Processing..."
+                    : "Cancel result"}
+                </button>
+              )}
+
+              <ResultRestoreButton
+  password={
+    password
+  }
+  match={
+    selectedMatch
+  }
+  disabled={
+    loading
+  }
+  onMessage={
+    setMessage
+  }
+  onRestored={
+    async () => {
+      await loadMatches();
+
+      setSummaryRefreshKey(
+        (current) =>
+          current + 1
+      );
+    }
+  }
+/>
           </form>
         )}
 

@@ -6,7 +6,7 @@ import { buildStandings } from "../../../lib/standings";
 
 import {
   applyPlayerReplacements,
-  getDivisionReplacements,
+  getSeasonPlayerReplacements,
   resolveReplacementPlayerId,
 } from "../../../lib/player-replacements";
 
@@ -30,6 +30,9 @@ type DivisionNumber =
   Division:
   /api/standings?season=3&competition=division-1
 
+  Qualification:
+  /api/standings?season=3&competition=season-qualification
+
   Champions League group:
   /api/standings?season=3&competition=champions-league&group_name=A
 */
@@ -40,7 +43,9 @@ export async function GET(
   try {
     const {
       searchParams,
-    } = new URL(request.url);
+    } = new URL(
+      request.url
+    );
 
     const season =
       Number(
@@ -66,7 +71,9 @@ export async function GET(
     */
 
     if (
-      !Number.isInteger(season) ||
+      !Number.isInteger(
+        season
+      ) ||
       season < 1 ||
       season > 4
     ) {
@@ -107,7 +114,7 @@ export async function GET(
       DIVISION NUMBER
       ========================================
 
-      Public competition IDs:
+      Public IDs:
 
       division-1
       division-2
@@ -128,9 +135,11 @@ export async function GET(
 
     const divisionNumber =
       divisionMatch
-        ? Number(
-            divisionMatch[1]
-          ) as DivisionNumber
+        ? (
+            Number(
+              divisionMatch[1]
+            ) as DivisionNumber
+          )
         : null;
 
     /*
@@ -140,7 +149,8 @@ export async function GET(
     */
 
     const isDivision =
-      divisionNumber !== null;
+      divisionNumber !==
+      null;
 
     const isQualification =
       competition ===
@@ -172,7 +182,7 @@ export async function GET(
 
     /*
       European group tables
-      require a group.
+      require group name.
     */
 
     if (
@@ -193,6 +203,10 @@ export async function GET(
     /*
       ========================================
       BASE PARTICIPANTS
+      ========================================
+
+      Беремо початковий склад
+      із season competition data.
       ========================================
     */
 
@@ -226,50 +240,68 @@ export async function GET(
 
     /*
       ========================================
-      PLAYER REPLACEMENTS
+      ALL PLAYER REPLACEMENTS OF SEASON
       ========================================
 
-      Only divisions currently use
-      player replacement inheritance.
+      Заміна тепер глобальна
+      в межах сезону.
+
+      Наприклад:
+
+      VolodyaBES -> monkeyscott
+
+      впливає не тільки на Division,
+      а й на Qualification,
+      European groups тощо.
       ========================================
     */
 
     const replacements =
-      isDivision &&
-      divisionNumber !== null
-        ? await getDivisionReplacements(
-            seasonNumber,
-            divisionNumber
-          )
-        : [];
+      await getSeasonPlayerReplacements(
+        seasonNumber
+      );
 
     /*
       ========================================
       CURRENT PARTICIPANTS
       ========================================
 
-      Example:
+      Перетворюємо початковий список
+      учасників на актуальний список
+      після всіх replacement chains.
 
-      Base:
-      VolodyaBES
+      A -> B
+      B -> C
 
-      Replacement:
-      VolodyaBES -> No_Stress23
-
-      Current table:
-      No_Stress23
+      У таблиці буде C.
       ========================================
     */
 
     const participantIds =
-      isDivision
-        ? applyPlayerReplacements(
-            baseParticipantIds,
-            replacements
-          )
-        : [
-            ...baseParticipantIds,
-          ];
+      applyPlayerReplacements(
+        baseParticipantIds,
+        replacements
+      );
+
+    /*
+      ========================================
+      DATABASE COMPETITION ID
+      ========================================
+
+      У коді qualification має ID:
+
+      season-qualification
+
+      У public.matches:
+
+      qualification
+      ========================================
+    */
+
+    const databaseCompetition =
+      isQualification
+        ? "qualification"
+        : competition;
 
     /*
       ========================================
@@ -302,19 +334,12 @@ export async function GET(
       ========================================
       DIVISION MATCHES
       ========================================
-
-      Public:
-      division-1
-
-      Database:
-      competition = division
-      division = 1
-      ========================================
     */
 
     if (
       isDivision &&
-      divisionNumber !== null
+      divisionNumber !==
+        null
     ) {
       query =
         query
@@ -330,7 +355,7 @@ export async function GET(
       query =
         query.eq(
           "competition",
-          competition
+          databaseCompetition
         );
     }
 
@@ -387,47 +412,50 @@ export async function GET(
 
     /*
       ========================================
-      MATCHES FOR STANDINGS
+      MATCHES FOR CURRENT STANDINGS
       ========================================
 
-      Physical database history stays intact.
+      Дуже важливе правило:
 
-      Example:
+      finished матчі фізично
+      НЕ переписуються в БД.
 
-      Round 4:
-      gadyuka -> VolodyaBES
-      finished 0:2
+      Наприклад:
 
-      Database remains:
-      VolodyaBES
+      VolodyaBES зіграв 2 матчі.
 
-      But for CURRENT standings calculation:
+      Потім:
+      VolodyaBES -> monkeyscott
 
-      VolodyaBES -> No_Stress23
+      У public.matches finished rows
+      залишаються VolodyaBES.
 
-      Therefore the 3 points and goals
-      belong to No_Stress23's inherited slot.
+      Але при розрахунку АКТУАЛЬНОЇ
+      таблиці ми віртуально резолвимо:
+
+      VolodyaBES -> monkeyscott
+
+      Тому monkeyscott успадковує
+      очки, голи та статистику.
       ========================================
     */
 
     const standingsMatches =
-      (data ?? []).map(
+      (
+        data ?? []
+      ).map(
         (match) => ({
           home_id:
-            isDivision
-              ? resolveReplacementPlayerId(
-                  match.home_id,
-                  replacements
-                )
-              : match.home_id,
+            resolveReplacementPlayerId(
+              match.home_id,
+              replacements
+            ),
 
           away_id:
-            isDivision
-              ? resolveReplacementPlayerId(
-                  match.away_id,
-                  replacements
-                )
-              : match.away_id,
+            resolveReplacementPlayerId(
+              match.away_id,
+              replacements
+            ),
 
           home_goals:
             match.home_goals,
@@ -470,16 +498,23 @@ export async function GET(
 
       competition,
 
+      database_competition:
+        isDivision
+          ? "division"
+          : databaseCompetition,
+
       division:
         divisionNumber,
 
       group_name:
-        groupName ?? null,
+        groupName ??
+        null,
 
       format,
 
       matches_count:
-        data?.length ?? 0,
+        data?.length ??
+        0,
 
       replacements_count:
         replacements.length,

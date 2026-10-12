@@ -32,6 +32,14 @@ type PlayerReplacement = {
 
   inherit_standings: boolean;
 
+  coop_removed_team_id:
+    | string
+    | null;
+
+  coop_removed_slot:
+    | number
+    | null;
+
   created_at: string;
 };
 
@@ -52,10 +60,31 @@ type StandingsRow = {
   points: number;
 };
 
+type CompetitionSummary = {
+  competition: string;
+  matches: number;
+};
+
 type PreviewMatch = {
   id: string;
 
-  round: number | null;
+  competition: string;
+
+  division:
+    | number
+    | null;
+
+  round:
+    | number
+    | null;
+
+  stage:
+    | string
+    | null;
+
+  group_name:
+    | string
+    | null;
 
   status: string;
 
@@ -63,29 +92,91 @@ type PreviewMatch = {
     home_id: string;
     away_id: string;
 
-    home_goals: number | null;
-    away_goals: number | null;
+    home_goals:
+      | number
+      | null;
+
+    away_goals:
+      | number
+      | null;
   };
 
   after: {
     home_id: string;
     away_id: string;
 
-    home_goals: number | null;
-    away_goals: number | null;
+    home_goals:
+      | number
+      | null;
+
+    away_goals:
+      | number
+      | null;
   };
 };
 
 type HistoricalMatch = {
   id: string;
 
-  round: number | null;
+  competition: string;
+
+  division:
+    | number
+    | null;
+
+  round:
+    | number
+    | null;
+
+  stage:
+    | string
+    | null;
+
+  group_name:
+    | string
+    | null;
 
   home_id: string;
   away_id: string;
 
-  home_goals: number | null;
-  away_goals: number | null;
+  home_goals:
+    | number
+    | null;
+
+  away_goals:
+    | number
+    | null;
+};
+
+type CoopRemoval = {
+  required: boolean;
+
+  team_id:
+    | string
+    | null;
+
+  team_name:
+    | string
+    | null;
+
+  slot:
+    | 1
+    | 2
+    | null;
+
+  teammate_id:
+    | string
+    | null;
+
+  teammate_nickname:
+    | string
+    | null;
+
+  incoming_player_added: boolean;
+
+  action:
+    | string
+    | null;
 };
 
 type LoadResponse = {
@@ -96,6 +187,8 @@ type LoadResponse = {
 
   base_player_ids?: string[];
   current_player_ids?: string[];
+
+  eligible_incoming_player_ids?: string[];
 
   replacements?: PlayerReplacement[];
 
@@ -126,7 +219,13 @@ type PreviewResponse = {
 
   affected_unfinished_matches?: number;
 
-  affected_matches?: PreviewMatch[];
+  affected_by_competition?:
+    CompetitionSummary[];
+
+  affected_match_ids?: string[];
+
+  affected_matches?:
+    PreviewMatch[];
 
   finished_historical_matches?:
     HistoricalMatch[];
@@ -144,6 +243,9 @@ type PreviewResponse = {
   current_player_count?: number;
   preview_player_count?: number;
 
+  coop_removal?:
+    CoopRemoval;
+
   error?: string;
 };
 
@@ -154,10 +256,69 @@ type LoadingAction =
   | "revert"
   | null;
 
+/*
+  ========================================
+  НАЗВА ТУРНІРУ
+  ========================================
+*/
+
+function getCompetitionName(
+  competition: string
+) {
+  const names:
+    Record<
+      string,
+      string
+    > = {
+      division:
+        "Дивізіон",
+
+      "division-1-cup":
+        "Кубок 1 дивізіону",
+
+      "division-2-cup":
+        "Кубок 2 дивізіону",
+
+      "division-3-cup":
+        "Кубок 3 дивізіону",
+
+      qualification:
+        "Кваліфікація",
+
+      "champions-league":
+        "Ліга чемпіонів",
+
+      "europa-league":
+        "Ліга Європи",
+
+      "conference-league":
+        "Ліга конференцій",
+
+      "european-super-cup":
+        "Суперкубок Європи",
+
+      "associations-cup":
+        "Кубок асоціацій",
+    };
+
+  return (
+    names[
+      competition
+    ] ??
+    competition
+  );
+}
+
+/*
+  ========================================
+  СТОРІНКА
+  ========================================
+*/
+
 export default function PlayerReplacementsPage() {
   /*
     ========================================
-    SETTINGS
+    НАЛАШТУВАННЯ
     ========================================
   */
 
@@ -185,7 +346,7 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    DATA
+    ДАНІ
     ========================================
   */
 
@@ -204,6 +365,14 @@ export default function PlayerReplacementsPage() {
     );
 
   const [
+    eligibleIncomingPlayerIds,
+    setEligibleIncomingPlayerIds,
+  ] =
+    useState<string[]>(
+      []
+    );
+
+  const [
     replacements,
     setReplacements,
   ] =
@@ -213,7 +382,7 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    NEW REPLACEMENT
+    НОВА ЗАМІНА
     ========================================
   */
 
@@ -239,7 +408,7 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    UI
+    ІНТЕРФЕЙС
     ========================================
   */
 
@@ -258,17 +427,25 @@ export default function PlayerReplacementsPage() {
     );
 
   const busy =
-    loadingAction !== null;
+    loadingAction !==
+    null;
 
   /*
     ========================================
-    PLAYER NAME
+    ІМ'Я ГРАВЦЯ
     ========================================
   */
 
   function getPlayerName(
-    playerId: string
+    playerId:
+      | string
+      | null
+      | undefined
   ) {
+    if (!playerId) {
+      return "—";
+    }
+
     return (
       players.find(
         (player) =>
@@ -281,7 +458,7 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    CURRENT PLAYERS
+    ПОТОЧНІ ГРАВЦІ
     ========================================
   */
 
@@ -291,7 +468,8 @@ export default function PlayerReplacementsPage() {
         .map((id) =>
           players.find(
             (player) =>
-              player.id === id
+              player.id ===
+              id
           )
         )
         .filter(
@@ -307,56 +485,26 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    INCOMING PLAYER CANDIDATES
+    ДОСТУПНІ НОВІ ГРАВЦІ
     ========================================
   */
 
   const incomingPlayers =
     useMemo(() => {
-      const currentSet =
-        new Set(
-          currentPlayerIds
-        );
-
-      /*
-        Не пропонуємо гравців,
-        які вже є активними.
-
-        Також не пропонуємо гравців,
-        які вже беруть участь у поточному
-        replacement chain.
-
-        Повернення попереднього гравця
-        робиться через Revert.
-      */
-
-      const replacementPlayerIds =
-        new Set<string>();
-
-      for (
-        const replacement
-        of replacements
-      ) {
-        replacementPlayerIds.add(
-          replacement
-            .outgoing_player_id
-        );
-
-        replacementPlayerIds.add(
-          replacement
-            .incoming_player_id
-        );
-      }
-
-      return [...players]
+      return eligibleIncomingPlayerIds
+        .map((id) =>
+          players.find(
+            (player) =>
+              player.id ===
+              id
+          )
+        )
         .filter(
-          (player) =>
-            !currentSet.has(
-              player.id
-            ) &&
-            !replacementPlayerIds.has(
-              player.id
-            )
+          (
+            player
+          ): player is (typeof players)[number] =>
+            player !==
+            undefined
         )
         .sort(
           (a, b) =>
@@ -365,13 +513,12 @@ export default function PlayerReplacementsPage() {
             )
         );
     }, [
-      currentPlayerIds,
-      replacements,
+      eligibleIncomingPlayerIds,
     ]);
 
   /*
     ========================================
-    HISTORY
+    ІСТОРІЯ
     ========================================
   */
 
@@ -394,7 +541,7 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    CAN REVERT
+    ЧИ МОЖНА СКАСУВАТИ ЗАМІНУ
     ========================================
   */
 
@@ -418,7 +565,7 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    RESET PREVIEW
+    ОЧИЩЕННЯ ПОПЕРЕДНЬОГО ПЕРЕГЛЯДУ
     ========================================
   */
 
@@ -430,7 +577,37 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    LOAD DIVISION
+    СКИДАННЯ ЗАВАНТАЖЕНИХ ДАНИХ
+    ========================================
+  */
+
+  function resetLoadedData() {
+    setLoaded(false);
+
+    setCurrentPlayerIds(
+      []
+    );
+
+    setEligibleIncomingPlayerIds(
+      []
+    );
+
+    setReplacements(
+      []
+    );
+
+    setOutgoingId("");
+
+    setIncomingId("");
+
+    setPreview(null);
+
+    setMessage("");
+  }
+
+  /*
+    ========================================
+    ЗАВАНТАЖЕННЯ ДИВІЗІОНУ
     ========================================
   */
 
@@ -442,7 +619,7 @@ export default function PlayerReplacementsPage() {
       ) => {
         if (!password) {
           setMessage(
-            "Enter administrator password"
+            "Введіть пароль адміністратора"
           );
 
           return;
@@ -462,12 +639,16 @@ export default function PlayerReplacementsPage() {
 
           params.set(
             "season",
-            String(season)
+            String(
+              season
+            )
           );
 
           params.set(
             "division",
-            String(division)
+            String(
+              division
+            )
           );
 
           const response =
@@ -498,13 +679,17 @@ export default function PlayerReplacementsPage() {
               []
             );
 
+            setEligibleIncomingPlayerIds(
+              []
+            );
+
             setReplacements(
               []
             );
 
             setMessage(
               result.error ??
-                "Failed to load division"
+                "Не вдалося завантажити дивізіон"
             );
 
             return;
@@ -515,6 +700,11 @@ export default function PlayerReplacementsPage() {
               .current_player_ids ??
             [];
 
+          const nextEligibleIncomingPlayerIds =
+            result
+              .eligible_incoming_player_ids ??
+            [];
+
           const nextReplacements =
             result
               .replacements ??
@@ -522,6 +712,10 @@ export default function PlayerReplacementsPage() {
 
           setCurrentPlayerIds(
             nextPlayerIds
+          );
+
+          setEligibleIncomingPlayerIds(
+            nextEligibleIncomingPlayerIds
           );
 
           setReplacements(
@@ -546,7 +740,7 @@ export default function PlayerReplacementsPage() {
 
           if (showMessage) {
             setMessage(
-              "✅ Division loaded"
+              `✅ Дивізіон завантажено. Доступних кандидатів на заміну: ${nextEligibleIncomingPlayerIds.length}`
             );
           }
         } catch {
@@ -556,12 +750,16 @@ export default function PlayerReplacementsPage() {
             []
           );
 
+          setEligibleIncomingPlayerIds(
+            []
+          );
+
           setReplacements(
             []
           );
 
           setMessage(
-            "Connection error"
+            "Помилка з'єднання"
           );
         } finally {
           setLoadingAction(
@@ -578,7 +776,7 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    CHANGE SEASON
+    ЗМІНА СЕЗОНУ
     ========================================
   */
 
@@ -597,28 +795,12 @@ export default function PlayerReplacementsPage() {
       setDivision(1);
     }
 
-    setLoaded(false);
-
-    setCurrentPlayerIds(
-      []
-    );
-
-    setReplacements(
-      []
-    );
-
-    setOutgoingId("");
-
-    setIncomingId("");
-
-    setPreview(null);
-
-    setMessage("");
+    resetLoadedData();
   }
 
   /*
     ========================================
-    CHANGE DIVISION
+    ЗМІНА ДИВІЗІОНУ
     ========================================
   */
 
@@ -630,28 +812,12 @@ export default function PlayerReplacementsPage() {
       newDivision
     );
 
-    setLoaded(false);
-
-    setCurrentPlayerIds(
-      []
-    );
-
-    setReplacements(
-      []
-    );
-
-    setOutgoingId("");
-
-    setIncomingId("");
-
-    setPreview(null);
-
-    setMessage("");
+    resetLoadedData();
   }
 
   /*
     ========================================
-    PREVIEW
+    ПОПЕРЕДНІЙ ПЕРЕГЛЯД
     ========================================
   */
 
@@ -663,7 +829,7 @@ export default function PlayerReplacementsPage() {
 
     if (!password) {
       setMessage(
-        "Enter administrator password"
+        "Введіть пароль адміністратора"
       );
 
       return;
@@ -671,7 +837,7 @@ export default function PlayerReplacementsPage() {
 
     if (!outgoingId) {
       setMessage(
-        "Select outgoing player"
+        "Оберіть гравця, який вибуває"
       );
 
       return;
@@ -679,7 +845,7 @@ export default function PlayerReplacementsPage() {
 
     if (!incomingId) {
       setMessage(
-        "Select incoming player"
+        "Оберіть нового гравця"
       );
 
       return;
@@ -730,7 +896,7 @@ export default function PlayerReplacementsPage() {
       if (!response.ok) {
         setMessage(
           result.error ??
-            "Preview failed"
+            "Не вдалося створити попередній перегляд"
         );
 
         return;
@@ -741,11 +907,11 @@ export default function PlayerReplacementsPage() {
       );
 
       setMessage(
-        "✅ Preview ready. No database changes have been made."
+        "✅ Попередній перегляд готовий. Жодних змін у базі даних не виконано."
       );
     } catch {
       setMessage(
-        "Connection error"
+        "Помилка з'єднання"
       );
     } finally {
       setLoadingAction(
@@ -756,7 +922,7 @@ export default function PlayerReplacementsPage() {
 
   /*
     ========================================
-    APPLY
+    ЗАСТОСУВАННЯ ЗАМІНИ
     ========================================
   */
 
@@ -772,17 +938,51 @@ export default function PlayerReplacementsPage() {
         .affected_future_matches ??
       0;
 
+    const competitionCount =
+      preview
+        .affected_by_competition
+        ?.length ??
+      0;
+
+    const coopText =
+      preview
+        .coop_removal
+        ?.required
+        ? `
+
+Iron Co-op Cup:
+${getPlayerName(
+  outgoingId
+)} буде видалений із команди ${
+            preview
+              .coop_removal
+              .team_name ??
+            "Iron Co-op Cup"
+          }.
+
+Місце в команді залишиться вільним.
+Новий гравець НЕ буде автоматично доданий до Co-op команди.`
+        : "";
+
     const confirmed =
       window.confirm(
-        `Replace ${getPlayerName(
-          outgoingId
-        )} with ${getPlayerName(
+        `ГЛОБАЛЬНА ЗАМІНА ГРАВЦЯ
+
+${getPlayerName(
+  outgoingId
+)} → ${getPlayerName(
           incomingId
-        )}?
+        )}
 
-All ${affectedMatches} unfinished matches will move to the new player.
+Сезон ${season}
 
-Finished historical matches will remain unchanged.`
+Буде перенесено ${affectedMatches} незавершених матчів у ${competitionCount} турнірах.
+
+Завершені історичні матчі залишаться без змін.
+
+Новий гравець успадкує турнірний слот і статистику попереднього гравця.${coopText}
+
+Підтвердити заміну?`
       );
 
     if (!confirmed) {
@@ -831,7 +1031,7 @@ Finished historical matches will remain unchanged.`
       if (!response.ok) {
         setMessage(
           result.error ??
-            "Replacement failed"
+            "Не вдалося виконати заміну"
         );
 
         return;
@@ -851,11 +1051,11 @@ Finished historical matches will remain unchanged.`
       );
 
       setMessage(
-        `✅ Replacement completed. Updated unfinished matches: ${updatedMatches}`
+        `✅ Заміна успішно виконана. Оновлено незавершених матчів: ${updatedMatches}`
       );
     } catch {
       setMessage(
-        "Connection error"
+        "Помилка з'єднання"
       );
     } finally {
       setLoadingAction(
@@ -866,7 +1066,7 @@ Finished historical matches will remain unchanged.`
 
   /*
     ========================================
-    REVERT
+    СКАСУВАННЯ ЗАМІНИ
     ========================================
   */
 
@@ -874,19 +1074,33 @@ Finished historical matches will remain unchanged.`
     replacement:
       PlayerReplacement
   ) {
+    const coopText =
+      replacement
+        .coop_removed_team_id
+        ? `
+
+Якщо початкове місце в Iron Co-op Cup досі вільне, попередній гравець буде повернений у команду.
+
+Якщо це місце вже вручну зайняв інший гравець, сервер заблокує скасування заміни.`
+        : "";
+
     const confirmed =
       window.confirm(
-        `Revert ${getPlayerName(
-          replacement
-            .outgoing_player_id
-        )} → ${getPlayerName(
+        `СКАСУВАННЯ ЗАМІНИ
+
+${getPlayerName(
+  replacement
+    .outgoing_player_id
+)} ← ${getPlayerName(
           replacement
             .incoming_player_id
-        )}?
+        )}
 
-All unfinished matches will return to the previous player.
+Усі незавершені матчі сезону ${replacement.season} повернуться попередньому гравцю.
 
-If the replacement player has already played a finished match, the server will block the revert.`
+Якщо новий гравець уже зіграв хоча б один завершений матч після заміни, сервер заблокує скасування.${coopText}
+
+Продовжити?`
       );
 
     if (!confirmed) {
@@ -928,7 +1142,7 @@ If the replacement player has already played a finished match, the server will b
       if (!response.ok) {
         setMessage(
           result.error ??
-            "Revert failed"
+            "Не вдалося скасувати заміну"
         );
 
         return;
@@ -944,11 +1158,11 @@ If the replacement player has already played a finished match, the server will b
       );
 
       setMessage(
-        `✅ Replacement reverted. Restored unfinished matches: ${updatedMatches}`
+        `✅ Заміну скасовано. Повернуто незавершених матчів: ${updatedMatches}`
       );
     } catch {
       setMessage(
-        "Connection error"
+        "Помилка з'єднання"
       );
     } finally {
       setLoadingAction(
@@ -959,12 +1173,13 @@ If the replacement player has already played a finished match, the server will b
 
   /*
     ========================================
-    STANDINGS CARD
+    КАРТКА СТАТИСТИКИ
     ========================================
   */
 
   function standingsCard(
     title: string,
+
     row:
       | StandingsRow
       | null
@@ -978,7 +1193,7 @@ If the replacement player has already played a finished match, the server will b
           </div>
 
           <div className="mt-4 text-white/30">
-            No standings data
+            Немає даних таблиці
           </div>
         </div>
       );
@@ -999,7 +1214,7 @@ If the replacement player has already played a finished match, the server will b
         <div className="mt-5 grid grid-cols-4 gap-3 text-center">
           <div>
             <div className="text-xs text-white/35">
-              P
+              І
             </div>
 
             <div className="mt-1 font-black">
@@ -1009,7 +1224,7 @@ If the replacement player has already played a finished match, the server will b
 
           <div>
             <div className="text-xs text-white/35">
-              W
+              В
             </div>
 
             <div className="mt-1 font-black">
@@ -1019,7 +1234,7 @@ If the replacement player has already played a finished match, the server will b
 
           <div>
             <div className="text-xs text-white/35">
-              D
+              Н
             </div>
 
             <div className="mt-1 font-black">
@@ -1029,7 +1244,7 @@ If the replacement player has already played a finished match, the server will b
 
           <div>
             <div className="text-xs text-white/35">
-              L
+              П
             </div>
 
             <div className="mt-1 font-black">
@@ -1041,7 +1256,7 @@ If the replacement player has already played a finished match, the server will b
         <div className="mt-5 grid grid-cols-4 gap-3 text-center">
           <div>
             <div className="text-xs text-white/35">
-              GF
+              ГЗ
             </div>
 
             <div className="mt-1 font-black">
@@ -1051,7 +1266,7 @@ If the replacement player has already played a finished match, the server will b
 
           <div>
             <div className="text-xs text-white/35">
-              GA
+              ГП
             </div>
 
             <div className="mt-1 font-black">
@@ -1061,7 +1276,7 @@ If the replacement player has already played a finished match, the server will b
 
           <div>
             <div className="text-xs text-white/35">
-              GD
+              РГ
             </div>
 
             <div className="mt-1 font-black">
@@ -1069,6 +1284,7 @@ If the replacement player has already played a finished match, the server will b
               0
                 ? "+"
                 : ""}
+
               {
                 row.goalDifference
               }
@@ -1077,7 +1293,7 @@ If the replacement player has already played a finished match, the server will b
 
           <div>
             <div className="text-xs text-blue-300">
-              PTS
+              ОЧК
             </div>
 
             <div className="mt-1 text-xl font-black text-blue-300">
@@ -1088,6 +1304,73 @@ If the replacement player has already played a finished match, the server will b
       </div>
     );
   }
+
+  /*
+    ========================================
+    ОПИС МАТЧУ
+    ========================================
+  */
+
+  function getMatchContext(
+    match:
+      | PreviewMatch
+      | HistoricalMatch
+  ) {
+    const parts:
+      string[] = [];
+
+    if (
+      match.competition ===
+        "division" &&
+      match.division !==
+        null
+    ) {
+      parts.push(
+        `Дивізіон ${match.division}`
+      );
+    } else {
+      parts.push(
+        getCompetitionName(
+          match.competition
+        )
+      );
+
+      if (
+        match.division !==
+        null
+      ) {
+        parts.push(
+          `Дивізіон ${match.division}`
+        );
+      }
+    }
+
+    if (
+      match.stage
+    ) {
+      parts.push(
+        match.stage
+      );
+    }
+
+    if (
+      match.group_name
+    ) {
+      parts.push(
+        `Група ${match.group_name}`
+      );
+    }
+
+    return parts.join(
+      " • "
+    );
+  }
+
+  /*
+    ========================================
+    ІНТЕРФЕЙС
+    ========================================
+  */
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
@@ -1101,7 +1384,7 @@ If the replacement player has already played a finished match, the server will b
             </div>
 
             <div className="mt-1 text-xs text-white/40">
-              Player Management
+              Керування гравцями
             </div>
           </div>
 
@@ -1110,14 +1393,14 @@ If the replacement player has already played a finished match, the server will b
               href="/admin"
               className="font-bold text-blue-300 transition hover:text-blue-200"
             >
-              ← Admin
+              ← Адмінка
             </a>
 
             <a
               href="/"
               className="font-bold text-white/40 transition hover:text-white/70"
             >
-              Website
+              Сайт
             </a>
           </div>
         </div>
@@ -1125,23 +1408,37 @@ If the replacement player has already played a finished match, the server will b
 
       <section className="mx-auto max-w-6xl px-6 py-14">
         <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-          Roster Management
+          Керування складом сезону
         </div>
 
         <h1 className="mt-3 text-4xl font-black">
-          Player Replacements
+          Заміни гравців
         </h1>
 
         <p className="mt-4 max-w-3xl leading-7 text-white/40">
-          Replace an active player while preserving
-          inherited standings.
+          Глобальна заміна гравця в межах сезону зі
+          збереженням історичних результатів та
+          успадкуванням турнірної статистики.
         </p>
 
-        <div className="mt-6 rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-5 text-sm leading-6 text-blue-100/70">
-          Finished matches remain historical under
-          the previous player. Every unfinished
-          division match is transferred to the new
-          player regardless of round number.
+        <div className="mt-6 rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-5 text-sm leading-7 text-blue-100/70">
+          <b className="text-blue-200">
+            Глобальна заміна:
+          </b>{" "}
+          усі незавершені матчі гравця в поточному
+          сезоні переходять новому гравцю в усіх
+          індивідуальних турнірах. Завершені матчі
+          залишаються в історії за попереднім гравцем.
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-purple-400/20 bg-purple-500/[0.06] p-5 text-sm leading-7 text-purple-100/70">
+          <b className="text-purple-200">
+            Iron Co-op Cup:
+          </b>{" "}
+          якщо гравець перебуває в Co-op команді, він
+          буде видалений із неї, а його місце залишиться
+          вільним. Новий гравець глобальної заміни
+          автоматично до Co-op команди не додається.
         </div>
 
         {/* SETTINGS */}
@@ -1149,7 +1446,7 @@ If the replacement player has already played a finished match, the server will b
         <div className="mt-8 grid gap-5 rounded-3xl border border-white/10 bg-[#07101d] p-7 lg:grid-cols-3">
           <div>
             <label className="text-sm font-bold text-white/60">
-              Administrator password
+              Пароль адміністратора
             </label>
 
             <input
@@ -1165,36 +1462,16 @@ If the replacement player has already played a finished match, the server will b
                     .value
                 );
 
-                setLoaded(
-                  false
-                );
-
-                setCurrentPlayerIds(
-                  []
-                );
-
-                setReplacements(
-                  []
-                );
-
-                setOutgoingId("");
-
-                setIncomingId("");
-
-                setPreview(
-                  null
-                );
-
-                setMessage("");
+                resetLoadedData();
               }}
-              placeholder="Password"
+              placeholder="Введіть пароль"
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             />
           </div>
 
           <div>
             <label className="text-sm font-bold text-white/60">
-              Season
+              Сезон
             </label>
 
             <select
@@ -1214,26 +1491,26 @@ If the replacement player has already played a finished match, the server will b
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             >
               <option value={1}>
-                Season 1
+                Сезон 1
               </option>
 
               <option value={2}>
-                Season 2
+                Сезон 2
               </option>
 
               <option value={3}>
-                Season 3
+                Сезон 3
               </option>
 
               <option value={4}>
-                Season 4
+                Сезон 4
               </option>
             </select>
           </div>
 
           <div>
             <label className="text-sm font-bold text-white/60">
-              Division
+              Дивізіон
             </label>
 
             <select
@@ -1253,24 +1530,25 @@ If the replacement player has already played a finished match, the server will b
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
             >
               <option value={1}>
-                Division 1
+                Дивізіон 1
               </option>
 
               <option value={2}>
-                Division 2
+                Дивізіон 2
               </option>
 
               <option value={3}>
-                Division 3
+                Дивізіон 3
               </option>
 
               <option
                 value={4}
                 disabled={
-                  season === 1
+                  season ===
+                  1
                 }
               >
-                Division 4
+                Дивізіон 4
               </option>
             </select>
           </div>
@@ -1288,12 +1566,12 @@ If the replacement player has already played a finished match, the server will b
           >
             {loadingAction ===
             "load"
-              ? "Loading..."
-              : "Load Division"}
+              ? "Завантаження..."
+              : "Завантажити дивізіон"}
           </button>
         </div>
 
-        {/* LOADED DATA */}
+        {/* LOADED */}
 
         {loaded && (
           <>
@@ -1303,19 +1581,20 @@ If the replacement player has already played a finished match, the server will b
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                    Current Roster
+                    Поточний склад
                   </div>
 
                   <h2 className="mt-2 text-3xl font-black">
-                    Division {division}
+                    Дивізіон{" "}
+                    {division}
                   </h2>
                 </div>
 
                 <div className="text-sm text-white/35">
+                  Гравців:{" "}
                   {
                     currentPlayers.length
-                  }{" "}
-                  players
+                  }
                 </div>
               </div>
 
@@ -1358,25 +1637,26 @@ If the replacement player has already played a finished match, the server will b
             >
               <div>
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                  New Replacement
+                  Нова глобальна заміна
                 </div>
 
                 <h2 className="mt-2 text-3xl font-black">
-                  Replace Player
+                  Замінити гравця
                 </h2>
 
                 <p className="mt-3 max-w-3xl leading-7 text-white/40">
-                  Select the player leaving the
-                  division and the player taking
-                  over the slot. Preview is
-                  required before confirmation.
+                  Оберіть гравця, який вибуває, та нового
+                  гравця. Заміна буде застосована до всіх
+                  незавершених індивідуальних матчів
+                  сезону{" "}
+                  {season}.
                 </p>
               </div>
 
               <div className="grid gap-5 lg:grid-cols-2">
                 <div>
                   <label className="text-sm font-bold text-white/60">
-                    Outgoing Player
+                    Гравець, який вибуває
                   </label>
 
                   <select
@@ -1396,7 +1676,7 @@ If the replacement player has already played a finished match, the server will b
                     className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                   >
                     <option value="">
-                      Select player
+                      Оберіть гравця
                     </option>
 
                     {currentPlayers.map(
@@ -1422,7 +1702,7 @@ If the replacement player has already played a finished match, the server will b
 
                 <div>
                   <label className="text-sm font-bold text-white/60">
-                    Incoming Player
+                    Новий гравець
                   </label>
 
                   <select
@@ -1442,7 +1722,7 @@ If the replacement player has already played a finished match, the server will b
                     className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
                   >
                     <option value="">
-                      Select player
+                      Оберіть гравця
                     </option>
 
                     {incomingPlayers.map(
@@ -1464,16 +1744,33 @@ If the replacement player has already played a finished match, the server will b
                       )
                     )}
                   </select>
+
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-white/30">
+                    <span>
+                      Доступних кандидатів:{" "}
+                      {
+                        incomingPlayers.length
+                      }
+                    </span>
+
+                    <span>
+                      Тільки гравці без власної історії
+                      матчів у сезоні{" "}
+                      {season}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-[#030711] p-5 text-sm leading-6 text-white/50">
+              <div className="rounded-xl border border-white/10 bg-[#030711] p-5 text-sm leading-7 text-white/50">
                 <b className="text-white/80">
-                  Replacement rule:
+                  Правило заміни:
                 </b>{" "}
-                every unfinished match of the outgoing
-                player will be reassigned to the incoming
-                player. Finished matches remain unchanged.
+                усі незавершені матчі сезону переходять
+                новому гравцю. Завершені матчі залишаються
+                в історії за попереднім гравцем. Новий
+                гравець успадковує турнірний слот і
+                статистику.
               </div>
 
               <button
@@ -1487,8 +1784,8 @@ If the replacement player has already played a finished match, the server will b
               >
                 {loadingAction ===
                 "preview"
-                  ? "Generating Preview..."
-                  : "Preview Replacement"}
+                  ? "Формування перегляду..."
+                  : "Переглянути заміну"}
               </button>
             </form>
 
@@ -1497,7 +1794,7 @@ If the replacement player has already played a finished match, the server will b
             {preview && (
               <div className="mt-8 rounded-3xl border border-blue-400/25 bg-blue-500/[0.06] p-7">
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-300">
-                  Preview
+                  Попередній перегляд
                 </div>
 
                 <h2 className="mt-3 text-3xl font-black">
@@ -1512,21 +1809,32 @@ If the replacement player has already played a finished match, the server will b
                   )}
                 </h2>
 
-                <div className="mt-4 inline-flex rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-blue-300">
-                  All unfinished matches
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <div className="rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-blue-300">
+                    Глобальна заміна
+                  </div>
+
+                  <div className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-white/50">
+                    Сезон{" "}
+                    {season}
+                  </div>
+
+                  <div className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-white/50">
+                    Завершені матчі зберігаються
+                  </div>
                 </div>
 
                 {/* STANDINGS */}
 
                 <div className="mt-7 grid gap-5 lg:grid-cols-2">
                   {standingsCard(
-                    "Before",
+                    "До заміни",
                     preview
                       .standings_before
                   )}
 
                   {standingsCard(
-                    "After",
+                    "Після заміни",
                     preview
                       .standings_after
                   )}
@@ -1537,7 +1845,7 @@ If the replacement player has already played a finished match, the server will b
                 <div className="mt-6 grid gap-4 sm:grid-cols-3">
                   <div className="rounded-2xl border border-white/10 bg-[#030711] p-5">
                     <div className="text-xs font-bold uppercase tracking-[0.15em] text-white/35">
-                      Unfinished Matches
+                      Незавершених матчів
                     </div>
 
                     <div className="mt-2 text-4xl font-black">
@@ -1553,7 +1861,7 @@ If the replacement player has already played a finished match, the server will b
 
                   <div className="rounded-2xl border border-white/10 bg-[#030711] p-5">
                     <div className="text-xs font-bold uppercase tracking-[0.15em] text-white/35">
-                      Points Inherited
+                      Успадковано очок
                     </div>
 
                     <div className="mt-2 text-4xl font-black">
@@ -1567,7 +1875,7 @@ If the replacement player has already played a finished match, the server will b
 
                   <div className="rounded-2xl border border-white/10 bg-[#030711] p-5">
                     <div className="text-xs font-bold uppercase tracking-[0.15em] text-white/35">
-                      Players
+                      Гравців у дивізіоні
                     </div>
 
                     <div className="mt-2 text-4xl font-black">
@@ -1590,7 +1898,130 @@ If the replacement player has already played a finished match, the server will b
                   </div>
                 </div>
 
-                {/* HISTORICAL MATCHES */}
+                {/* COMPETITIONS */}
+
+                {(preview
+                  .affected_by_competition
+                  ?.length ??
+                  0) > 0 && (
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-[#030711] p-5">
+                    <div className="text-xs font-black uppercase tracking-[0.15em] text-blue-300">
+                      Турніри, яких торкнеться заміна
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {preview
+                        .affected_by_competition
+                        ?.map(
+                          (
+                            item
+                          ) => (
+                            <div
+                              key={
+                                item.competition
+                              }
+                              className="rounded-xl border border-white/10 bg-[#07101d] px-4 py-4"
+                            >
+                              <div className="font-black">
+                                {getCompetitionName(
+                                  item.competition
+                                )}
+                              </div>
+
+                              <div className="mt-1 text-sm text-white/40">
+                                Незавершених матчів:{" "}
+                                {
+                                  item.matches
+                                }
+                              </div>
+                            </div>
+                          )
+                        )}
+                    </div>
+                  </div>
+                )}
+
+                {/* CO-OP */}
+
+                <div className="mt-6 rounded-2xl border border-purple-400/20 bg-purple-500/[0.06] p-5">
+                  <div className="text-xs font-black uppercase tracking-[0.15em] text-purple-300">
+                    Iron Co-op Cup
+                  </div>
+
+                  {preview
+                    .coop_removal
+                    ?.required ? (
+                    <>
+                      <div className="mt-3 text-lg font-black">
+                        Видалити{" "}
+                        {getPlayerName(
+                          outgoingId
+                        )}{" "}
+                        із команди{" "}
+                        {
+                          preview
+                            .coop_removal
+                            .team_name
+                        }
+                      </div>
+
+                      <div className="mt-3 grid gap-3 text-sm text-white/50 sm:grid-cols-3">
+                        <div className="rounded-xl border border-white/10 bg-[#030711] p-4">
+                          <div className="text-xs uppercase tracking-[0.12em] text-white/30">
+                            Місце
+                          </div>
+
+                          <div className="mt-1 font-black text-white">
+                            #
+                            {
+                              preview
+                                .coop_removal
+                                .slot
+                            }
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 bg-[#030711] p-4">
+                          <div className="text-xs uppercase tracking-[0.12em] text-white/30">
+                            Напарник
+                          </div>
+
+                          <div className="mt-1 font-black text-white">
+                            {preview
+                              .coop_removal
+                              .teammate_nickname ??
+                              "—"}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 bg-[#030711] p-4">
+                          <div className="text-xs uppercase tracking-[0.12em] text-white/30">
+                            Стан місця
+                          </div>
+
+                          <div className="mt-1 font-black text-purple-300">
+                            Вільне
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 text-sm leading-6 text-purple-100/60">
+                        Новий гравець глобальної заміни не
+                        буде автоматично доданий до цієї
+                        Co-op команди. Пізніше ви зможете
+                        вручну призначити будь-якого
+                        дозволеного гравця на вільне місце.
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-3 text-sm text-white/45">
+                      Для цієї заміни жодних дій з
+                      Iron Co-op Cup не потрібно.
+                    </div>
+                  )}
+                </div>
+
+                {/* HISTORICAL */}
 
                 {(preview
                   .finished_historical_matches
@@ -1598,12 +2029,12 @@ If the replacement player has already played a finished match, the server will b
                   0) > 0 && (
                   <div className="mt-6 rounded-2xl border border-green-400/15 bg-green-500/[0.05] p-5">
                     <div className="text-xs font-black uppercase tracking-[0.15em] text-green-300">
-                      Historical Matches Preserved
+                      Історичні матчі збережено
                     </div>
 
                     <div className="mt-2 text-sm text-white/45">
-                      These finished matches stay
-                      permanently under{" "}
+                      Ці завершені матчі назавжди
+                      залишаться записаними за{" "}
                       <b className="text-white/70">
                         {getPlayerName(
                           outgoingId
@@ -1623,31 +2054,40 @@ If the replacement player has already played a finished match, the server will b
                               key={
                                 match.id
                               }
-                              className="grid grid-cols-[70px_1fr_auto_1fr] items-center gap-3 rounded-xl border border-white/5 bg-[#030711] px-4 py-3 text-sm"
+                              className="rounded-xl border border-white/5 bg-[#030711] px-4 py-3"
                             >
-                              <div className="font-black text-white/35">
-                                R
-                                {
-                                  match.round
-                                }
-                              </div>
-
-                              <div className="text-right font-bold">
-                                {getPlayerName(
-                                  match.home_id
+                              <div className="text-xs font-bold text-green-300/70">
+                                {getMatchContext(
+                                  match
                                 )}
+
+                                {match.round !==
+                                  null &&
+                                  ` • Тур ${match.round}`}
                               </div>
 
-                              <div className="font-black text-green-300">
-                                {match.home_goals}{" "}
-                                :{" "}
-                                {match.away_goals}
-                              </div>
+                              <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-sm">
+                                <div className="text-right font-bold">
+                                  {getPlayerName(
+                                    match.home_id
+                                  )}
+                                </div>
 
-                              <div className="font-bold">
-                                {getPlayerName(
-                                  match.away_id
-                                )}
+                                <div className="font-black text-green-300">
+                                  {
+                                    match.home_goals
+                                  }{" "}
+                                  :{" "}
+                                  {
+                                    match.away_goals
+                                  }
+                                </div>
+
+                                <div className="font-bold">
+                                  {getPlayerName(
+                                    match.away_id
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )
@@ -1664,7 +2104,7 @@ If the replacement player has already played a finished match, the server will b
                   0) > 0 && (
                   <details className="mt-6 rounded-2xl border border-white/10 bg-[#030711]">
                     <summary className="cursor-pointer px-5 py-4 font-black">
-                      Unfinished Matches to Transfer (
+                      Усі незавершені матчі для перенесення (
                       {
                         preview
                           .affected_matches
@@ -1684,41 +2124,46 @@ If the replacement player has already played a finished match, the server will b
                               key={
                                 match.id
                               }
-                              className="grid gap-3 border-b border-white/5 px-5 py-4 last:border-b-0 lg:grid-cols-[80px_1fr_auto_1fr]"
+                              className="border-b border-white/5 px-5 py-4 last:border-b-0"
                             >
-                              <div className="text-sm font-black text-blue-300">
-                                R
-                                {
-                                  match.round
-                                }
-                              </div>
-
-                              <div className="text-sm text-white/50">
-                                {getPlayerName(
-                                  match.before
-                                    .home_id
-                                )}{" "}
-                                —{" "}
-                                {getPlayerName(
-                                  match.before
-                                    .away_id
+                              <div className="text-xs font-black text-blue-300">
+                                {getMatchContext(
+                                  match
                                 )}
+
+                                {match.round !==
+                                  null &&
+                                  ` • Тур ${match.round}`}
                               </div>
 
-                              <div className="text-white/20">
-                                →
-                              </div>
+                              <div className="mt-2 grid gap-2 text-sm lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+                                <div className="text-white/45">
+                                  {getPlayerName(
+                                    match.before
+                                      .home_id
+                                  )}{" "}
+                                  —{" "}
+                                  {getPlayerName(
+                                    match.before
+                                      .away_id
+                                  )}
+                                </div>
 
-                              <div className="text-sm font-bold">
-                                {getPlayerName(
-                                  match.after
-                                    .home_id
-                                )}{" "}
-                                —{" "}
-                                {getPlayerName(
-                                  match.after
-                                    .away_id
-                                )}
+                                <div className="text-white/20">
+                                  →
+                                </div>
+
+                                <div className="font-bold">
+                                  {getPlayerName(
+                                    match.after
+                                      .home_id
+                                  )}{" "}
+                                  —{" "}
+                                  {getPlayerName(
+                                    match.after
+                                      .away_id
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )
@@ -1729,11 +2174,14 @@ If the replacement player has already played a finished match, the server will b
 
                 {/* WARNING */}
 
-                <div className="mt-6 rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-4 text-sm leading-6 text-yellow-200">
-                  Confirming this action will write
-                  the replacement to the database.
-                  Finished historical matches will
-                  not be rewritten.
+                <div className="mt-6 rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-4 text-sm leading-7 text-yellow-200">
+                  <b>
+                    Увага.
+                  </b>{" "}
+                  Підтвердження виконає глобальну заміну
+                  гравця в базі даних поточного сезону.
+                  Завершені історичні матчі переписані не
+                  будуть.
                 </div>
 
                 <button
@@ -1748,8 +2196,8 @@ If the replacement player has already played a finished match, the server will b
                 >
                   {loadingAction ===
                   "apply"
-                    ? "Applying..."
-                    : "Confirm Replacement"}
+                    ? "Виконується заміна..."
+                    : "Підтвердити заміну"}
                 </button>
               </div>
             )}
@@ -1760,26 +2208,26 @@ If the replacement player has already played a finished match, the server will b
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                    History
+                    Історія сезону
                   </div>
 
                   <h2 className="mt-2 text-3xl font-black">
-                    Replacement History
+                    Історія замін
                   </h2>
                 </div>
 
                 <div className="text-sm text-white/35">
+                  Замін:{" "}
                   {
                     replacements.length
-                  }{" "}
-                  replacements
+                  }
                 </div>
               </div>
 
               {sortedReplacements.length ===
               0 ? (
                 <div className="mt-7 rounded-2xl border border-white/10 bg-[#030711] p-7 text-center text-white/35">
-                  No replacements for this division.
+                  У цьому сезоні замін ще не було.
                 </div>
               ) : (
                 <div className="mt-7 space-y-4">
@@ -1817,23 +2265,51 @@ If the replacement player has already played a finished match, the server will b
 
                               <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/35">
                                 <span>
-                                  All unfinished
-                                  matches transferred
+                                  Сезон{" "}
+                                  {
+                                    replacement.season
+                                  }
                                 </span>
 
                                 <span>
-                                  Standings inherited:{" "}
+                                  Початковий дивізіон:{" "}
+                                  {
+                                    replacement.division
+                                  }
+                                </span>
+
+                                <span>
+                                  Незавершені матчі
+                                  перенесено глобально
+                                </span>
+
+                                <span>
+                                  Статистику успадковано:{" "}
                                   {replacement
                                     .inherit_standings
-                                    ? "Yes"
-                                    : "No"}
+                                    ? "Так"
+                                    : "Ні"}
                                 </span>
+
+                                {replacement
+                                  .coop_removed_team_id && (
+                                  <span className="text-purple-300/70">
+                                    Місце{" "}
+                                    {
+                                      replacement
+                                        .coop_removed_slot
+                                    }{" "}
+                                    у Co-op звільнено
+                                  </span>
+                                )}
 
                                 <span>
                                   {new Date(
                                     replacement
                                       .created_at
-                                  ).toLocaleString()}
+                                  ).toLocaleString(
+                                    "uk-UA"
+                                  )}
                                 </span>
                               </div>
                             </div>
@@ -1853,12 +2329,13 @@ If the replacement player has already played a finished match, the server will b
                               >
                                 {loadingAction ===
                                 "revert"
-                                  ? "Reverting..."
-                                  : "Revert"}
+                                  ? "Скасування..."
+                                  : "Скасувати заміну"}
                               </button>
                             ) : (
                               <div className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-bold text-white/30">
-                                Revert later replacement first
+                                Спочатку скасуйте наступну
+                                заміну в ланцюжку
                               </div>
                             )}
                           </div>

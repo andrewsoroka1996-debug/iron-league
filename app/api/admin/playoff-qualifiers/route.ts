@@ -10,10 +10,9 @@ type Match = {
   stage: string | null;
 
   /*
-    round тепер використовується
+    round використовується
     як номер пари в сітці.
   */
-
   round: number | null;
 
   leg: number | null;
@@ -53,21 +52,15 @@ const playoffStages = [
 function getExpectedSeriesCount(
   stage: string
 ) {
-  if (
-    stage === "round-of-16"
-  ) {
+  if (stage === "round-of-16") {
     return 8;
   }
 
-  if (
-    stage === "quarterfinal"
-  ) {
+  if (stage === "quarterfinal") {
     return 4;
   }
 
-  if (
-    stage === "semifinal"
-  ) {
+  if (stage === "semifinal") {
     return 2;
   }
 
@@ -281,14 +274,17 @@ export async function GET(
               seriesMatches[0];
 
             const bracketSlot =
-              first?.round ?? null;
+              first?.round ??
+              null;
 
             const seriesHomeId =
-              first?.series_home_id ??
+              first
+                ?.series_home_id ??
               null;
 
             const seriesAwayId =
-              first?.series_away_id ??
+              first
+                ?.series_away_id ??
               null;
 
             /*
@@ -454,13 +450,16 @@ export async function GET(
         .map(
           (series) => ({
             player_id:
-              series.winner_id as string,
+              series
+                .winner_id as string,
 
             source_slot:
-              series.bracket_slot as number,
+              series
+                .bracket_slot as number,
 
             next_round_slot:
-              series.next_round_slot as number,
+              series
+                .next_round_slot as number,
           })
         );
 
@@ -561,23 +560,27 @@ export async function GET(
           const sourceA =
             seriesResults.find(
               (series) =>
-                series.bracket_slot ===
+                series
+                  .bracket_slot ===
                 sourceSlotA
             );
 
           const sourceB =
             seriesResults.find(
               (series) =>
-                series.bracket_slot ===
+                series
+                  .bracket_slot ===
                 sourceSlotB
             );
 
           const playerA =
-            sourceA?.winner_id ??
+            sourceA
+              ?.winner_id ??
             null;
 
           const playerB =
-            sourceB?.winner_id ??
+            sourceB
+              ?.winner_id ??
             null;
 
           return {
@@ -595,43 +598,55 @@ export async function GET(
             player_b:
               playerB,
 
-            source_a: sourceA
-              ? {
-                  series_id:
-                    sourceA.series_id,
+            source_a:
+              sourceA
+                ? {
+                    series_id:
+                      sourceA
+                        .series_id,
 
-                  home_id:
-                    sourceA.home_id,
+                    home_id:
+                      sourceA
+                        .home_id,
 
-                  away_id:
-                    sourceA.away_id,
+                    away_id:
+                      sourceA
+                        .away_id,
 
-                  complete:
-                    sourceA.complete,
+                    complete:
+                      sourceA
+                        .complete,
 
-                  winner_id:
-                    sourceA.winner_id,
-                }
-              : null,
+                    winner_id:
+                      sourceA
+                        .winner_id,
+                  }
+                : null,
 
-            source_b: sourceB
-              ? {
-                  series_id:
-                    sourceB.series_id,
+            source_b:
+              sourceB
+                ? {
+                    series_id:
+                      sourceB
+                        .series_id,
 
-                  home_id:
-                    sourceB.home_id,
+                    home_id:
+                      sourceB
+                        .home_id,
 
-                  away_id:
-                    sourceB.away_id,
+                    away_id:
+                      sourceB
+                        .away_id,
 
-                  complete:
-                    sourceB.complete,
+                    complete:
+                      sourceB
+                        .complete,
 
-                  winner_id:
-                    sourceB.winner_id,
-                }
-              : null,
+                    winner_id:
+                      sourceB
+                        .winner_id,
+                  }
+                : null,
 
             /*
               Конкретну пару
@@ -670,7 +685,8 @@ export async function GET(
         seriesResults
           .map(
             (series) =>
-              series.bracket_slot
+              series
+                .bracket_slot
           )
           .filter(
             (
@@ -715,7 +731,9 @@ export async function GET(
       success: true,
 
       season,
+
       competition,
+
       stage,
 
       expected_series:
