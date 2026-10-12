@@ -1118,82 +1118,112 @@ results.map((match) => (
 
       </section>
 
-      {/* =====================================
-          DIVISIONS
-      ===================================== */}
+      
+{/* =====================================
+    DIVISIONS
+===================================== */}
 
-      <section
-        id="divisions"
-        className="border-y border-white/10 bg-white/[0.02]"
-      >
+<section
+  id="divisions"
+  className="border-y border-white/10 bg-white/[0.02]"
+>
+  <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20">
 
-        <div className="mx-auto max-w-7xl px-6 py-20">
+    {/* SECTION HEADER */}
+    <div className="mb-8">
+      <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
+        Чемпіонат
+      </div>
 
-          <div className="mb-10">
+      <h2 className="mt-3 text-3xl font-black sm:text-4xl">
+        Дивізіони
+      </h2>
 
-            <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-              Чемпіонат
+      <p className="mt-3 text-sm leading-6 text-white/50">
+        Поточні лідери чотирьох дивізіонів Iron League.
+      </p>
+    </div>
+
+    {/* DIVISION CARDS */}
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+      {divisions.map((division) => (
+        <a
+          key={division.number}
+          href={`/divisions/${Number(division.number)}`}
+          className="group block rounded-2xl border border-white/10 bg-[#07101d] p-5 transition-all duration-200 hover:border-blue-400/40 hover:bg-[#0b1729] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 sm:p-6"
+        >
+
+          {/* DIVISION NAME */}
+          <div className="flex items-start justify-between gap-3">
+
+            <div className="text-sm font-black uppercase tracking-wide text-blue-400">
+              {division.name}
             </div>
 
-            <h2 className="mt-3 text-4xl font-black">
-              Дивізіони
-            </h2>
+            <div
+              aria-hidden="true"
+              className="text-3xl font-black leading-none text-white/10"
+            >
+              {division.number}
+            </div>
 
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {/* LEADER AND POINTS */}
+          <div className="mt-6 flex items-end justify-between gap-4">
 
-            {divisions.map((division) => (
+            {/* LEADER */}
+            <div className="min-w-0 flex-1">
 
-              <a
-                key={division.number}
-                href={`/divisions/${Number(
-                  division.number
-                )}`}
-                className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] p-6 transition duration-300 hover:-translate-y-1 hover:border-blue-400/40"
-              >
+              <div className="text-xs font-semibold uppercase tracking-widest text-white/50">
+                Лідер
+              </div>
 
-                <div className="absolute right-3 top-0 text-7xl font-black text-white/[0.025]">
-                  {division.number}
-                </div>
+              <div className="mt-2 break-words text-lg font-black leading-tight text-white sm:text-xl">
+                {division.leader}
+              </div>
 
-                <div className="relative">
+            </div>
 
-                  <div className="text-sm font-black uppercase tracking-wider text-blue-400">
-                    {division.name}
-                  </div>
+            {/* POINTS */}
+            <div className="shrink-0 text-right">
 
-                  <div className="mt-10 text-xs uppercase tracking-[0.2em] text-white/30">
-                    Лідер
-                  </div>
+              <div className="text-3xl font-black tabular-nums text-white">
+                {division.points}
+              </div>
 
-                  <div className="mt-2 text-2xl font-black">
-                    {division.leader}
-                  </div>
+              <div className="mt-1 text-xs uppercase tracking-wide text-white/50">
+                Очок
+              </div>
 
-                  <div className="mt-7 flex items-end justify-between border-t border-white/10 pt-5">
-
-                    <span className="text-sm text-white/35">
-                      Очки
-                    </span>
-
-                    <span className="text-4xl font-black">
-                      {division.points}
-                    </span>
-
-                  </div>
-
-                </div>
-
-              </a>
-
-            ))}
+            </div>
 
           </div>
 
-        </div>
+          {/* CARD FOOTER */}
+          <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
 
-      </section>
+            <span className="text-sm font-semibold text-blue-300">
+              Турнірна таблиця
+            </span>
+
+            <span
+              aria-hidden="true"
+              className="text-lg text-blue-300 transition-transform duration-200 group-hover:translate-x-1"
+            >
+              →
+            </span>
+
+          </div>
+
+        </a>
+      ))}
+
+    </div>
+  </div>
+</section>
+
 
       {/* =====================================
           TOURNAMENTS
