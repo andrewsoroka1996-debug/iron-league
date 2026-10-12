@@ -1,6 +1,7 @@
 
 import Image from "next/image";
 import SiteHeader from "../components/public/SiteHeader";
+import SiteFooter from "../components/public/SiteFooter";
 import { seasonCompetitions } from "../data/competitions/season-competitions";
 import { players } from "../data/players";
 import { season3 } from "../data/seasons/season-3";
@@ -1021,102 +1022,90 @@ export default async function Home() {
 
       </section>
 
-      {/* =====================================
-          RECENT RESULTS
-      ===================================== */}
+      
+{/* RECENT RESULTS */}
+<section
+  id="matches"
+  className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-14"
+>
+  {/* SECTION HEADER */}
+  <div className="mb-5 flex items-end justify-between gap-3">
+    <div>
+      <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
+        Матч-центр
+      </div>
 
-      <section
-        id="matches"
-        className="mx-auto max-w-7xl px-6 py-20"
-      >
+      <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+        Останні результати
+      </h2>
+    </div>
 
-        <div className="mb-10 flex items-end justify-between">
+    <a
+      href="/matches"
+      className="hidden text-sm font-semibold text-blue-300 hover:text-blue-200 sm:block"
+    >
+      Усі матчі →
+    </a>
+  </div>
 
-          <div>
+  {/* MATCH LIST */}
+  <div className="grid gap-2">
+    {results.length === 0 ? (
+      <div className="rounded-xl border border-white/10 bg-[#07101d] p-5 text-center">
+        <div className="font-bold text-white/60">
+          Завершених матчів поки немає
+        </div>
 
-            <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-              Матч-центр
-            </div>
+        <p className="mt-2 text-sm text-white/50">
+          Результати з&apos;являться після внесення рахунків.
+        </p>
+      </div>
+    ) : (
+      results.map((match) => (
+        <div
+          key={match.id}
+          className="rounded-xl border border-white/10 bg-[#07101d] px-3 py-3 transition hover:border-blue-400/30 sm:px-4"
+        >
+          {/* TOURNAMENT */}
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-blue-300 sm:text-xs">
+              {match.tournament}
+            </span>
 
-            <h2 className="mt-3 text-4xl font-black">
-              Останні результати
-            </h2>
-
+            <span className="shrink-0 text-[10px] text-white/45 sm:text-xs">
+              Завершено
+            </span>
           </div>
 
-          <a
-            href="/matches"
-            className="hidden text-sm font-bold text-blue-400 transition hover:text-blue-300 sm:block"
-          >
-            Усі матчі →
-          </a>
-
-        </div>
-
-        <div className="grid gap-4">
-
-          {results.length === 0 ? (
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.025] px-6 py-10 text-center">
-
-              <div className="font-bold text-white/45">
-                Завершених матчів поки немає
-              </div>
-
-              <div className="mt-2 text-sm text-white/25">
-                Результати автоматично з&apos;являться
-                тут після внесення рахунків.
-              </div>
-
+          {/* PLAYERS AND SCORE */}
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1 break-words text-right text-xs font-bold leading-4 text-white sm:text-sm">
+              {match.home}
             </div>
 
-          ) : (
+            <div className="flex min-w-16 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 px-2 py-2 text-base font-black tabular-nums text-blue-300 sm:text-lg">
+              {match.score}
+            </div>
 
-            
-results.map((match) => (
-  <div
-    key={match.id}
-    className="rounded-2xl border border-white/10 bg-[#07101d] p-4 transition hover:border-blue-400/30 sm:p-5"
-  >
-    {/* TOURNAMENT AND STATUS */}
-    <div className="mb-4 flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-      <div className="text-xs font-bold uppercase tracking-wider text-blue-300">
-        {match.tournament}
-      </div>
-
-      <div className="shrink-0 text-xs font-semibold text-white/40">
-        Завершено
-      </div>
-    </div>
-
-    {/* MATCH RESULT */}
-    <div className="flex items-center gap-2 sm:gap-4">
-
-      {/* HOME PLAYER */}
-      <div className="min-w-0 flex-1 break-all text-right text-sm font-bold leading-5 text-white sm:text-base">
-        {match.home}
-      </div>
-
-      {/* SCORE */}
-      <div className="shrink-0 rounded-xl border border-blue-400/10 bg-blue-500/15 px-3 py-2 text-center text-lg font-black tabular-nums text-blue-300 sm:px-5 sm:text-xl">
-        {match.score}
-      </div>
-
-      {/* AWAY PLAYER */}
-      <div className="min-w-0 flex-1 break-all text-left text-sm font-bold leading-5 text-white sm:text-base">
-        {match.away}
-      </div>
-
-    </div>
-  </div>
-))
-
-
-          )}
-
+            <div className="min-w-0 flex-1 break-words text-left text-xs font-bold leading-4 text-white sm:text-sm">
+              {match.away}
+            </div>
+          </div>
         </div>
+      ))
+    )}
+  </div>
 
-      </section>
+  {/* MOBILE ALL MATCHES LINK */}
+  <a
+    href="/matches"
+    className="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-blue-300 sm:hidden"
+  >
+    Усі матчі
+    <span aria-hidden="true">→</span>
+  </a>
+</section>
+
 
       
 
@@ -1303,209 +1292,131 @@ results.map((match) => (
 
 
 
-      {/* =====================================
-          NEWS
-      ===================================== */}
+{/* NEWS */}
+<section
+  id="news"
+  className="border-t border-white/10 bg-white/[0.02]"
+>
+  <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-16">
 
-      <section
-        id="news"
-        className="border-t border-white/10 bg-white/[0.02]"
+    {/* HEADER */}
+    <div className="mb-5">
+      <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
+        НОВИНИ
+      </div>
+
+      <h2 className="mt-2 text-2xl font-black sm:text-4xl">
+        Новини Iron League
+      </h2>
+
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
+        Оголошення, результати, жеребкування та
+        головні події ліги.
+      </p>
+
+      <a
+        href="/news"
+        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-blue-300 hover:text-blue-200"
       >
+        Усі новини
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
 
-        <div className="mx-auto max-w-7xl px-6 py-20">
-
-          <div className="flex flex-wrap items-end justify-between gap-5">
-
-            <div>
-
-              <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-                Новини
-              </div>
-
-              <h2 className="mt-3 text-4xl font-black">
-                Новини Iron League
-              </h2>
-
-              <p className="mt-3 max-w-2xl leading-7 text-white/40">
-                Офіційні оголошення, результати,
-                жеребкування та головні події ліги.
-              </p>
-
-            </div>
-
-            <a
-              href="/news"
-              className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-5 py-3 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/15"
-            >
-              Усі новини →
-            </a>
-
-          </div>
-
-          {latestNews.length === 0 ? (
-
-            <a
-              href="/news"
-              className="group relative mt-10 block overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] px-8 py-14 text-center transition hover:border-blue-400/30"
-            >
-
-              <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[90px]" />
-
-              <div className="relative">
-
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-2xl font-black text-blue-300">
-                  IL
-                </div>
-
-                <h3 className="mt-6 text-2xl font-black">
-                  Новин поки немає
-                </h3>
-
-                <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/40">
-                  Офіційні новини, анонси та головні
-                  події Iron League з&apos;являться
-                  тут після публікації.
-                </p>
-
-                <div className="mt-7 font-black text-blue-300">
-                  Перейти до розділу новин →
-                </div>
-
-              </div>
-
-            </a>
-
-          ) : (
-
-            <div className="mt-10 grid gap-6 lg:grid-cols-3">
-
-              {latestNews.map(
-                (item, index) => (
-
-                  <a
-                    key={item.id}
-                    href={`/news/${item.slug}`}
-                    className={`group overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] transition duration-300 hover:-translate-y-1 hover:border-blue-400/30 ${
-                      index === 0
-                        ? "lg:col-span-2"
-                        : ""
-                    }`}
-                  >
-
-                    <div
-                      className={`relative overflow-hidden bg-[#030711] ${
-                        index === 0
-                          ? "h-72"
-                          : "h-52"
-                      }`}
-                    >
-
-                      {item.image_url ? (
-
-                        <img
-                          src={item.image_url}
-                          alt={item.title}
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                        />
-
-                      ) : (
-
-                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-blue-500/10 to-[#030711]">
-
-                          <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-2xl font-black text-blue-300">
-                            IL
-                          </div>
-
-                        </div>
-
-                      )}
-
-                      <div className="absolute left-5 top-5 rounded-full border border-blue-400/20 bg-[#030711]/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.15em] text-blue-300 backdrop-blur">
-                        {item.category}
-                      </div>
-
-                    </div>
-
-                    <div className="p-6">
-
-                      <div className="text-xs text-white/25">
-                        {formatNewsDate(
-                          item.published_at
-                        )}
-                      </div>
-
-                      <h3
-                        className={`mt-3 font-black leading-tight ${
-                          index === 0
-                            ? "text-3xl"
-                            : "text-2xl"
-                        }`}
-                      >
-                        {item.title}
-                      </h3>
-
-                      {item.excerpt && (
-
-                        <p className="mt-4 line-clamp-3 leading-7 text-white/40">
-                          {item.excerpt}
-                        </p>
-
-                      )}
-
-                      <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5">
-
-                        <span className="text-sm text-white/30">
-                          Читати новину
-                        </span>
-
-                        <span className="text-blue-400 transition group-hover:translate-x-1">
-                          →
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                  </a>
-
-                )
-              )}
-
-            </div>
-
-          )}
-
+    {/* NEWS LIST */}
+    {latestNews.length === 0 ? (
+      <a
+        href="/news"
+        className="block rounded-xl border border-white/10 bg-[#07101d] p-5 text-center"
+      >
+        <div className="font-bold text-white">
+          Новин поки немає
         </div>
 
-      </section>
+        <p className="mt-2 text-sm text-white/50">
+          Новини з&apos;являться після публікації.
+        </p>
+      </a>
+    ) : (
+      <div className="grid gap-2 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {latestNews.map((item) => (
+          <a
+            key={item.id}
+            href={`/news/${item.slug}`}
+            className="group flex overflow-hidden rounded-xl border border-white/10 bg-[#07101d] transition hover:border-blue-400/30 sm:flex-col"
+          >
+
+            {/* IMAGE */}
+            <div className="relative w-24 shrink-0 self-stretch overflow-hidden bg-[#0b1729] sm:h-44 sm:w-full sm:self-auto">
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={item.title}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-500/15 to-[#030711]">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-400/20 bg-blue-500/10 text-sm font-black text-blue-300">
+                    IL
+                  </div>
+
+                  <div className="mt-1 hidden text-[9px] font-bold uppercase tracking-wider text-white/40 sm:block">
+                    IRON LEAGUE NEWS
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* CONTENT */}
+            <div className="flex min-h-28 min-w-0 flex-1 flex-col p-3 sm:p-5">
+
+              {/* CATEGORY */}
+              <div className="text-[10px] font-bold uppercase tracking-wide text-blue-300 sm:text-xs">
+                {item.category}
+              </div>
+
+              {/* TITLE */}
+              <h3 className="mt-1 line-clamp-2 break-words text-sm font-black leading-5 text-white sm:mt-3 sm:text-xl sm:leading-7">
+                {item.title}
+              </h3>
+
+              {/* DESCRIPTION — DESKTOP ONLY */}
+              {item.excerpt && (
+                <p className="mt-2 hidden line-clamp-2 text-sm leading-6 text-white/55 sm:block">
+                  {item.excerpt}
+                </p>
+              )}
+
+              {/* DATE AND LINK */}
+              <div className="mt-auto flex items-center justify-between gap-2 pt-2 sm:mt-4 sm:border-t sm:border-white/10 sm:pt-3">
+
+                <span className="text-[10px] text-white/50 sm:text-xs">
+                  {formatNewsDate(item.published_at)}
+                </span>
+
+                <span
+                  aria-hidden="true"
+                  className="shrink-0 text-lg text-blue-300 transition-transform group-hover:translate-x-1"
+                >
+                  →
+                </span>
+
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+  </div>
+</section>
+
+
 
       {/* =====================================
           FOOTER
       ===================================== */}
 
-      <footer className="border-t border-white/10 bg-[#02050b]">
-
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-10 sm:flex-row sm:items-center sm:justify-between">
-
-          <div>
-
-            <div className="font-black tracking-[0.16em]">
-              IRON LEAGUE
-            </div>
-
-            <div className="mt-1 text-xs text-white/30">
-              Більше ніж гра
-            </div>
-
-          </div>
-
-          <div className="text-sm text-white/30">
-            © 2026 Iron League
-          </div>
-
-        </div>
-
-      </footer>
+      <SiteFooter />
 
     </main>
   );
