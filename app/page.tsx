@@ -1119,140 +1119,110 @@ results.map((match) => (
       </section>
 
       
-{/* =====================================
-    DIVISIONS
-===================================== */}
 
+{/* DIVISIONS */}
 <section
   id="divisions"
   className="border-y border-white/10 bg-white/[0.02]"
 >
-  <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20">
+  <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-16">
 
-    {/* SECTION HEADER */}
-    <div className="mb-8">
+    <div className="mb-5">
       <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
         Чемпіонат
       </div>
 
-      <h2 className="mt-3 text-3xl font-black sm:text-4xl">
+      <h2 className="mt-2 text-3xl font-black sm:text-4xl">
         Дивізіони
       </h2>
 
-      <p className="mt-3 text-sm leading-6 text-white/50">
+      <p className="mt-2 text-sm text-white/50">
         Поточні лідери чотирьох дивізіонів Iron League.
       </p>
     </div>
 
-    {/* DIVISION CARDS */}
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       {divisions.map((division) => (
         <a
           key={division.number}
           href={`/divisions/${Number(division.number)}`}
-          className="group block rounded-2xl border border-white/10 bg-[#07101d] p-5 transition-all duration-200 hover:border-blue-400/40 hover:bg-[#0b1729] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 sm:p-6"
+          className="group block rounded-xl border border-white/10 bg-[#07101d] px-4 py-3 transition-all duration-200 hover:border-blue-400/40 hover:bg-[#0b1729] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 sm:p-5"
         >
-
-          {/* DIVISION NAME */}
-          <div className="flex items-start justify-between gap-3">
-
-            <div className="text-sm font-black uppercase tracking-wide text-blue-400">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-xs font-black uppercase tracking-wide text-blue-400 sm:text-sm">
               {division.name}
             </div>
 
-            <div
-              aria-hidden="true"
-              className="text-3xl font-black leading-none text-white/10"
-            >
+            <div className="text-xl font-black leading-none text-white/15">
               {division.number}
             </div>
-
           </div>
 
-          {/* LEADER AND POINTS */}
-          <div className="mt-6 flex items-end justify-between gap-4">
-
-            {/* LEADER */}
+          <div className="mt-3 flex items-end justify-between gap-3">
             <div className="min-w-0 flex-1">
-
-              <div className="text-xs font-semibold uppercase tracking-widest text-white/50">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-white/45">
                 Лідер
               </div>
 
-              <div className="mt-2 break-words text-lg font-black leading-tight text-white sm:text-xl">
+              <div className="mt-1 break-words text-base font-black leading-tight text-white sm:text-lg">
                 {division.leader}
               </div>
-
             </div>
 
-            {/* POINTS */}
             <div className="shrink-0 text-right">
-
-              <div className="text-3xl font-black tabular-nums text-white">
+              <div className="text-2xl font-black leading-none tabular-nums text-white">
                 {division.points}
               </div>
 
-              <div className="mt-1 text-xs uppercase tracking-wide text-white/50">
+              <div className="mt-1 text-[10px] uppercase text-white/50">
                 Очок
               </div>
-
             </div>
-
           </div>
 
-          {/* CARD FOOTER */}
-          <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
-
-            <span className="text-sm font-semibold text-blue-300">
+          <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-2">
+            <span className="text-xs font-semibold text-blue-300">
               Турнірна таблиця
             </span>
 
             <span
               aria-hidden="true"
-              className="text-lg text-blue-300 transition-transform duration-200 group-hover:translate-x-1"
+              className="text-base text-blue-300 transition-transform group-hover:translate-x-1"
             >
               →
             </span>
-
           </div>
-
         </a>
       ))}
-
     </div>
   </div>
 </section>
 
 
-      
-{/* =====================================
-    TOURNAMENTS
-===================================== */}
 
+      
+
+{/* TOURNAMENTS */}
 <section
   id="tournaments"
-  className="mx-auto max-w-7xl scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20"
+  className="mx-auto max-w-7xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16"
 >
-  {/* SECTION HEADER */}
-  <div className="mb-8">
+  <div className="mb-6">
     <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
       IRON LEAGUE
     </div>
 
-    <h2 className="mt-3 text-3xl font-black sm:text-4xl">
+    <h2 className="mt-2 text-3xl font-black sm:text-4xl">
       Турніри
     </h2>
 
-    <p className="mt-3 text-sm text-white/50">
+    <p className="mt-2 text-sm text-white/50">
       Сезон {currentSeason} • Усі змагання ліги
     </p>
   </div>
 
-  {/* TOURNAMENT GRID */}
-  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
     {tournaments.map((tournament) => {
-      // Visual accent only — no tournament logic changes
       const accents: Record<string, string> = {
         "season-qualification": "#60A5FA",
         "champions-league": "#E9A83B",
@@ -1270,9 +1240,8 @@ results.map((match) => (
         <a
           key={tournament.id}
           href={tournament.href}
-          className="group relative flex min-h-44 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:bg-[#0b1729] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 sm:p-6"
+          className="group relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-[#07101d] px-4 py-3.5 transition-all duration-200 hover:border-white/25 hover:bg-[#0b1729] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 sm:p-5"
         >
-          {/* SUBTLE ACCENT GLOW */}
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0"
@@ -1281,17 +1250,15 @@ results.map((match) => (
             }}
           />
 
-          {/* LEFT ACCENT LINE */}
           <div
             aria-hidden="true"
-            className="absolute left-0 top-5 h-10 w-0.5 rounded-r"
+            className="absolute left-0 top-4 h-8 w-0.5 rounded-r"
             style={{ backgroundColor: accent }}
           />
 
-          {/* TOP ROW */}
-          <div className="relative flex items-start justify-between gap-3">
+          <div className="relative flex items-center justify-between gap-3">
             <div
-              className="flex h-11 min-w-11 items-center justify-center rounded-xl border px-2 text-sm font-black"
+              className="flex h-9 min-w-9 items-center justify-center rounded-lg border px-2 text-xs font-black"
               style={{
                 color: accent,
                 borderColor: `${accent}44`,
@@ -1303,26 +1270,25 @@ results.map((match) => (
 
             <div
               aria-hidden="true"
-              className="select-none text-5xl font-black leading-none text-white/[0.04]"
+              className="select-none text-4xl font-black leading-none text-white/[0.05]"
             >
               {tournament.short}
             </div>
           </div>
 
-          {/* TOURNAMENT CONTENT */}
-          <div className="relative mt-auto pt-6">
-            <h3 className="text-xl font-black leading-tight text-white sm:text-2xl">
+          <div className="relative mt-3">
+            <h3 className="text-lg font-black leading-tight text-white sm:text-xl">
               {tournament.name}
             </h3>
 
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-white/55 transition-colors group-hover:text-white">
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-white/55 group-hover:text-white">
                 Відкрити турнір
               </span>
 
               <span
                 aria-hidden="true"
-                className="text-xl font-bold transition-transform duration-200 group-hover:translate-x-1"
+                className="text-lg font-bold transition-transform group-hover:translate-x-1"
                 style={{ color: accent }}
               >
                 →
@@ -1334,6 +1300,7 @@ results.map((match) => (
     })}
   </div>
 </section>
+
 
 
       {/* =====================================
