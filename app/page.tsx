@@ -1225,72 +1225,116 @@ results.map((match) => (
 </section>
 
 
-      {/* =====================================
-          TOURNAMENTS
-      ===================================== */}
+      
+{/* =====================================
+    TOURNAMENTS
+===================================== */}
 
-      <section
-        id="tournaments"
-        className="mx-auto max-w-7xl px-6 py-20"
-      >
+<section
+  id="tournaments"
+  className="mx-auto max-w-7xl scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20"
+>
+  {/* SECTION HEADER */}
+  <div className="mb-8">
+    <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
+      IRON LEAGUE
+    </div>
 
-        <div className="mb-10">
+    <h2 className="mt-3 text-3xl font-black sm:text-4xl">
+      Турніри
+    </h2>
 
-          <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-            Iron League
-          </div>
+    <p className="mt-3 text-sm text-white/50">
+      Сезон {currentSeason} • Усі змагання ліги
+    </p>
+  </div>
 
-          <h2 className="mt-3 text-4xl font-black">
-            Турніри
-          </h2>
+  {/* TOURNAMENT GRID */}
+  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    {tournaments.map((tournament) => {
+      // Visual accent only — no tournament logic changes
+      const accents: Record<string, string> = {
+        "season-qualification": "#60A5FA",
+        "champions-league": "#E9A83B",
+        "europa-league": "#F59E0B",
+        "conference-league": "#34D399",
+        "european-super-cup": "#FBBF24",
+        "division-cups": "#60A5FA",
+        "associations-cup": "#A78BFA",
+        "iron-coop-cup": "#22D3EE",
+      };
 
-          <div className="mt-2 text-sm text-white/35">
-            Сезон {currentSeason}
-          </div>
+      const accent = accents[tournament.id] ?? "#60A5FA";
 
-        </div>
+      return (
+        <a
+          key={tournament.id}
+          href={tournament.href}
+          className="group relative flex min-h-44 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:bg-[#0b1729] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 sm:p-6"
+        >
+          {/* SUBTLE ACCENT GLOW */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: `radial-gradient(circle at top right, ${accent}18, transparent 70%)`,
+            }}
+          />
 
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {/* LEFT ACCENT LINE */}
+          <div
+            aria-hidden="true"
+            className="absolute left-0 top-5 h-10 w-0.5 rounded-r"
+            style={{ backgroundColor: accent }}
+          />
 
-          {tournaments.map((tournament) => (
-
-            <a
-              key={tournament.id}
-              href={tournament.href}
-              className="group relative min-h-52 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-500/10 via-[#07101d] to-[#030711] p-7 transition duration-300 hover:-translate-y-1 hover:border-blue-400/40"
+          {/* TOP ROW */}
+          <div className="relative flex items-start justify-between gap-3">
+            <div
+              className="flex h-11 min-w-11 items-center justify-center rounded-xl border px-2 text-sm font-black"
+              style={{
+                color: accent,
+                borderColor: `${accent}44`,
+                backgroundColor: `${accent}16`,
+              }}
             >
+              {tournament.short}
+            </div>
 
-              <div className="absolute -right-5 -top-7 text-[110px] font-black text-white/[0.025]">
-                {tournament.short}
-              </div>
+            <div
+              aria-hidden="true"
+              className="select-none text-5xl font-black leading-none text-white/[0.04]"
+            >
+              {tournament.short}
+            </div>
+          </div>
 
-              <div className="relative flex h-full flex-col justify-between">
+          {/* TOURNAMENT CONTENT */}
+          <div className="relative mt-auto pt-6">
+            <h3 className="text-xl font-black leading-tight text-white sm:text-2xl">
+              {tournament.name}
+            </h3>
 
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/10 font-black text-blue-300">
-                  {tournament.short}
-                </div>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-white/55 transition-colors group-hover:text-white">
+                Відкрити турнір
+              </span>
 
-                <div>
+              <span
+                aria-hidden="true"
+                className="text-xl font-bold transition-transform duration-200 group-hover:translate-x-1"
+                style={{ color: accent }}
+              >
+                →
+              </span>
+            </div>
+          </div>
+        </a>
+      );
+    })}
+  </div>
+</section>
 
-                  <div className="text-2xl font-black">
-                    {tournament.name}
-                  </div>
-
-                  <div className="mt-2 text-sm text-white/35">
-                    Перейти до турніру →
-                  </div>
-
-                </div>
-
-              </div>
-
-            </a>
-
-          ))}
-
-        </div>
-
-      </section>
 
       {/* =====================================
           NEWS
