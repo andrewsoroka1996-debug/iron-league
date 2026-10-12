@@ -1,4 +1,5 @@
 import Image from "next/image";
+import SiteHeader from "../components/public/SiteHeader";
 import { seasonCompetitions } from "../data/competitions/season-competitions";
 
 import { players } from "../data/players";
@@ -959,91 +960,9 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-[#030711] text-white">
       {/* HEADER */}
+<SiteHeader />
 
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a
-            href="/"
-            className="flex items-center gap-4"
-          >
-            <img
-              src="/iron-league-logo.jpg"
-              alt="Iron League"
-              className="h-16 w-auto object-contain"
-            />
-
-            <div>
-              <div className="text-xl font-black tracking-[0.18em]">
-                IRON LEAGUE
-              </div>
-
-              <div className="text-[10px] uppercase tracking-[0.35em] text-white/40">
-                більше ніж гра
-              </div>
-            </div>
-          </a>
-
-          <nav className="hidden items-center gap-7 text-sm font-semibold text-white/60 lg:flex">
-            <a
-              href="/"
-              className="text-white"
-            >
-              Головна
-            </a>
-
-            <a
-              href="/matches"
-              className="transition hover:text-white"
-            >
-              Матчі
-            </a>
-
-            <a
-              href="/divisions"
-              className="transition hover:text-white"
-            >
-              Дивізіони
-            </a>
-
-            <a
-              href="#tournaments"
-              className="transition hover:text-white"
-            >
-              Турніри
-            </a>
-
-            <a
-              href="/players"
-              className="transition hover:text-white"
-            >
-              Гравці
-            </a>
-
-            <a
-  href="/coefficients"
-  className="transition hover:text-white"
->
-  Коефіцієнти
-</a>
-
-            <a
-              href="/history"
-              className="transition hover:text-white"
-            >
-              Історія
-            </a>
-
-            <a
-              href="/news"
-              className="transition hover:text-white"
-            >
-              Новини
-            </a>
-          </nav>
-        </div>
-      </header>
-
-      {/* HERO */}
+{/* HERO */}
 
       <section className="relative overflow-hidden border-b border-white/10">
         <Image
