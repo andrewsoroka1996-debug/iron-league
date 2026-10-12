@@ -1,14 +1,68 @@
+
 @import "tailwindcss";
+
+/* ========================================
+   BASE THEME
+======================================== */
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
+/* ========================================
+   IRON LEAGUE DESIGN SYSTEM V1
+======================================== */
+
+:root {
+  /* Backgrounds */
+  --il-background: #030711;
+  --il-surface: #07101d;
+  --il-surface-elevated: #142338;
+
+  /* Brand */
+  --il-primary: #3b82f6;
+  --il-primary-hover: #60a5fa;
+  --il-gold: #e9a83b;
+
+  /* Typography */
+  --il-text: #f8fafc;
+  --il-text-secondary: #94a3b8;
+  --il-text-muted: #64748b;
+
+  /* Borders */
+  --il-border: rgba(255, 255, 255, 0.10);
+
+  /* Corners */
+  --il-radius-card: 24px;
+  --il-radius-button: 12px;
+}
+
+/* ========================================
+   TAILWIND THEME TOKENS
+======================================== */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-il-background: var(--il-background);
+  --color-il-surface: var(--il-surface);
+  --color-il-elevated: var(--il-surface-elevated);
+
+  --color-il-primary: var(--il-primary);
+  --color-il-primary-hover: var(--il-primary-hover);
+  --color-il-gold: var(--il-gold);
+
+  --color-il-text: var(--il-text);
+  --color-il-secondary: var(--il-text-secondary);
+  --color-il-muted: var(--il-text-muted);
+  --color-il-border: var(--il-border);
 }
+
+/* ========================================
+   EXISTING GLOBAL BEHAVIOR
+======================================== */
 
 @media (prefers-color-scheme: dark) {
   :root {
