@@ -100,7 +100,7 @@ export default function DivisionSchedule({
           </h2>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-4 sm:space-y-8">
           {roundNumbers.map((roundNumber) => {
             const roundMatches =
               matchesWithRound.filter(
@@ -113,14 +113,14 @@ export default function DivisionSchedule({
                 key={roundNumber}
                 className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]"
               >
-                <div className="border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-6 py-5">
+                <div className="border-b border-white/10 bg-gradient-to-r from-blue-500/15 to-transparent px-4 py-3 sm:px-6 sm:py-5">
                   <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
                     Чемпіонат
                   </div>
 
-                  <h3 className="mt-1 text-2xl font-black">
-                    Тур {roundNumber}
-                  </h3>
+                  <h3 className="mt-1 text-xl font-black sm:text-2xl">
+  Тур {roundNumber}
+</h3>
                 </div>
 
                 <div>
@@ -133,60 +133,57 @@ export default function DivisionSchedule({
                       match.away_goals !==
                         null;
 
-                    return (
-                      <div
-                        key={match.id}
-                        className="grid items-center gap-4 border-b border-white/5 px-6 py-5 last:border-b-0 md:grid-cols-[1fr_auto_1fr]"
-                      >
-                        <a
-                          href={`/players/${match.home_id}?season=${season}`}
-                          className="text-center font-bold transition hover:text-blue-300 md:text-right"
-                        >
-                          {getNickname(
-                            match.home_id
-                          )}
-                        </a>
+                    
+return (
+  <div
+    key={match.id}
+    className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-white/5 px-3 py-3 last:border-b-0 md:gap-4 md:px-6 md:py-5"
+  >
+    {/* HOME PLAYER */}
+    <a
+      href={`/players/${match.home_id}?season=${season}`}
+      className="min-w-0 break-words text-right text-xs font-bold leading-4 transition hover:text-blue-300 md:text-base md:leading-normal"
+    >
+      {getNickname(match.home_id)}
+    </a>
 
-                        <div className="text-center">
-                          {finished ? (
-                            <div>
-                              <div className="inline-flex min-w-24 justify-center rounded-xl bg-blue-500/15 px-5 py-2 text-xl font-black text-blue-300">
-                                {
-                                  match.home_goals
-                                }
-                                {" : "}
-                                {
-                                  match.away_goals
-                                }
-                              </div>
+    {/* RESULT */}
+    <div className="min-w-[58px] text-center">
+      {finished ? (
+        <div>
+          <div className="inline-flex min-w-[58px] justify-center rounded-lg bg-blue-500/15 px-2 py-2 text-sm font-black text-blue-300 md:min-w-24 md:rounded-xl md:px-5 md:text-xl">
+            {match.home_goals}
+            {" : "}
+            {match.away_goals}
+          </div>
 
-                              <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-green-400/70">
-                                Завершено
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="inline-flex min-w-24 justify-center rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-bold text-white/35">
-                                VS
-                              </div>
+          <div className="mt-1 text-[9px] font-bold uppercase tracking-wide text-green-400/70 md:mt-2 md:text-[10px] md:tracking-[0.18em]">
+            Завершено
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="inline-flex min-w-[58px] justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-xs font-bold text-white/35 md:min-w-24 md:rounded-xl md:px-5 md:text-sm">
+            VS
+          </div>
 
-                              <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/20">
-                                Не зіграно
-                              </div>
-                            </div>
-                          )}
-                        </div>
+          <div className="mt-1 text-[9px] font-bold uppercase tracking-wide text-white/30 md:mt-2 md:text-[10px] md:tracking-[0.18em]">
+            Не зіграно
+          </div>
+        </div>
+      )}
+    </div>
 
-                        <a
-                          href={`/players/${match.away_id}?season=${season}`}
-                          className="text-center font-bold transition hover:text-blue-300 md:text-left"
-                        >
-                          {getNickname(
-                            match.away_id
-                          )}
-                        </a>
-                      </div>
-                    );
+    {/* AWAY PLAYER */}
+    <a
+      href={`/players/${match.away_id}?season=${season}`}
+      className="min-w-0 break-words text-left text-xs font-bold leading-4 transition hover:text-blue-300 md:text-base md:leading-normal"
+    >
+      {getNickname(match.away_id)}
+    </a>
+  </div>
+);
+
                   })}
                 </div>
               </div>
