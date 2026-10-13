@@ -346,7 +346,7 @@ export default async function GroupStagePage({
     europaLeague: {
       accent: "text-orange-400",
       accentSoft: "text-orange-300",
-      active: "bg-orange-600 shadow-orange-500/20",
+      active: "bg-orange-700 shadow-orange-500/20",
     },
 
     conferenceLeague: {
