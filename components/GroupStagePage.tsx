@@ -585,7 +585,7 @@ export default async function GroupStagePage({
 
   {/* TABLE HEADER */}
 
-<div className="grid grid-cols-[28px_minmax(0,1fr)_26px_34px_14px] items-center gap-2 border-b border-white/10 bg-white/[0.035] px-3 py-1.5 text-[10px] font-bold uppercase text-white/45">
+<div className="grid grid-cols-[28px_minmax(0,1fr)_26px_34px_14px] items-center gap-2 border-b border-white/10 bg-white/[0.035] px-3 py-1.5 text-[10px] font-bold uppercase text-white/80">
     <span className="text-center">#</span>
     <span className="text-[9px] tracking-tight">
   Гравець
