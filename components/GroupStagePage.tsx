@@ -883,7 +883,7 @@ export default async function GroupStagePage({
 
 {/* MOBILE LEGEND */}
 {totalPlayers > 0 && (
-  <div className="mt-4 flex flex-wrap gap-5 px-1 text-xs text-white/45 lg:hidden">
+  <div className="mt-4 flex flex-wrap gap-5 px-1 text-xs text-white/80 lg:hidden">
     <span>
       <b className="text-white/70">І</b> — ігри
     </span>
