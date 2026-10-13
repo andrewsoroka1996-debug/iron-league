@@ -1,4 +1,7 @@
 import StadiumBackground from "../../../components/StadiumBackground";
+import Link from "next/link";
+import SiteHeader from "../../../components/public/SiteHeader";
+import SiteFooter from "../../../components/public/SiteFooter";
 import { season3 } from "../../../data/seasons/season-3";
 
 import {
@@ -201,193 +204,206 @@ const tournaments: TournamentCard[] = [
     : []),
 ];
 
+
 export default function Season3HistoryPage() {
   return (
     <main className="min-h-screen bg-[#030711] text-white">
-      {/* HEADER */}
-
-      <header className="border-b border-white/10 bg-[#030711]/95">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a
-            href="/"
-            className="flex items-center gap-4"
-          >
-            <img
-              src="/iron-league-logo.jpg"
-              alt="Iron League"
-              className="h-14 w-auto object-contain"
-            />
-
-            <div>
-              <div className="font-black tracking-[0.18em]">
-                IRON LEAGUE
-              </div>
-
-              <div className="text-xs text-white/35">
-                Історія • Сезон 3
-              </div>
-            </div>
-          </a>
-
-          <a
-            href="/history"
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
-          >
-            ← Усі сезони
-          </a>
-        </div>
-      </header>
+      {/* GLOBAL HEADER */}
+      <SiteHeader />
 
       {/* HERO */}
-
       <section className="relative overflow-hidden border-b border-white/10">
-        <StadiumBackground
-  opacity="20"
-  preload
-/>
+        <StadiumBackground opacity="20" preload />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/70" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/75" />
 
-        <div className="relative mx-auto max-w-7xl px-6 py-20">
-          <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
-            Iron League
-          </div>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/80" />
 
-          <h1 className="mt-4 text-5xl font-black sm:text-6xl">
-            Сезон 3
-          </h1>
+        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
+          {/* BACK LINK */}
+          <Link
+            href="/history"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-blue-300 transition hover:text-blue-200 sm:text-sm"
+          >
+            <span aria-hidden="true">←</span>
+            Усі сезони
+          </Link>
 
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/45">
-            Поточний сезон Iron League.
-            Результати, таблиці та
-            переможці оновлюються
-            автоматично в міру
-            проведення турнірів.
-          </p>
-
-          <div className="mt-9 flex flex-wrap gap-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3">
-              <span className="text-sm text-white/40">
-                Дивізіонів
-              </span>
-
-              <span className="ml-2 font-black">
-                4
-              </span>
+          {/* SEASON TITLE */}
+          <div className="mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs">
+              IRON LEAGUE · HISTORY
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3">
-              <span className="text-sm text-white/40">
-                Гравців
-              </span>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
+                Сезон 3
+              </h1>
 
-              <span className="ml-2 font-black">
-                {playerIds.length}
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3">
-              <span className="text-sm text-white/40">
-                Турнірів
-              </span>
-
-              <span className="ml-2 font-black">
-                {tournaments.length}
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-blue-400/20 bg-blue-500/[0.08] px-5 py-3">
-              <span className="text-sm text-white/40">
-                Статус
-              </span>
-
-              <span className="ml-2 font-black text-blue-300">
+              <span className="rounded-full border border-blue-400/30 bg-blue-500/15 px-3 py-1 text-[11px] font-bold text-blue-300">
                 Поточний сезон
               </span>
+            </div>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              Третій сезон Iron League.
+              Турнірні таблиці, результати матчів,
+              статистика учасників та досягнення.
+            </p>
+          </div>
+
+          {/* SEASON STATISTICS */}
+          <div className="mt-7 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+            {/* DIVISIONS */}
+            <div className="rounded-xl border border-white/10 bg-[#07101d]/80 px-4 py-3 backdrop-blur-sm sm:min-w-36">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                Дивізіонів
+              </div>
+
+              <div className="mt-1 text-2xl font-black tabular-nums text-white">
+                4
+              </div>
+            </div>
+
+            {/* PLAYERS */}
+            <div className="rounded-xl border border-white/10 bg-[#07101d]/80 px-4 py-3 backdrop-blur-sm sm:min-w-36">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                Гравців
+              </div>
+
+              <div className="mt-1 text-2xl font-black tabular-nums text-white">
+                {playerIds.length}
+              </div>
+            </div>
+
+            {/* TOURNAMENTS */}
+            <div className="rounded-xl border border-white/10 bg-[#07101d]/80 px-4 py-3 backdrop-blur-sm sm:min-w-36">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                Турнірів
+              </div>
+
+              <div className="mt-1 text-2xl font-black tabular-nums text-blue-300">
+                {tournaments.length}
+              </div>
+            </div>
+
+            {/* STATUS */}
+            <div className="rounded-xl border border-blue-400/25 bg-blue-500/[0.08] px-4 py-3 backdrop-blur-sm sm:min-w-44">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                Статус
+              </div>
+
+              <div className="mt-2 text-base font-black text-blue-300">
+                Поточний сезон
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* TOURNAMENTS */}
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
+        {/* SECTION HEADER */}
+        <div className="mb-6 sm:mb-8">
+          <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-400 sm:text-xs">
+            ЗМАГАННЯ IRON LEAGUE
+          </div>
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
-        <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-          Турніри
+          <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+            Турніри сезону 3
+          </h2>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">
+            Чемпіонати дивізіонів, кубки, європейські
+            та інші змагання третього сезону.
+          </p>
         </div>
 
-        <h2 className="mt-3 text-4xl font-black">
-          Сезон 3
-        </h2>
+        {/* TOURNAMENT GRID */}
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+          {tournaments.map((tournament) => (
+            <Link
+              key={tournament.id}
+              href={tournament.href}
+              className="group relative flex min-h-[150px] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-400/35 hover:bg-[#0a1729] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 sm:min-h-[175px] sm:p-5"
+            >
+              {/* BACKGROUND ACCENT */}
+              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-500/[0.06] blur-3xl" />
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {tournaments.map(
-            (tournament) => (
-              <a
-                key={tournament.id}
-                href={tournament.href}
-                className="group rounded-3xl border border-white/10 bg-[#07101d] p-7 transition hover:-translate-y-1 hover:border-blue-400/30"
-              >
-                <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-400">
-                  {
-                    tournament.category
-                  }
+              <div className="relative flex flex-1 flex-col">
+                {/* CATEGORY */}
+                <div className="flex items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="h-6 w-1 shrink-0 rounded-full bg-blue-400"
+                  />
+
+                  <span className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-400 sm:text-[11px]">
+                    {tournament.category}
+                  </span>
                 </div>
 
-                <h3 className="mt-5 text-2xl font-black">
+                {/* TOURNAMENT NAME */}
+                <h3 className="mt-4 min-w-0 break-words text-xl font-black leading-snug text-white sm:text-2xl">
                   {tournament.name}
                 </h3>
 
-                <div className="mt-7 flex items-center justify-between border-t border-white/10 pt-5">
-                  <span className="text-sm text-white/30">
-                    Відкрити
+                {/* CARD FOOTER */}
+                <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+                  <span className="text-xs font-bold text-blue-300 transition group-hover:text-blue-200 sm:text-sm">
+                    Переглянути турнір
                   </span>
 
-                  <span className="text-blue-400">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/10 text-lg text-blue-300 transition-all duration-300 group-hover:translate-x-1 group-hover:border-blue-400/40 group-hover:bg-blue-500/20"
+                  >
                     →
                   </span>
                 </div>
-              </a>
-            )
-          )}
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
       {/* HALL OF FAME */}
-
       <section className="border-t border-white/10 bg-white/[0.02]">
-        <div className="mx-auto max-w-7xl px-6 py-16">
-          <div className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
-            Hall of Fame
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
+          {/* SECTION HEADER */}
+          <div className="mb-6 sm:mb-8">
+            <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-yellow-300 sm:text-xs">
+              HALL OF FAME
+            </div>
+
+            <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+              Переможці сезону
+            </h2>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">
+              Зафіксовані досягнення та трофеї
+              учасників третього сезону Iron League.
+            </p>
           </div>
 
-          <h2 className="mt-3 text-3xl font-black">
-            Переможці сезону
-          </h2>
-
+          {/* EXISTING WINNERS COMPONENT */}
           <SeasonWinners season={3} />
         </div>
       </section>
 
-      {/* FOOTER */}
+      {/* BACK TO HISTORY */}
+      <section className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-9">
+        <Link
+          href="/history"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-5 py-3 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/15"
+        >
+          <span aria-hidden="true">←</span>
+          Усі сезони Iron League
+        </Link>
+      </section>
 
-      <footer className="border-t border-white/10 bg-[#02050b]">
-        <div className="mx-auto flex max-w-7xl justify-between px-6 py-10">
-          <div>
-            <div className="font-black tracking-[0.16em]">
-              IRON LEAGUE
-            </div>
-
-            <div className="mt-1 text-xs text-white/30">
-              Більше ніж гра
-            </div>
-          </div>
-
-          <div className="text-sm text-white/30">
-            © 2026 Iron League
-          </div>
-        </div>
-      </footer>
+      {/* GLOBAL FOOTER */}
+      <SiteFooter />
     </main>
   );
 }

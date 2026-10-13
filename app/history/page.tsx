@@ -1,21 +1,26 @@
+
+import Link from "next/link";
+
 import StadiumBackground from "../../components/StadiumBackground";
+import SiteHeader from "../../components/public/SiteHeader";
+import SiteFooter from "../../components/public/SiteFooter";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const seasons = [
   {
-  number: 1,
-  title: "Сезон 1",
-  status: "Архів",
-  href: "/history/season-1",
-},
-{
-  number: 2,
-  title: "Сезон 2",
-  status: "Архів",
-  href: "/history/season-2",
-},
+    number: 1,
+    title: "Сезон 1",
+    status: "Архів",
+    href: "/history/season-1",
+  },
+  {
+    number: 2,
+    title: "Сезон 2",
+    status: "Архів",
+    href: "/history/season-2",
+  },
   {
     number: 3,
     title: "Сезон 3",
@@ -33,143 +38,168 @@ const seasons = [
 export default function HistoryPage() {
   return (
     <main className="min-h-screen bg-[#030711] text-white">
-      {/* HEADER */}
-
-      <header className="border-b border-white/10 bg-[#030711]/95">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a
-            href="/"
-            className="flex items-center gap-4"
-          >
-            <img
-              src="/iron-league-logo.jpg"
-              alt="Iron League"
-              className="h-14 w-auto object-contain"
-            />
-
-            <div>
-              <div className="font-black tracking-[0.18em]">
-                IRON LEAGUE
-              </div>
-
-              <div className="text-xs text-white/35">
-                Історія
-              </div>
-            </div>
-          </a>
-
-          <a
-            href="/"
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
-          >
-            ← На головну
-          </a>
-        </div>
-      </header>
+      {/* GLOBAL HEADER */}
+      <SiteHeader />
 
       {/* HERO */}
-
       <section className="relative overflow-hidden border-b border-white/10">
-        <StadiumBackground
-  opacity="20"
-  preload
-/>
+        <StadiumBackground opacity="20" preload />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/70" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/75" />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/75" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/80" />
 
-        <div className="relative mx-auto max-w-7xl px-6 py-20">
-          <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
-            Iron League
+        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
+          {/* BACK LINK */}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-blue-300 transition hover:text-blue-200 sm:text-sm"
+          >
+            <span aria-hidden="true">←</span>
+            На головну
+          </Link>
+
+          {/* TITLE */}
+          <div className="mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs">
+              IRON LEAGUE · HISTORY
+            </div>
+
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+              Історія ліги
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              Історія сезонів Iron League: склади учасників,
+              турнірні таблиці, переможці, кубки,
+              статистика та головні події ліги.
+            </p>
           </div>
 
-          <h1 className="mt-4 text-5xl font-black sm:text-6xl">
-            Історія ліги
-          </h1>
+          {/* ARCHIVE INFORMATION */}
+          <div className="mt-6 inline-flex items-center gap-3 rounded-xl border border-blue-400/15 bg-[#07101d]/80 px-4 py-3 backdrop-blur-sm">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-xl font-black text-blue-300">
+              {seasons.length}
+            </div>
 
-          <p className="mt-5 max-w-3xl text-lg leading-8 text-white/45">
-            Архів сезонів Iron League:
-            склади, таблиці, турніри,
-            переможці, статистика та
-            головні події.
+            <div>
+              <div className="text-sm font-black text-white">
+                Сезони Iron League
+              </div>
+
+              <div className="mt-0.5 text-xs text-white/45">
+                Історія та розвиток чемпіонату
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SEASON ARCHIVE */}
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
+        {/* SECTION HEADER */}
+        <div className="mb-6 sm:mb-8">
+          <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-400 sm:text-xs">
+            АРХІВ IRON LEAGUE
+          </div>
+
+          <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+            Історія за сезонами
+          </h2>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">
+            Обери сезон, щоб переглянути його історію,
+            результати та турніри.
           </p>
         </div>
+
+        {/* SEASONS GRID */}
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-5">
+          {seasons.map((season) => {
+            const isCurrent = season.number === 3;
+            const isPreparing = season.number === 4;
+
+            return (
+              <Link
+                key={season.number}
+                href={season.href}
+                aria-label={`Відкрити ${season.title}`}
+                className={`group relative flex min-h-[190px] min-w-0 flex-col overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-400/40 hover:shadow-[0_18px_45px_rgba(0,0,0,0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 sm:min-h-[215px] sm:p-6 ${
+                  isCurrent
+                    ? "border-blue-400/25 bg-[#09182c]"
+                    : "border-white/10 bg-[#07101d]"
+                }`}
+              >
+                {/* BACKGROUND EFFECT */}
+                <div className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-blue-500/[0.07] blur-3xl" />
+
+                {/* BACKGROUND NUMBER */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-3 top-3 text-[105px] font-black leading-none tracking-tighter text-white/[0.035] sm:text-[120px]"
+                >
+                  {String(season.number).padStart(2, "0")}
+                </div>
+
+                {/* CARD CONTENT */}
+                <div className="relative flex flex-1 flex-col">
+                  {/* NUMBER AND STATUS */}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="h-7 w-1 rounded-full bg-blue-400" />
+
+                      <span className="text-[11px] font-black uppercase tracking-[0.15em] text-blue-400">
+                        SEASON{" "}
+                        {String(season.number).padStart(2, "0")}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`rounded-full border px-3 py-1 text-[10px] font-bold ${
+                        isCurrent
+                          ? "border-blue-400/25 bg-blue-500/10 text-blue-300"
+                          : isPreparing
+                            ? "border-white/10 bg-white/[0.04] text-white/45"
+                            : "border-white/15 bg-white/[0.05] text-white/60"
+                      }`}
+                    >
+                      {season.status}
+                    </span>
+                  </div>
+
+                  {/* SEASON TITLE */}
+                  <div className="mt-5">
+                    <h3 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                      {season.title}
+                    </h3>
+
+                    <p className="mt-2 text-sm leading-6 text-white/45">
+                      Матеріали та історія виступів учасників.
+                    </p>
+                  </div>
+
+                  {/* CARD FOOTER */}
+                  <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+                    <span className="text-xs font-bold text-blue-300 transition group-hover:text-blue-200 sm:text-sm">
+                      Переглянути сезон
+                    </span>
+
+                    <span
+                      aria-hidden="true"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/10 text-lg text-blue-300 transition-all duration-300 group-hover:translate-x-1 group-hover:border-blue-400/40 group-hover:bg-blue-500/20"
+                    >
+                      →
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </section>
 
-      {/* SEASONS */}
-
-      <section className="mx-auto max-w-7xl px-6 py-16">
-        <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-          Архів
-        </div>
-
-        <h2 className="mt-3 text-3xl font-black">
-          Сезони
-        </h2>
-
-        <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {seasons.map((season) => (
-            <a
-              key={season.number}
-              href={season.href}
-              className="group relative min-h-[250px] overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] p-7 transition duration-300 hover:-translate-y-1 hover:border-blue-400/30 hover:bg-[#091525]"
-            >
-              {/* BACKGROUND NUMBER */}
-
-              <div className="pointer-events-none absolute right-5 top-0 text-[115px] font-black leading-none text-white/[0.025]">
-                {season.number}
-              </div>
-
-              {/* CONTENT */}
-
-              <div className="relative flex h-full flex-col">
-                <div className="text-xs font-black uppercase tracking-[0.24em] text-blue-400">
-                  Iron League
-                </div>
-
-                <h3 className="mt-5 text-3xl font-black">
-                  {season.title}
-                </h3>
-
-                <div className="mt-3 text-sm text-white/35">
-                  {season.status}
-                </div>
-
-                <div className="mt-auto flex items-center justify-between pt-12">
-                  <span className="font-bold text-blue-300">
-                    Відкрити сезон
-                  </span>
-
-                  <span className="text-blue-400 transition group-hover:translate-x-1">
-                    →
-                  </span>
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* FOOTER */}
-
-      <footer className="mt-8 border-t border-white/10 bg-[#02050b]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-6 py-10 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="font-black tracking-[0.16em]">
-              IRON LEAGUE
-            </div>
-
-            <div className="mt-1 text-xs text-white/30">
-              Більше ніж гра
-            </div>
-          </div>
-
-          <div className="text-sm text-white/30">
-            © 2026 Iron League
-          </div>
-        </div>
-      </footer>
+      {/* GLOBAL FOOTER */}
+      <SiteFooter />
     </main>
   );
 }
