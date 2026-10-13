@@ -1,6 +1,7 @@
 import StadiumBackground from "./StadiumBackground";
 import SiteHeader from "./public/SiteHeader";
 import { players } from "../data/players";
+import Link from "next/link";
 
 import { season1 } from "../data/seasons/season-1";
 import { season2 } from "../data/seasons/season-2";
@@ -149,17 +150,10 @@ export default async function DivisionPage({
     division
   );
 
-const replacements =
-  await getDivisionReplacements(
-    season,
-    division
-  );
-
-const divisionPlayersIds =
-  applyPlayerReplacements(
-    baseDivisionPlayerIds,
-    replacements
-  );
+const replacementsRequest = getDivisionReplacements(
+  season,
+  division
+);
 
   /*
     ========================================
@@ -167,14 +161,11 @@ const divisionPlayersIds =
     ========================================
   */
 
-  const {
-    data,
-    error,
-  } = await supabaseAdmin
-    .from("matches")
-    .select(
-      `
-        id,
+  const matchesRequest = supabaseAdmin
+  .from("matches")
+  .select(
+    `
+      id,
         round,
         home_id,
         away_id,
@@ -202,6 +193,15 @@ const divisionPlayersIds =
         nullsFirst: false,
       }
     );
+    const [replacements, { data, error }] = await Promise.all([
+  replacementsRequest,
+  matchesRequest,
+]);
+
+const divisionPlayersIds = applyPlayerReplacements(
+  baseDivisionPlayerIds,
+  replacements
+);
 
   if (error) {
     console.error(
@@ -436,7 +436,7 @@ const divisionPlayersIds =
             >
               {([1, 2, 3, 4] as const).map(
                 (seasonNumber) => (
-                  <a
+                  <Link
                     key={seasonNumber}
                     href={`/divisions/${division}?season=${seasonNumber}`}
                     aria-current={
@@ -446,12 +446,12 @@ const divisionPlayersIds =
                     }
                     className={`flex min-h-10 items-center justify-center rounded-lg px-1 py-2 text-center text-[11px] font-bold transition-colors sm:text-sm ${
                       season === seasonNumber
-                        ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                        ? "bg-blue-700 text-white shadow-lg shadow-blue-700/20"
                         : "text-white/55 hover:bg-white/5 hover:text-white"
                     }`}
                   >
                     Сезон {seasonNumber}
-                  </a>
+                  </Link>
                 )
               )}
             </nav>
@@ -558,7 +558,7 @@ const divisionPlayersIds =
 
   {/* MOBILE STANDINGS */}
   <div className="lg:hidden">
-    <div className="grid grid-cols-[28px_minmax(0,1fr)_30px_38px_14px] items-center gap-2 border-b border-white/10 bg-white/[0.04] px-3 py-3 text-[10px] font-bold uppercase text-white/45">
+    <div className="grid grid-cols-[28px_minmax(0,1fr)_30px_38px_14px] items-center gap-2 border-b border-white/10 bg-white/[0.04] px-3 py-3 text-[10px] font-bold uppercase text-white/70">
       <span className="text-center">#</span>
       <span>Гравець</span>
       <span className="text-center">І</span>
@@ -591,7 +591,7 @@ const divisionPlayersIds =
             </span>
 
             {row.player.account && (
-              <span className="mt-0.5 block truncate text-[10px] text-white/35">
+              <span className="mt-0.5 block truncate text-[10px] text-white/75">
                 ({row.player.account})
               </span>
             )}
@@ -681,7 +681,7 @@ const divisionPlayersIds =
     <table className="w-full min-w-[1000px]">
 
                   <thead className="border-b border-white/10 bg-white/[0.035]">
-                    <tr className="text-xs font-bold uppercase tracking-wider text-white/35">
+                    <tr className="text-xs font-bold uppercase tracking-wider text-white/70">
                       <th className="px-5 py-4 text-center">
                         #
                       </th>
@@ -766,7 +766,7 @@ const divisionPlayersIds =
                               {row
                                 .player
                                 .account && (
-                                <div className="mt-1 text-xs text-white/35">
+                                <div className="mt-1 text-xs text-white/75">
                                   (
                                   {
                                     row
