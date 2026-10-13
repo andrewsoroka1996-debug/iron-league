@@ -2,6 +2,7 @@
 import { players } from "../../data/players";
 import SiteHeader from "../../components/public/SiteHeader";
 import SiteFooter from "../../components/public/SiteFooter";
+import Link from "next/link";
 
 import { season1 } from "../../data/seasons/season-1";
 import { season2 } from "../../data/seasons/season-2";
@@ -468,7 +469,12 @@ export default async function MatchesPage({
   // ========================================
   // LOAD ALL MATCHES — PAGINATION
   // ========================================
-
+const coopTeamsRequest = Promise.resolve(
+  supabase
+    .from("coop_teams")
+    .select("id, name, player_1_id, player_2_id")
+    .eq("season", season)
+);
   const PAGE_SIZE = 500;
 
   const allMatches: Match[] = [];
@@ -520,17 +526,9 @@ export default async function MatchesPage({
   // ========================================
 
   const {
-    data: coopTeamsData,
-    error: coopTeamsError,
-  } = await supabase
-    .from("coop_teams")
-    .select(`
-      id,
-      name,
-      player_1_id,
-      player_2_id
-    `)
-    .eq("season", season);
+  data: coopTeamsData,
+  error: coopTeamsError,
+} = await coopTeamsRequest;
 
   if (coopTeamsError) {
     console.error(
@@ -653,7 +651,7 @@ export default async function MatchesPage({
               className="grid w-full max-w-lg grid-cols-4 gap-1 rounded-xl border border-white/10 bg-[#07101d] p-1"
             >
               {([1, 2, 3, 4] as const).map((item) => (
-                <a
+                <Link
                   key={item}
                   href={`/matches?season=${item}`}
                   aria-current={
@@ -661,12 +659,12 @@ export default async function MatchesPage({
                   }
                   className={`flex min-h-10 items-center justify-center rounded-lg px-1 py-2 text-center text-[11px] font-bold transition-colors sm:text-sm ${
                     season === item
-                      ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                      ? "bg-blue-700 text-white shadow-lg shadow-blue-700/20"
                       : "text-white/55 hover:bg-white/5 hover:text-white"
                   }`}
                 >
                   Сезон {item}
-                </a>
+                </Link>
               ))}
             </nav>
           </div>
@@ -689,11 +687,15 @@ export default async function MatchesPage({
 
             {/* COMPETITION */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-[0.2em] text-white/35">
-                Турнір
-              </label>
+              <label
+  htmlFor="filter-competition"
+  className="text-xs font-bold uppercase tracking-[0.2em] text-white/70"
+>
+  Турнір
+</label>
 
               <select
+              id="filter-competition"
                 name="competition"
                 defaultValue={competitionFilter}
                 className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3 font-semibold text-white outline-none transition focus:border-blue-400/40"
@@ -728,11 +730,15 @@ export default async function MatchesPage({
 
             {/* STATUS */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-[0.2em] text-white/35">
-                Статус
-              </label>
+              <label
+  htmlFor="filter-status"
+  className="text-xs font-bold uppercase tracking-[0.2em] text-white/70"
+>
+  Статус
+</label>
 
               <select
+              id="filter-status"
                 name="status"
                 defaultValue={statusFilter}
                 className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3 font-semibold text-white outline-none transition focus:border-blue-400/40"
@@ -745,11 +751,15 @@ export default async function MatchesPage({
 
             {/* PLAYER */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-[0.2em] text-white/35">
-                Гравець
-              </label>
+              <label
+  htmlFor="filter-player"
+  className="text-xs font-bold uppercase tracking-[0.2em] text-white/70"
+>
+  Гравець
+</label>
 
               <select
+              id="filter-player"
                 name="player"
                 defaultValue={playerFilter}
                 className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3 font-semibold text-white outline-none transition focus:border-blue-400/40"
@@ -771,7 +781,7 @@ export default async function MatchesPage({
             <div className="flex items-end gap-3">
               <button
                 type="submit"
-                className="rounded-xl bg-blue-500 px-6 py-3 font-black transition hover:bg-blue-400"
+                className="rounded-xl bg-blue-700 px-6 py-3 font-black transition hover:bg-blue-600"
               >
                 Застосувати
               </button>
@@ -826,7 +836,7 @@ export default async function MatchesPage({
             )}
           </div>
 
-          <div className="text-right text-sm text-white/35">
+          <div className="text-right text-sm text-white/70">
             <div>
               Матчів:{" "}
               <span className="font-black text-white">
@@ -870,7 +880,7 @@ export default async function MatchesPage({
               {filtersActive && (
                 <a
                   href={`/matches?season=${season}`}
-                  className="mt-7 inline-flex rounded-xl bg-blue-500 px-6 py-3 font-black transition hover:bg-blue-400"
+                  className="mt-7 inline-flex rounded-xl bg-blue-700 px-6 py-3 font-black transition hover:bg-blue-600"
                 >
                   Показати всі матчі
                 </a>
@@ -898,7 +908,7 @@ export default async function MatchesPage({
                     )}
                   </div>
 
-                  <div className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-xs font-bold text-white/35">
+                  <div className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-xs font-bold text-white/70">
                     {group.matches.length} матчів
                   </div>
                 </div>
