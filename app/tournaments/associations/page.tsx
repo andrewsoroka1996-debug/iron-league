@@ -356,7 +356,7 @@ function Season3BaseRanking({
       <div className="overflow-x-auto">
         <table className="w-full border-collapse lg:min-w-[850px]">
           <thead>
-            <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.14em] text-white/30">
+            <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.14em] text-white/80">
               <th className="px-2 py-2.5 text-center lg:px-5 lg:py-4">
   М
 </th>
@@ -415,7 +415,7 @@ function Season3BaseRanking({
 
 
 <details className="mt-2">
-  <summary className="cursor-pointer text-xs font-bold text-white/40 transition hover:text-blue-300">
+  <summary className="cursor-pointer text-xs font-bold text-white/75 transition hover:text-blue-300">
     Показати внесок гравців
   </summary>
 
@@ -814,7 +814,7 @@ export default async function AssociationsPage({
                     }
                     className={`flex min-h-10 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-bold transition-colors sm:text-sm ${
                       season === seasonNumber
-                        ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                        ? "bg-blue-700 text-white shadow-lg shadow-blue-700/20"
                         : "text-white/55 hover:bg-white/5 hover:text-white"
                     }`}
                   >
@@ -841,7 +841,7 @@ export default async function AssociationsPage({
             Рейтинг Асоціацій
           </h2>
 
-          <p className="mt-3 max-w-3xl leading-7 text-white/40">
+          <p className="mt-3 max-w-3xl leading-7 text-white/75">
             {season >= 3
               ? `У Сезоні ${season} до рейтингу Асоціації входять коефіцієнти гравців R2–R6. Коефіцієнт R1 має вагу 0.`
               : "Рейтинг Асоціації сформований відповідно до офіційних підсумків Сезону 2."}
