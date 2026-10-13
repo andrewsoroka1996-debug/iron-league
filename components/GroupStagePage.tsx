@@ -352,7 +352,7 @@ export default async function GroupStagePage({
     conferenceLeague: {
       accent: "text-emerald-400",
       accentSoft: "text-emerald-300",
-      active: "bg-emerald-600 shadow-emerald-500/20",
+      active: "bg-emerald-700 shadow-emerald-500/20",
     },
   }[competition];
 
