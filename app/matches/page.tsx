@@ -959,7 +959,7 @@ const coopTeamsRequest = Promise.resolve(
                                 {match.away_goals}
                               </div>
                             ) : (
-                              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-2 py-2 text-base font-black text-white/45 sm:px-4 sm:text-xl">
+                              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-2 py-2 text-base font-black text-white/80 sm:px-4 sm:text-xl">
                                 VS
                               </div>
                             )}
