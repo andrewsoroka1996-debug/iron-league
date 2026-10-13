@@ -2,6 +2,7 @@ import StadiumBackground from "../../../components/StadiumBackground";
 import SiteHeader from "../../../components/public/SiteHeader";
 import { players } from "../../../data/players";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
+import Link from "next/link";
 
 type SeasonNumber = 1 | 2 | 3 | 4;
 
@@ -295,7 +296,7 @@ function CupBracket({
                     )}
                   </div>
 
-                  <div className="mt-1 text-xs text-white/35">
+                  <div className="mt-1 text-xs text-white/70">
                     {
                       stageMatches.length
                     }{" "}
@@ -613,7 +614,7 @@ export default async function DivisionCupsPage({
             >
               {([1, 2, 3, 4] as const).map(
                 (seasonNumber) => (
-                  <a
+                  <Link
                     key={seasonNumber}
                     href={`/tournaments/division-cups?season=${seasonNumber}`}
                     aria-current={
@@ -623,12 +624,12 @@ export default async function DivisionCupsPage({
                     }
                     className={`flex min-h-10 items-center justify-center rounded-lg px-1 py-2 text-center text-[11px] font-bold transition-colors sm:text-sm ${
                       season === seasonNumber
-                        ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                        ? "bg-blue-700 text-white shadow-lg shadow-blue-700/20"
                         : "text-white/55 hover:bg-white/5 hover:text-white"
                     }`}
                   >
                     Сезон {seasonNumber}
-                  </a>
+                  </Link>
                 )
               )}
             </nav>
@@ -781,7 +782,7 @@ export default async function DivisionCupsPage({
                           додано
                         </div>
 
-                        <div className="mt-3 text-sm text-white/35">
+                        <div className="mt-3 text-sm text-white/80">
                           Матчі{" "}
                           {
                             cup.name
