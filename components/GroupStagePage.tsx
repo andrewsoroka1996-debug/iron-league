@@ -1,6 +1,7 @@
 import StadiumBackground from "./StadiumBackground";
 import SiteHeader from "./public/SiteHeader";
 import { connection } from "next/server";
+import Link from "next/link";
 
 import { players } from "../data/players";
 
@@ -412,7 +413,7 @@ export default async function GroupStagePage({
             >
               {([1, 2, 3, 4] as const).map(
                 (seasonNumber) => (
-                  <a
+                  <Link
                     key={seasonNumber}
                     href={`/tournaments/${competitionRoute}?season=${seasonNumber}`}
                     aria-current={
@@ -427,7 +428,7 @@ export default async function GroupStagePage({
                     }`}
                   >
                     Сезон {seasonNumber}
-                  </a>
+                  </Link>
                 )
               )}
             </nav>
@@ -620,7 +621,7 @@ export default async function GroupStagePage({
           </span>
 
           {row.player.account && (
-            <span className="mt-0.5 block truncate text-[10px] text-white/35">
+            <span className="mt-0.5 block truncate text-[10px] text-white/75">
               ({row.player.account})
             </span>
           )}
