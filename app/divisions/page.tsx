@@ -1,6 +1,9 @@
 
 import Link from "next/link";
+
+import StadiumBackground from "../../components/StadiumBackground";
 import SiteHeader from "../../components/public/SiteHeader";
+import SiteFooter from "../../components/public/SiteFooter";
 
 const divisions = [
   {
@@ -28,79 +31,147 @@ const divisions = [
 export default function DivisionsPage() {
   return (
     <main className="min-h-screen bg-[#030711] text-white">
-
       {/* GLOBAL HEADER */}
       <SiteHeader />
 
-      {/* PAGE CONTENT */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+      {/* HERO */}
+      <section className="relative overflow-hidden border-b border-white/10">
+        <StadiumBackground opacity="20" preload />
 
-        {/* SECTION HEADER */}
-        <div className="mb-12">
-          <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
-            Чемпіонат Iron League
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/75" />
+
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/80" />
+
+        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
+          {/* BACK LINK */}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-blue-300 transition hover:text-blue-200 sm:text-sm"
+          >
+            <span aria-hidden="true">←</span>
+            На головну
+          </Link>
+
+          {/* PAGE TITLE */}
+          <div className="mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs">
+              IRON LEAGUE · CHAMPIONSHIP
+            </div>
+
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+              Дивізіони
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              Чотири дивізіони — одна футбольна ліга.
+              Переглядай турнірні таблиці, календарі,
+              результати та статистику чемпіонату Iron League.
+            </p>
           </div>
 
-          <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
-            Дивізіони
-          </h1>
+          {/* DIVISIONS COUNT */}
+          <div className="mt-6 inline-flex items-center gap-3 rounded-xl border border-blue-400/15 bg-[#07101d]/80 px-4 py-3 backdrop-blur-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-xl font-black text-blue-300">
+              4
+            </div>
 
-          <p className="mt-5 max-w-2xl text-base leading-7 text-white/55">
-            Турнірні таблиці, матчі, результати та
-            статистика всіх чотирьох дивізіонів
-            Iron League.
+            <div>
+              <div className="text-sm font-black text-white">
+                Дивізіони Iron League
+              </div>
+
+              <div className="mt-0.5 text-xs text-white/40">
+                Обери дивізіон для перегляду
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* DIVISIONS SECTION */}
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
+        {/* SECTION HEADER */}
+        <div className="mb-6 sm:mb-8">
+          <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-400 sm:text-xs">
+            ЧЕМПІОНАТ
+          </div>
+
+          <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+            Обрати дивізіон
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-white/45">
+            Перейди до потрібного дивізіону та переглянь
+            інформацію про його сезон.
           </p>
         </div>
 
         {/* DIVISIONS GRID */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-5">
           {divisions.map((division) => (
-            <div
+            <Link
               key={division.number}
-              className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-blue-400/40 hover:shadow-[0_15px_50px_rgba(59,130,246,0.08)] sm:p-8"
+              href={`/divisions/${Number(division.number)}`}
+              aria-label={`Відкрити ${division.name}`}
+              className="group relative flex min-h-[182px] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-400/40 hover:bg-[#0a1729] hover:shadow-[0_18px_45px_rgba(0,0,0,0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 sm:min-h-[200px] sm:p-6"
             >
+              {/* BACKGROUND ACCENT */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-6 -top-8 h-40 w-40 rounded-full bg-blue-500/[0.07] blur-3xl"
+              />
 
               {/* BACKGROUND NUMBER */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute right-5 top-0 text-[100px] font-black leading-none text-white/[0.03]"
+                className="pointer-events-none absolute right-3 top-2 text-[90px] font-black leading-none tracking-tighter text-white/[0.035] sm:text-[110px]"
               >
                 {division.number}
               </div>
 
               {/* CARD CONTENT */}
-              <div className="relative">
-                <div className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">
-                  Division {division.number}
+              <div className="relative flex flex-1 flex-col">
+                {/* TOP LABEL */}
+                <div className="flex items-center gap-3">
+                  <div className="h-7 w-1 rounded-full bg-blue-400" />
+
+                  <span className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-400">
+                    DIVISION {division.number}
+                  </span>
                 </div>
 
-                <h2 className="mt-4 text-3xl font-black">
-                  {division.name}
-                </h2>
+                {/* NAME AND DESCRIPTION */}
+                <div className="mt-4">
+                  <h3 className="break-words text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    {division.name}
+                  </h3>
 
-                <p className="mt-3 min-h-12 text-sm leading-6 text-white/50">
-                  {division.description}
-                </p>
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-white/45">
+                    {division.description}
+                  </p>
+                </div>
 
-                {/* DIVISION LINK */}
-                <Link
-                  href={`/divisions/${Number(division.number)}`}
-                  className="mt-8 inline-flex items-center gap-3 rounded-xl border border-blue-400/20 bg-blue-500/10 px-5 py-3 text-sm font-bold text-blue-300 transition-all duration-200 hover:border-blue-400/40 hover:bg-blue-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
-                >
-                  Відкрити дивізіон
+                {/* CARD FOOTER */}
+                <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+                  <span className="text-xs font-bold text-blue-300 transition group-hover:text-blue-200 sm:text-sm">
+                    Переглянути дивізіон
+                  </span>
 
                   <span
                     aria-hidden="true"
-                    className="transition-transform duration-200 group-hover:translate-x-1"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/10 text-lg text-blue-300 transition-all duration-300 group-hover:translate-x-1 group-hover:border-blue-400/40 group-hover:bg-blue-500/20"
                   >
                     →
                   </span>
-                </Link>
+                </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
+
+      {/* GLOBAL FOOTER */}
+      <SiteFooter />
     </main>
   );
 }
