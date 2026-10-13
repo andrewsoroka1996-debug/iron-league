@@ -936,7 +936,7 @@ const coopTeamsRequest = Promise.resolve(
                                 {details}
                               </div>
                             ) : (
-                              <div className="text-[11px] font-semibold text-white/30 sm:text-xs">
+                              <div className="text-[11px] font-semibold text-white/75 sm:text-xs">
                                 Iron League
                               </div>
                             )}
