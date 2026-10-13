@@ -1,4 +1,6 @@
 import StadiumBackground from "../../components/StadiumBackground";
+import SiteHeader from "../../components/public/SiteHeader";
+import SiteFooter from "../../components/public/SiteFooter";
 import { supabase } from "../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -149,123 +151,104 @@ export default async function NewsPage({
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
-      {/* HEADER */}
-
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a
-            href="/"
-            className="flex items-center gap-4"
-          >
-            <img
-              src="/iron-league-logo.jpg"
-              alt="Iron League"
-              className="h-14 w-auto object-contain"
-            />
-
-            <div>
-              <div className="font-black tracking-[0.18em]">
-                IRON LEAGUE
-              </div>
-
-              <div className="text-xs text-white/35">
-                Новини
-              </div>
-            </div>
-          </a>
-
-          <a
-            href="/"
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-blue-300 transition hover:border-blue-400/30 hover:bg-blue-500/10"
-          >
-            ← На головну
-          </a>
-        </div>
-      </header>
+      {/* GLOBAL HEADER */}
+      <SiteHeader />
 
       {/* HERO */}
-
       <section className="relative overflow-hidden border-b border-white/10">
-        <StadiumBackground
-  opacity="20"
-  preload
-/>
+        <StadiumBackground opacity="20" preload />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/70" />
+        {/* BACKGROUND OVERLAYS */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/95 to-[#030711]/75" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/80" />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/75" />
+        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
+          {/* BACK LINK */}
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-blue-300 transition hover:text-blue-200 sm:text-sm"
+          >
+            <span aria-hidden="true">←</span>
+            На головну
+          </a>
 
-        <div className="relative mx-auto max-w-7xl px-6 py-20">
-          <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-400">
-            Iron League
+          {/* TITLE */}
+          <div className="mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs">
+              IRON LEAGUE · NEWS
+            </div>
+
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+              Новини
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              Усі події Iron League в одному місці.
+              Результати матчів, жеребкування, турнірні
+              новини та офіційні оголошення ліги.
+            </p>
           </div>
-
-          <h1 className="mt-4 text-5xl font-black sm:text-6xl">
-            Новини
-          </h1>
-
-          <p className="mt-5 max-w-3xl text-lg leading-8 text-white/45">
-            Головні події Iron League:
-            результати, жеребкування,
-            турніри, матчі дня та
-            офіційні оголошення.
-          </p>
         </div>
       </section>
 
-      {/* CONTENT */}
+{/* CONTENT */}
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
         {/* CATEGORIES */}
-
         <div>
-          <div className="text-xs font-bold uppercase tracking-[0.25em] text-white/25">
-            Категорії
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/50">
+            Категорії новин
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-3">
+          <nav
+            aria-label="Категорії новин"
+            className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3"
+          >
+            {/* ALL NEWS */}
             <a
               href="/news"
-              className={`rounded-full border px-4 py-2 text-sm font-bold transition ${
+              aria-current={
+                !selectedCategory ? "page" : undefined
+              }
+              className={`flex min-h-10 items-center justify-center rounded-xl border px-3 py-2.5 text-center text-xs font-bold transition sm:px-5 sm:text-sm ${
                 !selectedCategory
                   ? "border-blue-400/40 bg-blue-500/15 text-blue-300"
-                  : "border-white/10 bg-white/[0.03] text-white/40 hover:border-blue-400/30 hover:text-blue-300"
+                  : "border-white/10 bg-[#07101d] text-white/55 hover:border-blue-400/25 hover:bg-white/[0.04] hover:text-white"
               }`}
             >
-              Усі
+              Усі новини
             </a>
 
-            {categories.map(
-              (category) => {
-                const active =
-                  selectedCategory ===
-                  category;
+            {/* CATEGORY LINKS */}
+            {categories.map((category) => {
+              const active =
+                selectedCategory === category;
 
-                return (
-                  <a
-                    key={
-                      category
-                    }
-                    href={`/news?category=${encodeURIComponent(
-                      category
-                    )}`}
-                    className={`rounded-full border px-4 py-2 text-sm font-bold transition ${
-                      active
-                        ? "border-blue-400/40 bg-blue-500/15 text-blue-300"
-                        : "border-white/10 bg-white/[0.03] text-white/40 hover:border-blue-400/30 hover:text-blue-300"
-                    }`}
-                  >
-                    {
-                      category
-                    }
-                  </a>
-                );
-              }
-            )}
-          </div>
+              return (
+                <a
+                  key={category}
+                  href={`/news?category=${encodeURIComponent(
+                    category
+                  )}`}
+                  aria-current={
+                    active ? "page" : undefined
+                  }
+                  className={`flex min-h-10 min-w-0 items-center justify-center rounded-xl border px-3 py-2.5 text-center text-xs font-bold leading-5 transition sm:px-5 sm:text-sm ${
+                    active
+                      ? "border-blue-400/40 bg-blue-500/15 text-blue-300"
+                      : "border-white/10 bg-[#07101d] text-white/55 hover:border-blue-400/25 hover:bg-white/[0.04] hover:text-white"
+                  }`}
+                >
+                  <span className="break-words">
+                    {category}
+                  </span>
+                </a>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* CATEGORY TITLE */}
+{/* CATEGORY TITLE */}
 
         {selectedCategory && (
           <div className="mt-12">
@@ -301,81 +284,75 @@ export default async function NewsPage({
 
             <a
               href={`/news/${featuredNews.slug}`}
-              className="group mt-8 block overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] transition duration-300 hover:border-blue-400/30"
+              className="group mt-6 block overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] transition duration-300 hover:border-blue-400/30 sm:rounded-3xl"
             >
               <div className="grid lg:grid-cols-[1.3fr_1fr]">
-                {/* IMAGE */}
-
-                <div className="relative min-h-[340px] overflow-hidden bg-gradient-to-br from-blue-500/10 to-[#030711]">
+                {/* FEATURED IMAGE */}
+                <div className="relative h-52 overflow-hidden bg-[#030711] sm:h-64 lg:h-auto lg:min-h-[340px]">
                   {featuredNews.image_url ? (
                     <>
                       <img
-                        src={
-                          featuredNews.image_url
-                        }
-                        alt={
-                          featuredNews.title
-                        }
-                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                        src={featuredNews.image_url}
+                        alt={featuredNews.title}
+                        className="absolute inset-0 h-full w-full object-contain transition duration-700 group-hover:scale-[1.02] lg:object-cover"
                       />
 
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#07101d]/80" />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#07101d]/30 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-[#07101d]/80" />
                     </>
                   ) : (
                     <>
                       <StadiumBackground
-  opacity="30"
-  sizes="(max-width: 768px) 100vw, 50vw"
-/>
+                        opacity="30"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                      />
 
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-[#07101d]" />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/10 to-[#07101d]/70" />
 
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-blue-400/20 bg-blue-500/10 text-3xl font-black text-blue-300">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-xl font-black text-blue-300 sm:h-20 sm:w-20 sm:text-2xl">
                           IL
                         </div>
                       </div>
                     </>
                   )}
 
-                  <div className="absolute bottom-7 left-7 rounded-full border border-blue-400/30 bg-[#030711]/80 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-blue-300 backdrop-blur-xl">
-                    {
-                      featuredNews.category
-                    }
+                  {/* CATEGORY */}
+                  <div className="absolute bottom-3 left-3 max-w-[calc(100%-24px)] rounded-full border border-blue-400/30 bg-[#030711]/85 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-blue-300 backdrop-blur-xl sm:bottom-5 sm:left-5 sm:text-xs">
+                    {featuredNews.category}
                   </div>
                 </div>
 
-                {/* TEXT */}
-
-                <div className="flex flex-col justify-center p-8 lg:p-10">
-                  <div className="text-sm font-semibold text-white/30">
-                    {formatDate(
-                      featuredNews.published_at
-                    )}
+                {/* FEATURED TEXT */}
+                <div className="flex min-w-0 flex-col justify-center p-5 sm:p-6 lg:p-10">
+                  <div className="text-xs font-semibold text-white/40 sm:text-sm">
+                    {formatDate(featuredNews.published_at)}
                   </div>
 
-                  <h2 className="mt-4 text-3xl font-black leading-tight lg:text-4xl">
-                    {
-                      featuredNews.title
-                    }
+                  <h2 className="mt-3 break-words text-2xl font-black leading-tight text-white sm:text-3xl lg:text-4xl">
+                    {featuredNews.title}
                   </h2>
 
                   {featuredNews.excerpt && (
-                    <p className="mt-5 leading-7 text-white/45">
-                      {
-                        featuredNews.excerpt
-                      }
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-white/50 sm:line-clamp-4 sm:text-base sm:leading-7">
+                      {featuredNews.excerpt}
                     </p>
                   )}
 
-                  <div className="mt-8 font-black text-blue-300 transition group-hover:text-blue-200">
-                    Читати новину →
+                  <div className="mt-5 inline-flex items-center gap-2 text-sm font-black text-blue-300 transition group-hover:text-blue-200 sm:text-base">
+                    Читати новину
+
+                    <span
+                      aria-hidden="true"
+                      className="transition group-hover:translate-x-1"
+                    >
+                      →
+                    </span>
                   </div>
                 </div>
               </div>
             </a>
 
-            {/* OTHER NEWS */}
+{/* OTHER NEWS */}
 
             {otherNews.length >
               0 && (
@@ -390,76 +367,67 @@ export default async function NewsPage({
                     : "Усі новини"}
                 </h2>
 
-                <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {otherNews.map(
-                    (item) => (
-                      <a
-                        key={
-                          item.id
-                        }
-                        href={`/news/${item.slug}`}
-                        className="group overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] transition duration-300 hover:-translate-y-1 hover:border-blue-400/30"
-                      >
-                        <div className="relative h-52 overflow-hidden bg-[#030711]">
-                          {item.image_url ? (
-                            <img
-                              src={
-                                item.image_url
-                              }
-                              alt={
-                                item.title
-                              }
-                              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-blue-500/10 to-[#030711]">
-                              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-xl font-black text-blue-300">
-                                IL
-                              </div>
-                            </div>
-                          )}
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+                  {otherNews.map((item) => (
+                    <a
+                      key={item.id}
+                      href={`/news/${item.slug}`}
+                      className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] transition duration-300 hover:-translate-y-0.5 hover:border-blue-400/30 hover:bg-[#0a1729]"
+                    >
+                      {/* IMAGE — ONLY WHEN AVAILABLE */}
+                      {item.image_url && (
+                        <div className="relative h-44 overflow-hidden bg-[#030711] sm:h-48">
+                          <img
+                            src={item.image_url}
+                            alt={item.title}
+                            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                          />
+                        </div>
+                      )}
 
-                          <div className="absolute left-5 top-5 rounded-full border border-blue-400/20 bg-[#030711]/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-blue-300 backdrop-blur">
-                            {
-                              item.category
-                            }
-                          </div>
+                      {/* NEWS CONTENT */}
+                      <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
+                        {/* CATEGORY AND DATE */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                          <span className="inline-flex max-w-full items-center rounded-full border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-blue-300">
+                            {item.category}
+                          </span>
+
+                          <span className="text-[11px] text-white/40">
+                            {formatDate(item.published_at)}
+                          </span>
                         </div>
 
-                        <div className="p-6">
-                          <div className="text-xs text-white/25">
-                            {formatDate(
-                              item.published_at
-                            )}
-                          </div>
+                        {/* TITLE */}
+                        <h3 className="mt-3 break-words text-lg font-black leading-snug text-white sm:text-xl">
+                          {item.title}
+                        </h3>
 
-                          <h3 className="mt-3 text-2xl font-black leading-tight">
-                            {
-                              item.title
-                            }
-                          </h3>
+                        {/* EXCERPT */}
+                        {item.excerpt && (
+                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/45">
+                            {item.excerpt}
+                          </p>
+                        )}
 
-                          {item.excerpt && (
-                            <p className="mt-4 line-clamp-3 leading-7 text-white/40">
-                              {
-                                item.excerpt
-                              }
-                            </p>
-                          )}
-
-                          <div className="mt-7 flex items-center justify-between border-t border-white/10 pt-5">
-                            <span className="text-sm text-white/30">
-                              Детальніше
+                        {/* READ LINK */}
+                        <div className="mt-auto pt-4">
+                          <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                            <span className="text-xs font-bold text-blue-300 transition group-hover:text-blue-200 sm:text-sm">
+                              Читати новину
                             </span>
 
-                            <span className="text-blue-400 transition group-hover:translate-x-1">
+                            <span
+                              aria-hidden="true"
+                              className="text-base text-blue-400 transition group-hover:translate-x-1"
+                            >
                               →
                             </span>
                           </div>
                         </div>
-                      </a>
-                    )
-                  )}
+                      </div>
+                    </a>
+                  ))}
                 </div>
               </div>
             )}
@@ -521,25 +489,8 @@ export default async function NewsPage({
         )}
       </section>
 
-      {/* FOOTER */}
-
-      <footer className="border-t border-white/10 bg-[#02050b]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-6 py-10 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="font-black tracking-[0.16em]">
-              IRON LEAGUE
-            </div>
-
-            <div className="mt-1 text-xs text-white/30">
-              Більше ніж гра
-            </div>
-          </div>
-
-          <div className="text-sm text-white/30">
-            © 2026 Iron League
-          </div>
-        </div>
-      </footer>
+            {/* GLOBAL FOOTER */}
+      <SiteFooter />
     </main>
   );
 }
