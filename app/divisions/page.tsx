@@ -121,14 +121,6 @@ export default function DivisionsPage() {
                 className="pointer-events-none absolute -right-6 -top-8 h-40 w-40 rounded-full bg-blue-500/[0.07] blur-3xl"
               />
 
-              {/* BACKGROUND NUMBER */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute right-3 top-2 text-[90px] font-black leading-none tracking-tighter text-white/[0.035] sm:text-[110px]"
-              >
-                {division.number}
-              </div>
-
               {/* CARD CONTENT */}
               <div className="relative flex flex-1 flex-col">
                 {/* TOP LABEL */}
