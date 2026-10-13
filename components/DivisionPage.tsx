@@ -852,7 +852,7 @@ const divisionPlayersIds = applyPlayerReplacements(
   </span>
 </div>
 
-            <div className="mt-6 hidden flex-wrap gap-6 text-xs text-white/35 lg:flex">
+            <div className="mt-6 hidden flex-wrap gap-6 text-xs text-white/70 lg:flex">
               <span>
                 <b className="text-white/60">
                   І

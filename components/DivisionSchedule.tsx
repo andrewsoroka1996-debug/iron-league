@@ -163,11 +163,11 @@ return (
         </div>
       ) : (
         <div>
-          <div className="inline-flex min-w-[58px] justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-xs font-bold text-white/35 md:min-w-24 md:rounded-xl md:px-5 md:text-sm">
+          <div className="inline-flex min-w-[58px] justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-xs font-bold text-white/80 md:min-w-24 md:rounded-xl md:px-5 md:text-sm">
             VS
           </div>
 
-          <div className="mt-1 text-[9px] font-bold uppercase tracking-wide text-white/30 md:mt-2 md:text-[10px] md:tracking-[0.18em]">
+          <div className="mt-1 text-[9px] font-bold uppercase tracking-wide text-white/80 md:mt-2 md:text-[10px] md:tracking-[0.18em]">
             Не зіграно
           </div>
         </div>
