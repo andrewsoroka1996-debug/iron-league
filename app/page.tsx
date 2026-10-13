@@ -721,7 +721,7 @@ export default async function Home() {
 
               <a
                 href="/matches"
-                className="flex min-h-12 min-w-0 items-center justify-center rounded-xl bg-blue-500 px-2 py-3 text-center text-sm font-bold leading-snug text-white transition hover:bg-blue-400 sm:px-6 sm:py-3.5 sm:text-base"
+                className="flex min-h-12 min-w-0 items-center justify-center rounded-xl bg-blue-700 px-2 py-3 text-center text-sm font-bold leading-snug text-white transition hover:bg-blue-600 sm:px-6 sm:py-3.5 sm:text-base"
               >
                 Переглянути матчі
               </a>
@@ -744,7 +744,7 @@ export default async function Home() {
                   4
                 </div>
 
-                <div className="mt-1 text-xs uppercase tracking-widest text-white/40">
+                <div className="mt-1 text-xs uppercase tracking-widest text-white/70">
                   Дивізіони
                 </div>
               </div>
@@ -754,7 +754,7 @@ export default async function Home() {
                   {tournaments.length}+
                 </div>
 
-                <div className="mt-1 text-xs uppercase tracking-widest text-white/40">
+                <div className="mt-1 text-xs uppercase tracking-widest text-white/70">
                   Турнірів
                 </div>
               </div>
@@ -764,7 +764,7 @@ export default async function Home() {
                   ∞
                 </div>
 
-                <div className="mt-1 text-xs uppercase tracking-widest text-white/40">
+                <div className="mt-1 text-xs uppercase tracking-widest text-white/70">
                   Емоцій
                 </div>
               </div>
@@ -800,7 +800,7 @@ export default async function Home() {
                           Матч дня
                         </div>
 
-                        <div className="mt-1 text-sm text-white/40">
+                        <div className="mt-1 text-sm text-white/70">
                           {formatFeaturedDate(today)}
                         </div>
 
@@ -1005,7 +1005,7 @@ export default async function Home() {
 
                   <div className="border-t border-white/10 px-5 py-3 sm:px-7">
 
-                    <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/40">
+                    <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/70">
                       Iron League • Match of the Day
                     </div>
 
@@ -1077,7 +1077,7 @@ export default async function Home() {
                 {match.tournament}
               </span>
 
-              <span className="shrink-0 text-[10px] text-white/45 sm:text-xs">
+              <span className="shrink-0 text-[10px] text-white/70 sm:text-xs">
                 Завершено
               </span>
             </div>
@@ -1122,7 +1122,7 @@ export default async function Home() {
             </div>
 
             {/* MATCH STATUS */}
-            <div className="col-span-2 text-right text-xs font-medium text-white/45">
+            <div className="col-span-2 text-right text-xs font-medium text-white/70">
               Завершено
             </div>
           </div>
@@ -1178,14 +1178,11 @@ export default async function Home() {
               {division.name}
             </div>
 
-            <div className="text-xl font-black leading-none text-white/15">
-              {division.number}
-            </div>
           </div>
 
           <div className="mt-3 flex items-end justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-white/45">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-white/70">
                 Лідер
               </div>
 
@@ -1396,7 +1393,7 @@ export default async function Home() {
                     IL
                   </div>
 
-                  <div className="mt-1 hidden text-[9px] font-bold uppercase tracking-wider text-white/40 sm:block">
+                  <div className="mt-1 hidden text-[9px] font-bold uppercase tracking-wider text-white/70 sm:block">
                     IRON LEAGUE NEWS
                   </div>
                 </div>

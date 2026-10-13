@@ -36,14 +36,14 @@ export default function SiteFooter() {
               IRON LEAGUE
             </div>
 
-            <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-widest text-white/50 sm:mt-1 sm:text-[10px]">
+            <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-widest text-white/70 sm:mt-1 sm:text-[10px]">
               БІЛЬШЕ НІЖ ГРА
             </div>
           </div>
         </Link>
 
         {/* MOBILE DESCRIPTION */}
-        <p className="mt-2 text-xs text-white/50 sm:hidden">
+        <p className="mt-2 text-xs text-white/70 sm:hidden">
           Українська ліга eFootball
         </p>
 
@@ -74,7 +74,7 @@ export default function SiteFooter() {
 
         {/* COPYRIGHT */}
         <div className="mt-3 border-t border-white/10 pt-3 sm:mt-6 sm:pt-5">
-          <p className="text-[11px] text-white/40 sm:text-xs">
+          <p className="text-[11px] text-white/70 sm:text-xs">
             © {new Date().getFullYear()} Iron League.
             All rights reserved.
           </p>
