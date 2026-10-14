@@ -22,6 +22,10 @@ import {
   type CoefficientRow,
   type SeasonNumber,
 } from "../../lib/calculate-coefficients";
+import {
+  getSeasonPlayerReplacements,
+  applyPlayerReplacements,
+} from "../../lib/player-replacements";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -2021,14 +2025,43 @@ export default async function CoefficientsPage({
     ========================================
   */
 
-  const season3Rows =
-    needsLiveData
-      ? calculateCoefficients({
-          season: 3,
-          matches:
-            liveResult.matches,
-        })
-      : [];
+  /*
+  ========================================
+  ГЛОБАЛЬНІ ЗАМІНИ — СЕЗОН 3
+  ========================================
+*/
+
+const season3Replacements =
+  needsLiveData
+    ? await getSeasonPlayerReplacements(3)
+    : [];
+
+const resolveSeason3PlayerId = (
+  playerId: string
+): string => {
+  return (
+    applyPlayerReplacements(
+      [playerId],
+      season3Replacements
+    )[0] ?? playerId
+  );
+};
+
+/*
+  ========================================
+  LIVE КОЕФІЦІЄНТИ — СЕЗОН 3
+  ========================================
+*/
+
+const season3Rows =
+  needsLiveData
+    ? calculateCoefficients({
+        season: 3,
+        matches: liveResult.matches,
+        resolvePlayerId:
+          resolveSeason3PlayerId,
+      })
+    : [];
 
   const season3Summary =
     season3Rows.map(

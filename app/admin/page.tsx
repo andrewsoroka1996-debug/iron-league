@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import {
   useCallback,
@@ -1839,12 +1840,12 @@ setMatchId(
               Новини
             </a>
 
-            <a
-              href="/"
-              className="whitespace-nowrap font-bold text-blue-300 transition hover:text-blue-200"
-            >
-              ← На сайт
-            </a>
+          <Link
+  href="/"
+  className="whitespace-nowrap font-bold text-blue-300 transition hover:text-blue-200"
+>
+  ← На сайт
+</Link>
           </nav>
 
           {/* MOBILE MENU */}
@@ -1879,12 +1880,12 @@ setMatchId(
 
               <div className="my-1 border-t border-white/10" />
 
-              <a
-                href="/"
-                className="rounded-xl px-4 py-3 font-bold text-white/70 transition hover:bg-white/5"
-              >
-                ← На сайт
-              </a>
+              <Link
+  href="/"
+  className="rounded-xl px-4 py-3 font-bold text-white/70 transition hover:bg-white/5"
+>
+  ← На сайт
+</Link>
 
             </nav>
           </details>

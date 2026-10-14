@@ -10,6 +10,10 @@ import { getCompetitionPlayers } from "../data/competitions/get-competition-play
 import EuropeanPlayoffBracket from "./EuropeanPlayoffBracket";
 
 import { buildStandings } from "../lib/standings";
+import {
+  getSeasonPlayerReplacements,
+  applyPlayerReplacements,
+} from "../lib/player-replacements";
 import { supabase } from "../lib/supabase";
 
 type Competition =
@@ -157,6 +161,27 @@ export default async function GroupStagePage({
 
   const databaseMatches =
     (data ?? []) as DatabaseMatch[];
+    /*
+  ========================================
+  АКТУАЛЬНІ ГРАВЦІ ПІСЛЯ ЗАМІН
+  ========================================
+*/
+
+const replacements =
+  season === 3
+    ? await getSeasonPlayerReplacements(season)
+    : [];
+
+const resolveCurrentPlayerId = (
+  playerId: string
+): string => {
+  return (
+    applyPlayerReplacements(
+      [playerId],
+      replacements
+    )[0] ?? playerId
+  );
+};
 
   /*
     ========================================
@@ -168,14 +193,14 @@ export default async function GroupStagePage({
     groupNames.map(
       (groupName) => {
         const participantIds =
-          getCompetitionPlayers({
-            season,
-
-            competition:
-              competitionId,
-
-            groupName,
-          });
+  applyPlayerReplacements(
+    getCompetitionPlayers({
+      season,
+      competition: competitionId,
+      groupName,
+    }),
+    replacements
+  );
 
         const groupMatches =
           databaseMatches.filter(
@@ -202,10 +227,14 @@ export default async function GroupStagePage({
               groupMatches.map(
                 (match) => ({
                   home_id:
-                    match.home_id,
+  resolveCurrentPlayerId(
+    match.home_id
+  ),
 
-                  away_id:
-                    match.away_id,
+away_id:
+  resolveCurrentPlayerId(
+    match.away_id
+  ),
 
                   home_goals:
                     match.home_goals,

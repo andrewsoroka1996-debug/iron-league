@@ -29,6 +29,10 @@ import DivisionCupBracketForm from "./DivisionCupBracketForm";
 import CoopSeriesForm from "./CoopSeriesForm";
 import ResultRestoreButton from "../ResultRestoreButton";
 import UnplayedMatchActions from "../UnplayedMatchActions";
+type SeasonPlayerReplacement = {
+  outgoing_player_id: string;
+  incoming_player_id: string;
+};
 
 type TournamentMatch = {
   id: string;
@@ -487,42 +491,153 @@ export default function TournamentAdminPage() {
       "division-3-cup" ||
     competitionId ===
       "division-4-cup";
+const [
+  loadedPlayerReplacements,
+  setLoadedPlayerReplacements,
+] = useState<{
+  season: number;
+  password: string;
+  replacements: SeasonPlayerReplacement[];
+} | null>(null);
 
+const [
+  playerReplacementsError,
+  setPlayerReplacementsError,
+] = useState("");
+
+useEffect(() => {
+  if (!password) {
+    return;
+  }
+
+  const controller = new AbortController();
+
+  async function loadPlayerReplacements() {
+    try {
+      const response = await fetch(
+        `/api/admin/player-replacement?season=${season}&division=1`,
+        {
+          headers: {
+            "x-admin-password": password,
+          },
+          cache: "no-store",
+          signal: controller.signal,
+        }
+      );
+
+      const result = await response.json();
+
+      if (
+        !response.ok ||
+        !result.success ||
+        !Array.isArray(result.replacements)
+      ) {
+        throw new Error(
+          result.error ??
+            "Не вдалося завантажити заміни гравців"
+        );
+      }
+
+      if (!controller.signal.aborted) {
+        setLoadedPlayerReplacements({
+          season,
+          password,
+          replacements: result.replacements,
+        });
+
+        setPlayerReplacementsError("");
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setLoadedPlayerReplacements(null);
+
+        setPlayerReplacementsError(
+          error instanceof Error
+            ? error.message
+            : "Помилка завантаження замін"
+        );
+      }
+    }
+  }
+
+  void loadPlayerReplacements();
+
+  return () => {
+    controller.abort();
+  };
+}, [season, password]);
   /*
     ========================================
     ДОСТУПНІ ГРАВЦІ
     ========================================
   */
 
-  const availablePlayerIds =
-    useMemo(() => {
-      if (
-        !competitionId ||
-        competitionId ===
-          "associations-cup" ||
-        competitionId ===
-          "iron-coop-cup"
+  const availablePlayerIds = useMemo(() => {
+  if (
+    !competitionId ||
+    competitionId === "associations-cup" ||
+    competitionId === "iron-coop-cup"
+  ) {
+    return [];
+  }
+
+  const replacementDataIsReady =
+    !!password &&
+    loadedPlayerReplacements?.season === season &&
+    loadedPlayerReplacements?.password === password &&
+    !playerReplacementsError;
+
+  if (!replacementDataIsReady) {
+    return [];
+  }
+
+  const basePlayerIds = getCompetitionPlayers({
+    season,
+    competition: competitionId,
+    groupName:
+      stage === "group"
+        ? normalizedGroupName
+        : null,
+  });
+
+  const replacementMap = new Map(
+    loadedPlayerReplacements.replacements.map(
+      (replacement) => [
+        replacement.outgoing_player_id,
+        replacement.incoming_player_id,
+      ]
+    )
+  );
+
+  const currentPlayerIds = basePlayerIds.map(
+    (playerId) => {
+      let currentId = playerId;
+      const visited = new Set<string>();
+
+      while (
+        replacementMap.has(currentId) &&
+        !visited.has(currentId)
       ) {
-        return [];
+        visited.add(currentId);
+
+        currentId =
+          replacementMap.get(currentId)!;
       }
 
-      return getCompetitionPlayers({
-        season,
+      return currentId;
+    }
+  );
 
-        competition:
-          competitionId,
-
-        groupName:
-          stage === "group"
-            ? normalizedGroupName
-            : null,
-      });
-    }, [
-      season,
-      competitionId,
-      normalizedGroupName,
-      stage,
-    ]);
+  return [...new Set(currentPlayerIds)];
+}, [
+  season,
+  competitionId,
+  normalizedGroupName,
+  stage,
+  password,
+  loadedPlayerReplacements,
+  playerReplacementsError,
+]);
 
   /*
     ========================================

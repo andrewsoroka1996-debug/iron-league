@@ -12,6 +12,10 @@ import {
 import {
   getSeasonAssociationRanks,
 } from "./association-ranks";
+import {
+  getSeasonPlayerReplacements,
+  applyPlayerReplacements,
+} from "./player-replacements";
 
 /*
   ========================================
@@ -46,17 +50,33 @@ export async function getSeasonAssociationSquads(
     ========================================
   */
 
-  if (
-    season <= 3
-  ) {
-    return getCompetitionAssociations({
-      season:
-        season as 1 | 2 | 3,
-
-      competition:
-        "associations-cup",
+  if (season <= 3) {
+  const baseAssociations =
+    getCompetitionAssociations({
+      season: season as 1 | 2 | 3,
+      competition: "associations-cup",
     });
+
+  // Сезони 1–2 зберігаємо без змін.
+  if (season !== 3) {
+    return baseAssociations;
   }
+
+  // Отримуємо глобальні заміни сезону 3.
+  const replacements =
+    await getSeasonPlayerReplacements(season);
+
+  // Застосовуємо заміни до складів асоціацій.
+  return baseAssociations.map(
+    (association) => ({
+      ...association,
+      players: applyPlayerReplacements(
+        association.players,
+        replacements
+      ),
+    })
+  );
+}
 
   /*
     ========================================

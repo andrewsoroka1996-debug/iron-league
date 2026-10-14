@@ -7,6 +7,9 @@ import {
 import {
   getSeasonAssociationRankMap,
 } from "../../../../lib/association-ranks";
+import {
+  getSeasonPlayerReplacements,
+} from "../../../../lib/player-replacements";
 
 /*
   ========================================
@@ -96,7 +99,32 @@ export async function GET(
             season
           )
         : new Map();
+/*
+  ========================================
+  УСПАДКУВАННЯ РАНГІВ ПІСЛЯ ЗАМІНИ
+  ========================================
+*/
 
+if (season === 3) {
+  const replacements =
+    await getSeasonPlayerReplacements(
+      season
+    );
+
+  for (const replacement of replacements) {
+    const previousRank =
+      rankMap.get(
+        replacement.outgoing_player_id
+      );
+
+    if (previousRank) {
+      rankMap.set(
+        replacement.incoming_player_id,
+        previousRank
+      );
+    }
+  }
+}
     /*
       ========================================
       RESPONSE

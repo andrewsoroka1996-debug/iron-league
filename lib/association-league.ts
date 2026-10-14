@@ -25,6 +25,10 @@ import {
 import {
   supabaseAdmin,
 } from "./supabase-admin";
+import {
+  getSeasonPlayerReplacements,
+  applyPlayerReplacements,
+} from "./player-replacements";
 
 /*
   ========================================
@@ -492,8 +496,8 @@ async function loadLiveCoefficientMatches(
 */
 
 async function getLiveCoefficientMap(
-  season:
-    LiveAssociationLeagueSeason
+  season: LiveAssociationLeagueSeason,
+  resolvePlayerId: (playerId: string) => string
 ) {
   const matches =
     await loadLiveCoefficientMatches(
@@ -514,15 +518,15 @@ async function getLiveCoefficientMap(
   */
 
   const rows =
-    calculateCoefficients(
-      ({
-        season,
-
-        matches,
-      } as unknown) as Parameters<
-        typeof calculateCoefficients
-      >[0]
-    );
+  calculateCoefficients(
+    ({
+      season,
+      matches,
+      resolvePlayerId,
+    } as unknown) as Parameters<
+      typeof calculateCoefficients
+    >[0]
+  );
 
   const map =
     new Map<
@@ -1164,12 +1168,26 @@ export async function getAssociationLeague(
     live-коефіцієнти.
   */
 
-  const coefficientMap =
-    season === 2
-      ? getSeason2CoefficientMap()
-      : await getLiveCoefficientMap(
-          season
-        );
+  const replacements =
+  season >= 3
+    ? await getSeasonPlayerReplacements(season)
+    : [];
+
+const resolvePlayerId = (
+  playerId: string
+): string =>
+  applyPlayerReplacements(
+    [playerId],
+    replacements
+  )[0] ?? playerId;
+
+const coefficientMap =
+  season === 2
+    ? getSeason2CoefficientMap()
+    : await getLiveCoefficientMap(
+        season,
+        resolvePlayerId
+      );
 
   /*
     ========================================
@@ -1190,6 +1208,47 @@ export async function getAssociationLeague(
           season
         )
       : new Map();
+
+      /*
+  ========================================
+  УСПАДКУВАННЯ РАНГУ ТА ОЧОК
+  ПІСЛЯ ГЛОБАЛЬНОЇ ЗАМІНИ
+  ========================================
+*/
+
+const effectiveCoefficientMap =
+  new Map<string, number>();
+
+for (const [playerId, points] of coefficientMap) {
+  const currentPlayerId =
+    applyPlayerReplacements(
+      [playerId],
+      replacements
+    )[0] ?? playerId;
+
+  effectiveCoefficientMap.set(
+    currentPlayerId,
+    (effectiveCoefficientMap.get(currentPlayerId) ?? 0) +
+      points
+  );
+}
+
+const effectiveRankMap = new Map(rankMap);
+
+for (const [playerId, rankInfo] of rankMap) {
+  const currentPlayerId =
+    applyPlayerReplacements(
+      [playerId],
+      replacements
+    )[0] ?? playerId;
+
+  if (!effectiveRankMap.has(currentPlayerId)) {
+    effectiveRankMap.set(
+      currentPlayerId,
+      rankInfo
+    );
+  }
+}
 
   /*
     ========================================
@@ -1222,9 +1281,9 @@ export async function getAssociationLeague(
           association.players.map(
             (playerId) => {
               const coefficient =
-                coefficientMap.get(
-                  playerId
-                ) ?? 0;
+  effectiveCoefficientMap.get(
+    playerId
+  ) ?? 0;
 
               /*
                 Сезон 3+:
@@ -1235,11 +1294,11 @@ export async function getAssociationLeague(
               */
 
               const seed =
-                season >= 3
-                  ? rankMap.get(
-                      playerId
-                    )
-                  : null;
+  season >= 3
+    ? effectiveRankMap.get(
+        playerId
+      )
+    : null;
 
               const rank =
                 seed
