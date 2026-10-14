@@ -850,14 +850,13 @@ export default async function Home() {
                               : "text-xl"
                           }`}
                         >
-                          {mainFeaturedMatch.status ===
-                            "finished" &&
-                          mainFeaturedMatch.home_goals !==
-                            null &&
-                          mainFeaturedMatch.away_goals !==
-                            null
-                            ? `${mainFeaturedMatch.home_goals} : ${mainFeaturedMatch.away_goals}`
-                            : "VS"}
+                          {mainFeaturedMatch.status === "finished" &&
+mainFeaturedMatch.home_goals !== null &&
+mainFeaturedMatch.away_goals !== null
+  ? `${mainFeaturedMatch.home_goals} : ${mainFeaturedMatch.away_goals}`
+  : mainFeaturedMatch.status === "closed_unplayed"
+    ? "—"
+    : "VS"}
                         </div>
 
                         {/* AWAY PLAYER */}
@@ -872,10 +871,11 @@ export default async function Home() {
                       </div>
 
                       <div className="mt-8 text-sm text-white/35">
-                        {mainFeaturedMatch.status ===
-                        "finished"
-                          ? "Матч завершено"
-                          : "Iron League • Match of the Day"}
+                        {mainFeaturedMatch.status === "finished"
+  ? "Матч завершено"
+  : mainFeaturedMatch.status === "closed_unplayed"
+    ? "Завершено без результату"
+    : "Iron League • Match of the Day"}
                       </div>
 
                     </div>
@@ -920,14 +920,13 @@ export default async function Home() {
                               </div>
 
                               <div className="rounded-lg bg-blue-500/10 px-2.5 py-1.5 text-blue-300">
-                                {match.status ===
-                                  "finished" &&
-                                match.home_goals !==
-                                  null &&
-                                match.away_goals !==
-                                  null
-                                  ? `${match.home_goals}:${match.away_goals}`
-                                  : "VS"}
+                                {match.status === "finished" &&
+match.home_goals !== null &&
+match.away_goals !== null
+  ? `${match.home_goals}:${match.away_goals}`
+  : match.status === "closed_unplayed"
+    ? "—"
+    : "VS"}
                               </div>
 
                               <div className="truncate">

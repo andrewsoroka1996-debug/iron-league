@@ -320,7 +320,8 @@ function getLaterStages(
 */
 
 export async function getMatchResultRevertSafety(
-  matchId: string
+  matchId: string,
+  operation: "revert" | "late-result" = "revert"
 ): Promise<
   MatchResultRevertSafetyResult | null
 > {
@@ -393,21 +394,23 @@ export async function getMatchResultRevertSafety(
     ========================================
   */
 
-  const hasResult =
-    match.status ===
-      "finished" &&
-    match.home_goals !==
-      null &&
-    match.away_goals !==
-      null;
+  const validMatchState =
+  operation === "revert"
+    ? match.status === "finished" &&
+      match.home_goals !== null &&
+      match.away_goals !== null
+    : match.status === "closed_unplayed" &&
+      match.home_goals === null &&
+      match.away_goals === null &&
+      match.played_at === null;
 
-  if (
-    !hasResult
-  ) {
-    blockers.push(
-      "Матч не має завершеного результату"
-    );
-  }
+if (!validMatchState) {
+  blockers.push(
+    operation === "revert"
+      ? "Матч не має завершеного результату"
+      : "Матч не перебуває у стані «Завершено без результату»"
+  );
+}
 
   /*
     ========================================
@@ -1075,7 +1078,53 @@ export async function getMatchResultRevertSafety(
       }
     }
   }
+/*
+  ========================================
+  ПІЗНІЙ РЕЗУЛЬТАТ:
+  ЗАЛЕЖНОСТІ МІЖ ЄВРОКУБКАМИ
+  ========================================
+*/
 
+if (
+  operation === "late-result" &&
+  match.stage === "group"
+) {
+  const dependentCompetition =
+    match.competition === "champions-league"
+      ? "europa-league"
+      : match.competition === "europa-league"
+        ? "conference-league"
+        : null;
+
+  if (dependentCompetition) {
+    const { count, error } =
+      await supabaseAdmin
+        .from("matches")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("season", match.season)
+        .eq("competition", dependentCompetition)
+        .in("stage", [
+          "playoff",
+          "round-of-16",
+          "quarterfinal",
+          "semifinal",
+          "final",
+        ]);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if ((count ?? 0) > 0) {
+      blockers.push(
+        "У залежному єврокубку вже сформовано плейоф. Пізнє внесення рахунку заблоковано."
+      );
+    }
+  }
+}
   /*
     ========================================
     5. КУБОК АСОЦІАЦІЙ:

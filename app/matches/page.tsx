@@ -193,6 +193,10 @@ function getStatusName(status: string) {
   if (status === "finished") return "Завершено";
   if (status === "scheduled") return "Заплановано";
 
+  if (status === "closed_unplayed") {
+    return "Завершено без результату";
+  }
+
   return status;
 }
 
@@ -366,10 +370,11 @@ export default async function MatchesPage({
   const requestedStatus = params.status ?? "";
 
   const statusFilter =
-    requestedStatus === "finished" ||
-    requestedStatus === "scheduled"
-      ? requestedStatus
-      : "";
+  requestedStatus === "finished" ||
+  requestedStatus === "scheduled" ||
+  requestedStatus === "closed_unplayed"
+    ? requestedStatus
+    : "";
 
   const playerFilter = params.player ?? "";
 
@@ -738,19 +743,22 @@ const coopTeamsRequest = Promise.resolve(
 </label>
 
               <select
-              id="filter-status"
-                name="status"
-                defaultValue={statusFilter}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3 font-semibold text-white outline-none transition focus:border-blue-400/40"
-              >
-                <option value="">Усі матчі</option>
-                <option value="scheduled">Заплановані</option>
-                <option value="finished">Завершені</option>
-              </select>
-            </div>
+  id="filter-status"
+  name="status"
+  defaultValue={statusFilter}
+  className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3 font-semibold text-white outline-none transition focus:border-blue-400/40"
+>
+  <option value="">Усі матчі</option>
+  <option value="scheduled">Заплановані</option>
+  <option value="finished">Завершені</option>
+    <option value="closed_unplayed">
+    Завершені без результату
+  </option>
+</select>
+</div>
 
-            {/* PLAYER */}
-            <div>
+{/* PLAYER */}
+<div>
               <label
   htmlFor="filter-player"
   className="text-xs font-bold uppercase tracking-[0.2em] text-white/70"
@@ -822,8 +830,10 @@ const coopTeamsRequest = Promise.resolve(
                 {statusFilter && (
                   <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-300">
                     {statusFilter === "finished"
-                      ? "Завершені"
-                      : "Заплановані"}
+  ? "Завершені"
+  : statusFilter === "closed_unplayed"
+    ? "Завершені без результату"
+    : "Заплановані"}
                   </span>
                 )}
 
@@ -960,8 +970,8 @@ const coopTeamsRequest = Promise.resolve(
                               </div>
                             ) : (
                               <div className="rounded-xl border border-white/10 bg-white/[0.03] px-2 py-2 text-base font-black text-white/80 sm:px-4 sm:text-xl">
-                                VS
-                              </div>
+  {match.status === "closed_unplayed" ? "—" : "VS"}
+</div>
                             )}
                           </div>
 

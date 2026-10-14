@@ -28,6 +28,7 @@ import CoopTeamsForm from "./CoopTeamsForm";
 import DivisionCupBracketForm from "./DivisionCupBracketForm";
 import CoopSeriesForm from "./CoopSeriesForm";
 import ResultRestoreButton from "../ResultRestoreButton";
+import UnplayedMatchActions from "../UnplayedMatchActions";
 
 type TournamentMatch = {
   id: string;
@@ -2421,10 +2422,13 @@ export default function TournamentAdminPage() {
                         </div>
 
                         <div className="font-black">
-                          {match.status ===
-                          "finished"
-                            ? `${match.home_goals} : ${match.away_goals}`
-                            : "VS"}
+                          {match.status === "finished" &&
+match.home_goals !== null &&
+match.away_goals !== null
+  ? `${match.home_goals} : ${match.away_goals}`
+  : match.status === "closed_unplayed"
+    ? "Без результату"
+    : "VS"}
                         </div>
                       </div>
                     </button>
@@ -2542,11 +2546,24 @@ export default function TournamentAdminPage() {
                   className="mt-3 w-full rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-4 font-black text-red-300 transition hover:bg-red-500/20 disabled:opacity-40"
                 >
                   {loading
-                    ? "Processing..."
-                    : "Cancel result"}
+  ? "Обробка..."
+  : "Скасувати результат"}
                 </button>
               )}
 
+              <UnplayedMatchActions
+  password={password}
+  match={selectedMatch ?? null}
+  disabled={loading}
+  onMessage={setMessage}
+  onUpdated={async () => {
+    await loadMatches();
+
+    setSummaryRefreshKey(
+      (current) => current + 1
+    );
+  }}
+/>
               <ResultRestoreButton
   password={
     password

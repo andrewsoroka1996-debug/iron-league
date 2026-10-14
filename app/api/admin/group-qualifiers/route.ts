@@ -100,19 +100,23 @@ function isGroupComplete({
         continue;
       }
 
-      const matchExists =
+            const matchExists =
         matches.some(
           (match) =>
-            match.home_id ===
-              homeId &&
-            match.away_id ===
-              awayId &&
-            match.status ===
-              "finished" &&
-            match.home_goals !==
-              null &&
-            match.away_goals !==
-              null
+            match.home_id === homeId &&
+            match.away_id === awayId &&
+            (
+              (
+                match.status === "finished" &&
+                match.home_goals !== null &&
+                match.away_goals !== null
+              ) ||
+              (
+                match.status === "closed_unplayed" &&
+                match.home_goals === null &&
+                match.away_goals === null
+              )
+            )
         );
 
       if (!matchExists) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
+import { getMatchResultRevertSafety } from "../../../../lib/match-result-revert-safety";
 
 /*
   ==========================================
@@ -450,7 +451,33 @@ export async function POST(
         }
       );
     }
+/*
+  ========================================
+  ПІЗНЄ ВНЕСЕННЯ РАХУНКУ
+  ========================================
+*/
 
+if (match.status === "closed_unplayed") {
+  const safety =
+    await getMatchResultRevertSafety(
+      match.id,
+      "late-result"
+    );
+
+  if (!safety || !safety.can_revert) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          safety?.blockers.join("; ") ||
+          "Не вдалося перевірити залежності матчу",
+      },
+      {
+        status: 409,
+      }
+    );
+  }
+}
     const wasFinished =
       match.status === "finished";
 
@@ -474,9 +501,13 @@ export async function POST(
         played_at:
           new Date().toISOString(),
       })
-      .eq(
+            .eq(
         "id",
         match_id
+      )
+      .eq(
+        "status",
+        match.status
       )
       .select(
         `
@@ -501,16 +532,39 @@ export async function POST(
           is_tiebreak
         `
       )
-      .single();
+                  .maybeSingle();
 
     if (updateError) {
+      const isLateResultConflict =
+        match.status === "closed_unplayed" &&
+        updateError.code === "P0001";
+
       return NextResponse.json(
         {
-          error:
-            updateError.message,
+          success: false,
+          error: updateError.message,
         },
         {
-          status: 500,
+          status: isLateResultConflict ? 409 : 500,
+        }
+      );
+    }
+
+    /*
+      ========================================
+      ЗАХИСТ ВІД ЗМІНИ СТАТУСУ
+      ========================================
+    */
+
+    if (!updatedMatch) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Статус матчу змінився. Оновіть дані та повторіть спробу.",
+        },
+        {
+          status: 409,
         }
       );
     }

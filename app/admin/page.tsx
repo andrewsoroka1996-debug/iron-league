@@ -9,6 +9,7 @@ import {
 
 import { players } from "../../data/players";
 import ResultRestoreButton from "./ResultRestoreButton";
+import UnplayedMatchActions from "./UnplayedMatchActions";
 
 import { season1 } from "../../data/seasons/season-1";
 import { season2 } from "../../data/seasons/season-2";
@@ -2179,18 +2180,19 @@ setMatchId(
                         Рахунок
                       </h3>
 
-                      {selectedMatch.status ===
-                      "finished" ? (
-                        <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-bold text-green-400">
-                          Результат
-                          внесено
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-300">
-                          Матч не
-                          зіграно
-                        </span>
-                      )}
+                      {selectedMatch.status === "finished" ? (
+  <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-bold text-green-400">
+    Результат внесено
+  </span>
+) : selectedMatch.status === "closed_unplayed" ? (
+  <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
+    Завершено без результату
+  </span>
+) : (
+  <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-300">
+    Матч не зіграно
+  </span>
+)}
                     </div>
 
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
@@ -2289,7 +2291,29 @@ setMatchId(
                         : "Cancel result"}
                     </button>
                   )}
+<UnplayedMatchActions
+  password={password}
+  match={selectedMatch ?? null}
+  disabled={loading}
+  onMessage={setMessage}
+  onUpdated={async () => {
+    if (!selectedMatch) {
+      await loadCalendar();
+      return;
+    }
 
+    const closedMatchId = selectedMatch.id;
+    const closedRound = selectedMatch.round;
+
+    await loadCalendar();
+
+    if (closedRound !== null) {
+      setRound(closedRound);
+    }
+
+    setMatchId(closedMatchId);
+  }}
+/>
                   <ResultRestoreButton
   password={
     password
