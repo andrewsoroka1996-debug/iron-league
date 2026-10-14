@@ -1,5 +1,10 @@
 export const players = [
   {
+    id: "dimalwowski",
+    nickname: "DimaLwowski",
+    account: "dimalwowski_65466",
+  },
+  {
     id: "atackms",
     nickname: "atackms",
     account: "atackms",
