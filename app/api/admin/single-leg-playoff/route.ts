@@ -5,6 +5,10 @@ import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getCompetitionPlayers } from "../../../../data/competitions/get-competition-players";
 
 import type { SeasonNumber } from "../../../../data/competitions/season-competitions";
+import {
+  getSeasonPlayerReplacements,
+  applyPlayerReplacements,
+} from "../../../../lib/player-replacements";
 
 type DivisionCup =
   | "division-1-cup"
@@ -610,17 +614,30 @@ export async function POST(
       ========================================
     */
 
-    const participantIds =
-      getCompetitionPlayers({
-        season:
-          seasonNumber,
+    /*
+  Актуальний склад Кубка дивізіону
+  з урахуванням глобальних замін.
+*/
 
-        competition:
-          cup,
+const initialParticipantIds =
+  getCompetitionPlayers({
+    season: seasonNumber,
+    competition: cup,
+    groupName: null,
+  });
 
-        groupName:
-          null,
-      });
+const replacements =
+  seasonNumber >= 3
+    ? await getSeasonPlayerReplacements(
+        seasonNumber
+      )
+    : [];
+
+const participantIds =
+  applyPlayerReplacements(
+    initialParticipantIds,
+    replacements
+  );
 
     if (
       !participantIds.includes(
