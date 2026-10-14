@@ -1,5 +1,10 @@
 export const players = [
   {
+    id: "atackms",
+    nickname: "atackms",
+    account: "atackms",
+  },
+  {
     id: "everlast-ua",
     nickname: "EverlasT_UA",
     account: "everlast_ua",
