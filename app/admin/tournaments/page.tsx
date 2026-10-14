@@ -1341,7 +1341,7 @@ export default function TournamentAdminPage() {
       const confirmed =
         window.confirm(
           [
-            "Cancel this result?",
+            "Скасувати результат цього матчу?",
             "",
             `${getParticipantName(
               selectedMatch.home_id,
@@ -1351,7 +1351,7 @@ export default function TournamentAdminPage() {
               selectedMatch.participant_type
             )}`,
             "",
-            "The match will return to scheduled status.",
+            "Матч повернеться до статусу «Заплановано», а рахунок буде видалено.",
           ].join("\n")
         );
 
@@ -1405,14 +1405,14 @@ export default function TournamentAdminPage() {
         setMessage(
           blockerText ||
             result.error ||
-            "Failed to cancel result"
+            "Не вдалося скасувати результат"
         );
 
         return;
       }
 
       setMessage(
-        "✅ Result cancelled"
+        "✅ Результат успішно скасовано"
       );
 
       setHomeGoals("");
@@ -2327,26 +2327,34 @@ export default function TournamentAdminPage() {
 
         {/* MATCH LIST */}
 
+                {/* MATCH LIST */}
+
         {competitionId && (
-          <div className="mt-8 rounded-3xl border border-white/10 bg-[#07101d] p-7">
-            <div className="flex items-end justify-between gap-5">
-              <div>
+          <div className="mt-8 min-w-0 rounded-2xl border border-white/10 bg-[#07101d] p-4 sm:rounded-3xl sm:p-7">
+
+            <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
+
+              <div className="min-w-0">
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
                   Supabase
                 </div>
 
-                <h2 className="mt-2 text-3xl font-black">
-                  Створені
-                  матчі
+                <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+                  Створені матчі
                 </h2>
               </div>
 
-              <div className="text-sm text-white/35">
-                {
-                  matches.length
-                }{" "}
-                матчів
+              <div className="whitespace-nowrap text-sm font-medium text-white/45">
+                {matches.length}{" "}
+{matches.length % 100 >= 11 && matches.length % 100 <= 14
+  ? "матчів"
+  : matches.length % 10 === 1
+    ? "матч"
+    : [2, 3, 4].includes(matches.length % 10)
+      ? "матчі"
+      : "матчів"}
               </div>
+
             </div>
 
             {matchesLoading ? (
@@ -2381,9 +2389,12 @@ export default function TournamentAdminPage() {
                           : "border-white/10 bg-white/[0.025] hover:border-white/20"
                       }`}
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                          <div className="font-bold">
+                                            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-4">
+
+                        {/* УЧАСНИКИ ТА СТАДІЯ */}
+                        <div className="min-w-0">
+
+                          <div className="text-sm font-bold leading-5 [overflow-wrap:anywhere] sm:text-base">
                             {getParticipantName(
                               match.home_id,
                               match.participant_type
@@ -2397,9 +2408,21 @@ export default function TournamentAdminPage() {
                             )}
                           </div>
 
-                          <div className="mt-2 text-xs text-white/35">
-                            {match.stage &&
-                              `Стадія: ${match.stage}`}
+                          <div className="mt-2 text-xs leading-5 text-white/40 [overflow-wrap:anywhere]">
+                            {match.stage && (
+                              <>
+                                Стадія:{" "}
+                                {match.stage === "qualification"
+  ? "Кваліфікація"
+  : match.stage === "quarterfinal"
+    ? "Чвертьфінал"
+    : match.stage === "semifinal"
+      ? "Півфінал"
+      : match.stage === "final"
+        ? "Фінал"
+        : match.stage}
+                              </>
+                            )}
 
                             {match.group_name &&
                               ` • Група ${match.group_name}`}
@@ -2407,29 +2430,30 @@ export default function TournamentAdminPage() {
                             {match.round &&
                               ` • № ${match.round}`}
 
-                            {match.leg ===
-                              1 &&
+                            {match.leg === 1 &&
                               match.series_id &&
                               " • 1-й матч"}
 
-                            {match.leg ===
-                              2 &&
+                            {match.leg === 2 &&
                               " • Матч-відповідь"}
 
                             {match.is_tiebreak &&
                               " • Тай-брейк"}
                           </div>
+
                         </div>
 
-                        <div className="font-black">
+                        {/* РАХУНОК */}
+                        <div className="shrink-0 whitespace-nowrap text-right text-xs font-black tabular-nums text-white sm:text-base">
                           {match.status === "finished" &&
-match.home_goals !== null &&
-match.away_goals !== null
-  ? `${match.home_goals} : ${match.away_goals}`
-  : match.status === "closed_unplayed"
-    ? "Без результату"
-    : "VS"}
+                          match.home_goals !== null &&
+                          match.away_goals !== null
+                            ? `${match.home_goals} : ${match.away_goals}`
+                            : match.status === "closed_unplayed"
+                              ? "Без результату"
+                              : "VS"}
                         </div>
+
                       </div>
                     </button>
                   )
@@ -2446,19 +2470,21 @@ match.away_goals !== null
             onSubmit={
               saveResult
             }
-            className="mt-8 rounded-3xl border border-white/10 bg-[#07101d] p-7"
+            className="mt-6 min-w-0 rounded-2xl border border-white/10 bg-[#07101d] p-4 sm:mt-8 sm:rounded-3xl sm:p-7"
           >
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
               Результат
             </div>
 
-            <h2 className="mt-2 text-3xl font-black">
-              Внести рахунок
-            </h2>
+            <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+  Внести рахунок
+</h2>
 
-            <div className="mt-8 grid grid-cols-[1fr_auto_1fr] items-end gap-4">
-              <div>
-                <div className="mb-3 text-center font-bold">
+                        <div className="mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2 sm:mt-8 sm:gap-4">
+
+              {/* ГОСПОДАР */}
+              <div className="min-w-0">
+                <div className="mb-3 min-w-0 text-center text-xs font-bold leading-5 [overflow-wrap:anywhere] sm:text-base">
                   {getParticipantName(
                     selectedMatch.home_id,
                     selectedMatch.participant_type
@@ -2467,28 +2493,25 @@ match.away_goals !== null
 
                 <input
                   type="number"
+                  inputMode="numeric"
                   min="0"
-                  value={
-                    homeGoals
+                  aria-label="Голи господаря"
+                  value={homeGoals}
+                  onChange={(event) =>
+                    setHomeGoals(event.target.value)
                   }
-                  onChange={(
-                    event
-                  ) =>
-                    setHomeGoals(
-                      event.target
-                        .value
-                    )
-                  }
-                  className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
+                  className="w-full min-w-0 rounded-xl border border-white/10 bg-[#030711] px-2 py-3 text-center text-2xl font-black sm:px-4 sm:py-4 sm:text-3xl"
                 />
               </div>
 
-              <div className="pb-4 text-2xl font-black text-white/25">
+              {/* РОЗДІЛЬНИК */}
+              <div className="pb-3 text-xl font-black text-white/30 sm:pb-4 sm:text-2xl">
                 :
               </div>
 
-              <div>
-                <div className="mb-3 text-center font-bold">
+              {/* ГІСТЬ */}
+              <div className="min-w-0">
+                <div className="mb-3 min-w-0 text-center text-xs font-bold leading-5 [overflow-wrap:anywhere] sm:text-base">
                   {getParticipantName(
                     selectedMatch.away_id,
                     selectedMatch.participant_type
@@ -2497,21 +2520,17 @@ match.away_goals !== null
 
                 <input
                   type="number"
+                  inputMode="numeric"
                   min="0"
-                  value={
-                    awayGoals
+                  aria-label="Голи гостя"
+                  value={awayGoals}
+                  onChange={(event) =>
+                    setAwayGoals(event.target.value)
                   }
-                  onChange={(
-                    event
-                  ) =>
-                    setAwayGoals(
-                      event.target
-                        .value
-                    )
-                  }
-                  className="w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-4 text-center text-3xl font-black"
+                  className="w-full min-w-0 rounded-xl border border-white/10 bg-[#030711] px-2 py-3 text-center text-2xl font-black sm:px-4 sm:py-4 sm:text-3xl"
                 />
               </div>
+
             </div>
 
             <button
@@ -2551,19 +2570,21 @@ match.away_goals !== null
                 </button>
               )}
 
-              <UnplayedMatchActions
-  password={password}
-  match={selectedMatch ?? null}
-  disabled={loading}
-  onMessage={setMessage}
-  onUpdated={async () => {
-    await loadMatches();
+              <div className="mt-3">
+  <UnplayedMatchActions
+    password={password}
+    match={selectedMatch ?? null}
+    disabled={loading}
+    onMessage={setMessage}
+    onUpdated={async () => {
+      await loadMatches();
 
-    setSummaryRefreshKey(
-      (current) => current + 1
-    );
-  }}
-/>
+      setSummaryRefreshKey(
+        (current) => current + 1
+      );
+    }}
+  />
+</div>
               <ResultRestoreButton
   password={
     password

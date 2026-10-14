@@ -1079,7 +1079,7 @@ export default function AdminPage() {
       const confirmed =
         window.confirm(
           [
-            "Cancel this result?",
+            "Скасувати результат цього матчу?",
             "",
             `${getNickname(
               selectedMatch.home_id
@@ -1087,7 +1087,7 @@ export default function AdminPage() {
               selectedMatch.away_id
             )}`,
             "",
-            "The match will return to scheduled status.",
+            "Матч повернеться до статусу «Заплановано», а рахунок буде видалено.",
           ].join("\n")
         );
 
@@ -1150,7 +1150,7 @@ export default function AdminPage() {
         setMessage(
           blockerText ||
             result.error ||
-            "Failed to cancel result"
+            "Не вдалося скасувати результат"
         );
 
         return;
@@ -1163,7 +1163,7 @@ export default function AdminPage() {
       */
 
       setMessage(
-        "✅ Result cancelled"
+        "✅ Результат успішно скасовано"
       );
 
       const revertedMatchId =
@@ -1802,12 +1802,12 @@ setMatchId(
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
-      {/* HEADER */}
+            <header className="relative z-50 border-b border-white/10 bg-[#030711]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:py-5">
 
-      <header className="border-b border-white/10 bg-[#030711]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <div>
-            <div className="font-black tracking-[0.18em]">
+          {/* LOGO */}
+          <div className="min-w-0 shrink-0">
+            <div className="whitespace-nowrap text-sm font-black tracking-[0.12em] sm:text-base sm:tracking-[0.18em]">
               IRON LEAGUE
             </div>
 
@@ -1816,56 +1816,97 @@ setMatchId(
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-  <a
-    href="/admin/tournaments"
-    className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
-  >
-    Турніри
-  </a>
+          {/* DESKTOP MENU */}
+          <nav className="hidden items-center gap-4 lg:flex">
+            <a
+              href="/admin/tournaments"
+              className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
+            >
+              Турніри
+            </a>
 
-  <a
-  href="/admin/player-replacements"
-  className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
->
-  Заміни гравців
-</a>
+            <a
+              href="/admin/player-replacements"
+              className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
+            >
+              Заміни гравців
+            </a>
 
-  <a
-    href="/admin/news"
-    className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
-  >
-    Новини
-  </a>
+            <a
+              href="/admin/news"
+              className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
+            >
+              Новини
+            </a>
 
-  <a
-    href="/"
-    className="font-bold text-blue-300 transition hover:text-blue-200"
-  >
-    ← На сайт
-  </a>
-</div>
+            <a
+              href="/"
+              className="whitespace-nowrap font-bold text-blue-300 transition hover:text-blue-200"
+            >
+              ← На сайт
+            </a>
+          </nav>
+
+          {/* MOBILE MENU */}
+          <details className="group relative lg:hidden">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-300 [&::-webkit-details-marker]:hidden">
+              <span aria-hidden="true">☰</span>
+              <span>Меню</span>
+            </summary>
+
+            <nav className="absolute right-0 top-full z-50 mt-2 flex w-60 max-w-[calc(100vw-2rem)] flex-col gap-1 rounded-2xl border border-white/10 bg-[#07101d] p-2 shadow-2xl">
+
+              <a
+                href="/admin/tournaments"
+                className="rounded-xl px-4 py-3 font-bold text-blue-300 transition hover:bg-blue-500/10"
+              >
+                Турніри
+              </a>
+
+              <a
+                href="/admin/player-replacements"
+                className="rounded-xl px-4 py-3 font-bold text-blue-300 transition hover:bg-blue-500/10"
+              >
+                Заміни гравців
+              </a>
+
+              <a
+                href="/admin/news"
+                className="rounded-xl px-4 py-3 font-bold text-blue-300 transition hover:bg-blue-500/10"
+              >
+                Новини
+              </a>
+
+              <div className="my-1 border-t border-white/10" />
+
+              <a
+                href="/"
+                className="rounded-xl px-4 py-3 font-bold text-white/70 transition hover:bg-white/5"
+              >
+                ← На сайт
+              </a>
+
+            </nav>
+          </details>
+
         </div>
       </header>
 
-      <section className="mx-auto max-w-6xl px-6 py-14">
-        <h1 className="text-4xl font-black">
+      <section className="mx-auto w-full min-w-0 max-w-6xl px-4 py-8 sm:px-6 sm:py-14">
+  <h1 className="break-words text-2xl font-black sm:text-4xl">
           Керування Iron League
         </h1>
 
         {/* TABS */}
 
-        <div className="mt-8 inline-flex flex-wrap rounded-xl border border-white/10 bg-[#07101d] p-1">
+                <div className="mt-6 grid w-full min-w-0 grid-cols-3 gap-1 rounded-xl border border-white/10 bg-[#07101d] p-1 sm:mt-8 sm:inline-flex sm:w-auto sm:flex-wrap sm:gap-0">
           <button
             type="button"
             onClick={() => {
-              setTab(
-                "results"
-              );
-
+              setTab("results");
               setMessage("");
             }}
-            className={`rounded-lg px-6 py-3 text-sm font-bold transition ${
+            className={`min-w-0 rounded-lg px-1 py-3 text-center text-[11px] font-bold leading-tight transition min-[360px]:text-xs sm:px-6 sm:text-sm ${
               tab === "results"
                 ? "bg-blue-500 text-white"
                 : "text-white/45 hover:text-white"
@@ -1877,13 +1918,10 @@ setMatchId(
           <button
             type="button"
             onClick={() => {
-              setTab(
-                "calendar"
-              );
-
+              setTab("calendar");
               setMessage("");
             }}
-            className={`rounded-lg px-6 py-3 text-sm font-bold transition ${
+            className={`min-w-0 rounded-lg px-1 py-3 text-center text-[11px] font-bold leading-tight transition min-[360px]:text-xs sm:px-6 sm:text-sm ${
               tab === "calendar"
                 ? "bg-blue-500 text-white"
                 : "text-white/45 hover:text-white"
@@ -1895,13 +1933,10 @@ setMatchId(
           <button
             type="button"
             onClick={() => {
-              setTab(
-                "featured"
-              );
-
+              setTab("featured");
               setMessage("");
             }}
-            className={`rounded-lg px-6 py-3 text-sm font-bold transition ${
+            className={`min-w-0 rounded-lg px-1 py-3 text-center text-[11px] font-bold leading-tight transition min-[360px]:text-xs sm:px-6 sm:text-sm ${
               tab === "featured"
                 ? "bg-blue-500 text-white"
                 : "text-white/45 hover:text-white"
@@ -1914,7 +1949,7 @@ setMatchId(
         {/* COMMON SETTINGS */}
 
         <div
-          className={`mt-8 grid gap-5 rounded-3xl border border-white/10 bg-[#07101d] p-7 ${
+          className={`mt-6 grid min-w-0 gap-4 rounded-2xl border border-white/10 bg-[#07101d] p-4 sm:mt-8 sm:gap-5 sm:rounded-3xl sm:p-7 ${
             tab ===
             "featured"
               ? "md:grid-cols-2"
@@ -2057,11 +2092,11 @@ setMatchId(
             onSubmit={
               saveResult
             }
-            className="mt-8 space-y-6 rounded-3xl border border-white/10 bg-[#07101d] p-7"
+            className="mt-6 min-w-0 space-y-4 rounded-2xl border border-white/10 bg-[#07101d] p-4 sm:mt-8 sm:space-y-6 sm:rounded-3xl sm:p-7"
           >
-            <h2 className="text-3xl font-black">
-              Внести результат
-            </h2>
+            <h2 className="text-xl font-black sm:text-3xl">
+  Внести результат
+</h2>
 
             {calendarLoading ? (
               <div className="text-white/40">
@@ -2288,7 +2323,7 @@ setMatchId(
                     >
                       {loading
                         ? "Processing..."
-                        : "Cancel result"}
+                        : "Скасувати результат"}
                     </button>
                   )}
 <UnplayedMatchActions
@@ -2647,37 +2682,29 @@ setMatchId(
                             }
                           </div>
 
-                          {matches.map(
-                            (
-                              match
-                            ) => (
-                              <div
-                                key={
-                                  match.id
-                                }
-                                className="grid grid-cols-[1fr_auto_1fr] gap-4 border-t border-white/5 px-5 py-4"
-                              >
-                                <div className="text-right">
-                                  {getNickname(
-                                    match.home_id
-                                  )}
-                                </div>
-
-                                <div className="font-black text-white/30">
-                                  {match.status ===
-                                  "finished"
-                                    ? `${match.home_goals} : ${match.away_goals}`
-                                    : "VS"}
-                                </div>
-
-                                <div>
-                                  {getNickname(
-                                    match.away_id
-                                  )}
-                                </div>
+                                                    {matches.map((match) => (
+                            <div
+                              key={match.id}
+                              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-t border-white/5 px-3 py-3 sm:gap-4 sm:px-5 sm:py-4"
+                            >
+                              {/* ГОСПОДАР */}
+                              <div className="min-w-0 text-right text-sm leading-5 [overflow-wrap:anywhere] sm:text-base">
+                                {getNickname(match.home_id)}
                               </div>
-                            )
-                          )}
+
+                              {/* РАХУНОК */}
+                              <div className="shrink-0 whitespace-nowrap text-center text-sm font-black tabular-nums text-white/40 sm:text-base">
+                                {match.status === "finished"
+                                  ? `${match.home_goals} : ${match.away_goals}`
+                                  : "VS"}
+                              </div>
+
+                              {/* ГІСТЬ */}
+                              <div className="min-w-0 text-left text-sm leading-5 [overflow-wrap:anywhere] sm:text-base">
+                                {getNickname(match.away_id)}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       );
                     }
@@ -2695,7 +2722,7 @@ setMatchId(
           <div className="mt-8 space-y-8">
             {/* DATE / LOAD */}
 
-            <div className="rounded-3xl border border-white/10 bg-[#07101d] p-7">
+            <div className="min-w-0 rounded-2xl border border-white/10 bg-[#07101d] p-4 sm:rounded-3xl sm:p-7">
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
                 Головна сторінка
               </div>
@@ -2744,7 +2771,7 @@ setMatchId(
                         ""
                       );
                     }}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-[#030711] px-4 py-3"
+                    className="mt-2 w-full min-w-0 rounded-xl border border-white/10 bg-[#030711] px-4 py-3 [color-scheme:dark]"
                   />
                 </div>
 
@@ -2772,9 +2799,9 @@ setMatchId(
                 Призначення
               </div>
 
-              <h2 className="mt-2 text-3xl font-black">
-                Додати на головну
-              </h2>
+              <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+  Додати на головну
+</h2>
 
               {featuredMatches.length ===
               0 ? (
@@ -2941,15 +2968,19 @@ setMatchId(
 
             {/* CURRENT FEATURED */}
 
-            <div className="rounded-3xl border border-white/10 bg-[#07101d] p-7">
+            <div className="min-w-0 rounded-2xl border border-white/10 bg-[#07101d] p-4 sm:rounded-3xl sm:p-7">
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
                 Поточний блок
               </div>
 
-              <h2 className="mt-2 text-3xl font-black">
-                Матчі дня на{" "}
-                {featuredDate}
-              </h2>
+              <h2 className="mt-2 text-2xl font-black leading-snug sm:text-3xl">
+  Матчі дня на{" "}
+  <span className="whitespace-nowrap">
+    {featuredDate
+      ? featuredDate.split("-").reverse().join(".")
+      : "—"}
+  </span>
+</h2>
 
               {featuredAssignments.length ===
               0 ? (

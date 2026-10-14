@@ -1003,7 +1003,7 @@ export default function CoopTeamsForm({
                   key={
                     team.id
                   }
-                  className={`grid gap-4 border-b border-white/10 p-5 last:border-b-0 lg:grid-cols-[60px_1.1fr_1fr_1fr_auto] lg:items-center ${
+                  className={`grid min-w-0 grid-cols-[44px_minmax(0,1fr)] items-center gap-x-3 gap-y-4 border-b border-white/10 p-4 last:border-b-0 sm:p-5 lg:grid-cols-[60px_1.1fr_1fr_1fr_auto] lg:gap-4 ${
                     changed
                       ? "bg-blue-500/[0.05]"
                       : "bg-[#030711]"
@@ -1022,8 +1022,8 @@ export default function CoopTeamsForm({
 
                   {/* CLUB */}
 
-                  <div>
-                    <div className="text-lg font-black">
+                  <div className="min-w-0">
+  <div className="text-base font-black [overflow-wrap:anywhere] sm:text-lg">
                       {
                         team.name
                       }
@@ -1050,7 +1050,7 @@ export default function CoopTeamsForm({
 
                   {/* PLAYER 1 */}
 
-                  <div>
+                  <div className="col-span-2 min-w-0 lg:col-span-1">
                     <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.15em] text-white/30">
                       Гравець 1
                     </label>
@@ -1110,7 +1110,7 @@ export default function CoopTeamsForm({
 
                   {/* PLAYER 2 */}
 
-                  <div>
+                  <div className="col-span-2 min-w-0 lg:col-span-1">
                     <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.15em] text-white/30">
                       Гравець 2
                     </label>
@@ -1170,7 +1170,7 @@ export default function CoopTeamsForm({
 
                   {/* ACTIONS */}
 
-                  <div className="flex gap-2 lg:justify-end">
+                  <div className="col-span-2 flex min-w-0 gap-2 lg:col-span-1 lg:justify-end">
                     {(draft.player1Id ||
                       draft.player2Id) && (
                       <button

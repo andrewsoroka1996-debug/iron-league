@@ -234,7 +234,7 @@ export default function ResultRestoreButton({
           ) {
             onMessage(
               result.error ??
-                "Restore availability check failed"
+                "Не вдалося перевірити можливість відновлення результату"
             );
           }
 
@@ -261,7 +261,7 @@ export default function ResultRestoreButton({
           setPreview(null);
 
           onMessage(
-            "Connection error while checking Restore result"
+            "Помилка з'єднання під час перевірки відновлення результату"
           );
         }
       } finally {
@@ -309,7 +309,7 @@ export default function ResultRestoreButton({
       !preview?.restore_result
     ) {
       onMessage(
-        "No result is available for Restore"
+        "Немає результату, доступного для відновлення"
       );
 
       return;
@@ -327,11 +327,11 @@ export default function ResultRestoreButton({
     const confirmed =
       window.confirm(
         [
-          "Restore previous result?",
+          "Відновити попередній результат матчу?",
           "",
           `${oldResult.home_goals} : ${oldResult.away_goals}`,
           "",
-          "The exact previous status and played_at will also be restored.",
+          "Також буде відновлено попередній статус матчу та дату й час його проведення.",
         ].join("\n")
       );
 
@@ -380,14 +380,14 @@ export default function ResultRestoreButton({
       ) {
         onMessage(
           result.error ??
-            "Failed to restore result"
+            "Не вдалося відновити результат"
         );
 
         return;
       }
 
       onMessage(
-        "✅ Result restored"
+        "✅ Результат успішно відновлено"
       );
 
       /*
@@ -407,7 +407,7 @@ export default function ResultRestoreButton({
       setPreview(null);
     } catch {
       onMessage(
-        "Connection error while restoring result"
+        "Помилка з'єднання під час відновлення результату"
       );
     } finally {
       setRestoring(false);
@@ -433,21 +433,16 @@ export default function ResultRestoreButton({
   const restoreResultData =
     preview.restore_result;
 
-  return (
+    return (
     <button
       type="button"
-      onClick={
-        restoreResult
-      }
-      disabled={
-        disabled ||
-        restoring
-      }
-      className="mt-3 w-full rounded-xl border border-green-500/30 bg-green-500/10 px-6 py-4 font-black text-green-300 transition hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+      onClick={restoreResult}
+      disabled={disabled || restoring}
+      className="mt-3 w-full min-w-0 rounded-xl border border-green-500/30 bg-green-500/10 px-3 py-4 text-sm font-black text-green-300 transition hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-40 sm:px-6 sm:text-base"
     >
       {restoring
-        ? "Restoring..."
-        : `Restore result (${restoreResultData.home_goals} : ${restoreResultData.away_goals})`}
+        ? "Відновлення результату..."
+        : `Відновити результат (${restoreResultData.home_goals} : ${restoreResultData.away_goals})`}
     </button>
   );
 }

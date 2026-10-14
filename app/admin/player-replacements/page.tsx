@@ -2066,27 +2066,20 @@ ${getPlayerName(
                                   ` • Тур ${match.round}`}
                               </div>
 
-                              <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-sm">
-                                <div className="text-right font-bold">
-                                  {getPlayerName(
-                                    match.home_id
-                                  )}
+                                                            <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-xs sm:gap-3 sm:text-sm">
+                                {/* ГОСПОДАР */}
+                                <div className="min-w-0 text-right font-bold leading-5 [overflow-wrap:anywhere]">
+                                  {getPlayerName(match.home_id)}
                                 </div>
 
-                                <div className="font-black text-green-300">
-                                  {
-                                    match.home_goals
-                                  }{" "}
-                                  :{" "}
-                                  {
-                                    match.away_goals
-                                  }
+                                {/* РАХУНОК */}
+                                <div className="shrink-0 whitespace-nowrap font-black tabular-nums text-green-300">
+                                  {match.home_goals} : {match.away_goals}
                                 </div>
 
-                                <div className="font-bold">
-                                  {getPlayerName(
-                                    match.away_id
-                                  )}
+                                {/* ГІСТЬ */}
+                                <div className="min-w-0 font-bold leading-5 [overflow-wrap:anywhere]">
+                                  {getPlayerName(match.away_id)}
                                 </div>
                               </div>
                             </div>
