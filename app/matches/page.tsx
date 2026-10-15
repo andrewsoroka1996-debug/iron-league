@@ -23,6 +23,7 @@ type PageProps = {
     competition?: string;
     status?: string;
     player?: string;
+    limit?: string;
   }>;
 };
 
@@ -587,6 +588,74 @@ const coopTeamsRequest = Promise.resolve(
 
   // GROUPS
   const matchGroups = groupMatches(matches);
+  // ========================================
+// VISIBLE MATCHES — PROGRESSIVE DISPLAY
+// ========================================
+
+const MATCHES_INCREMENT = 30;
+
+const requestedLimit = Number(params.limit);
+
+const safeLimit =
+  Number.isSafeInteger(requestedLimit) &&
+  requestedLimit >= MATCHES_INCREMENT
+    ? requestedLimit
+    : MATCHES_INCREMENT;
+
+const visibleCount = Math.min(
+  matches.length,
+  safeLimit
+);
+
+const visibleGroups: MatchGroup[] = [];
+
+let remaining = visibleCount;
+
+for (const group of matchGroups) {
+  if (remaining <= 0) break;
+
+  const visibleMatches = group.matches.slice(
+    0,
+    remaining
+  );
+
+  if (visibleMatches.length > 0) {
+    visibleGroups.push({
+      ...group,
+      matches: visibleMatches,
+    });
+
+    remaining -= visibleMatches.length;
+  }
+}
+
+const hasMoreMatches = visibleCount < matches.length;
+
+const moreParams = new URLSearchParams();
+
+moreParams.set("season", String(season));
+
+if (competitionFilter) {
+  moreParams.set("competition", competitionFilter);
+}
+
+if (statusFilter) {
+  moreParams.set("status", statusFilter);
+}
+
+if (playerFilter) {
+  moreParams.set("player", playerFilter);
+}
+
+moreParams.set(
+  "limit",
+  String(
+    Math.min(
+      matches.length,
+      visibleCount + MATCHES_INCREMENT
+    )
+  )
+);
 
   // PARTICIPANT NAME
   function getParticipantName(id: string, type: string) {
@@ -899,7 +968,7 @@ const coopTeamsRequest = Promise.resolve(
           </div>
         ) : (
           <div className="grid gap-4 sm:gap-8">
-            {matchGroups.map((group) => (
+            {visibleGroups.map((group) => (
               <section
                 key={group.key}
                 className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d]"
@@ -1001,12 +1070,28 @@ const coopTeamsRequest = Promise.resolve(
                   })}
                 </div>
               </section>
-            ))}
+                        ))}
+          </div>
+        )}
+
+        {hasMoreMatches && (
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <Link
+              href={`/matches?${moreParams.toString()}`}
+              scroll={false}
+              className="rounded-xl border border-blue-400/30 bg-blue-600 px-7 py-3 text-sm font-black text-white transition hover:bg-blue-500"
+            >
+              Показати ще
+            </Link>
+
+            <div className="text-xs text-white/50">
+              Показано {visibleCount} із {matches.length} матчів
+            </div>
           </div>
         )}
       </section>
 
-            {/* FOOTER */}
+      {/* FOOTER */}
       <SiteFooter />
     </main>
   );
