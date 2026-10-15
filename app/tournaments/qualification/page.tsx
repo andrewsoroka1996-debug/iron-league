@@ -719,7 +719,117 @@ export default async function QualificationPage({
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
-              <div className="overflow-x-auto">
+              {/* MOBILE: tap a row to reveal full player statistics. */}
+              <div className="lg:hidden">
+                <div className="grid grid-cols-[34px_minmax(0,1fr)_26px_36px_20px] items-center gap-1 border-b border-white/10 bg-white/[0.03] px-2 py-3 text-[10px] font-bold uppercase tracking-wide text-white/40">
+                  <span className="text-center">#</span>
+                  <span>Гравець</span>
+                  <span className="text-center">І</span>
+                  <span className="text-center">О</span>
+                  <span className="text-center">Ст.</span>
+                </div>
+
+                {table.map((row, index) => {
+                  const qualified = qualifiedPlayerIds.has(row.playerId);
+                  const goalDifference = row.goalDifference;
+
+                  const extraStats = [
+                    { label: "Перемоги", value: row.wins },
+                    { label: "Нічиї", value: row.draws },
+                    { label: "Поразки", value: row.losses },
+                    { label: "Забиті", value: row.goalsFor },
+                    { label: "Пропущені", value: row.goalsAgainst },
+                    {
+                      label: "Різниця",
+                      value: goalDifference > 0 ? `+${goalDifference}` : `${goalDifference}`,
+                    },
+                  ];
+
+                  return (
+                    <details
+                      key={row.playerId}
+                      className={`group border-b border-white/[0.06] last:border-b-0 ${
+                        qualified ? "bg-green-400/[0.015]" : "bg-red-400/[0.015]"
+                      }`}
+                    >
+                      <summary className="grid cursor-pointer list-none grid-cols-[34px_minmax(0,1fr)_26px_36px_20px] items-center gap-1 px-2 py-3 transition hover:bg-white/[0.035] [&::-webkit-details-marker]:hidden">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.05] text-xs font-black text-white/75">
+                          {index + 1}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="flex min-w-0 items-center gap-1">
+                            <span className="block min-w-0 flex-1 truncate text-xs font-bold">
+                              {row.player.nickname}
+                            </span>
+                            <span aria-hidden="true" className="shrink-0 text-[10px] text-blue-300/70 transition group-open:rotate-180">
+                              ▾
+                            </span>
+                          </span>
+                          {row.player.account && (
+                            <span className="mt-1 block truncate text-[10px] text-white/30">
+                              @{row.player.account}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-center text-xs text-white/60">
+                          {row.played}
+                        </span>
+                        <span className="text-center text-sm font-black">
+                          {row.points}
+                        </span>
+                        <span
+                          role="img"
+                          aria-label={qualified ? "Пройшов" : "Не пройшов"}
+                          className={`mx-auto h-2.5 w-2.5 rounded-full ${
+                            qualified ? "bg-green-400" : "bg-red-400"
+                          }`}
+                        />
+                      </summary>
+
+                      <div className="border-t border-white/[0.06] bg-black/20 px-3 py-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          {extraStats.map((stat) => (
+                            <div
+                              key={stat.label}
+                              className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-2 py-2 text-center"
+                            >
+                              <div className="text-[10px] leading-tight text-white/40">
+                                {stat.label}
+                              </div>
+                              <div className={`mt-1 text-sm font-black ${
+                                stat.label === "Різниця"
+                                  ? goalDifference > 0
+                                    ? "text-green-400"
+                                    : goalDifference < 0
+                                      ? "text-red-400"
+                                      : "text-white"
+                                  : "text-white"
+                              }`}>
+                                {stat.value}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className={qualified ? "text-green-300" : "text-red-300"}>
+                            {qualified ? "Пройшов кваліфікацію" : "Не пройшов кваліфікацію"}
+                          </span>
+                          <a
+                            href={`/players/${row.player.id}?season=${season}`}
+                            className="font-semibold text-blue-300 transition hover:text-blue-200"
+                          >
+                            Профіль гравця →
+                          </a>
+                        </div>
+                      </div>
+                    </details>
+                  );
+                })}
+              </div>
+
+              {/* DESKTOP: keep the complete standings with all columns. */}
+              <div className="hidden overflow-x-auto lg:block">
                 <table className="w-full table-fixed border-collapse lg:min-w-[900px] lg:table-auto">
                   <thead className="border-b border-white/10 bg-white/[0.03]">
                     <tr className="text-[10px] uppercase tracking-wide text-white/40 lg:text-xs lg:tracking-wider">
@@ -1044,8 +1154,8 @@ export default async function QualificationPage({
               </span>
             </div>
 
-            <p className="mt-3 text-[11px] text-white/35 lg:hidden">
-              І — ігри · О — очки · колір — статус кваліфікації
+            <p className="mt-3 text-[11px] text-white/40 lg:hidden">
+              Натисни на рядок гравця, щоб переглянути перемоги, нічиї, поразки та статистику голів.
             </p>
 
             {/* QUALIFICATION RULE */}
