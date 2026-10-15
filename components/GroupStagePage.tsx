@@ -392,7 +392,7 @@ away_id:
       {/* HEADER */}
       <SiteHeader />
 
-            {/* HERO */}
+                  {/* HERO */}
       <section className="relative overflow-hidden border-b border-white/10">
         {competition === "championsLeague" ? (
           <Image
@@ -414,6 +414,16 @@ away_id:
             quality={75}
             className="object-cover object-[88%_center] opacity-85 sm:object-[78%_center] lg:object-[center_30%]"
           />
+        ) : competition === "conferenceLeague" ? (
+          <Image
+            src="/backgrounds/iron-league-conference-league-bg.webp"
+            alt=""
+            fill
+            preload
+            sizes="100vw"
+            quality={75}
+            className="object-cover object-[86%_center] opacity-85 sm:object-[76%_center] lg:object-[center_30%]"
+          />
         ) : (
           <StadiumBackground opacity="25" preload />
         )}
@@ -422,7 +432,8 @@ away_id:
         <div
           className={
             competition === "championsLeague" ||
-            competition === "europaLeague"
+            competition === "europaLeague" ||
+            competition === "conferenceLeague"
               ? "absolute inset-0 bg-gradient-to-r from-[#030711]/90 via-[#030711]/60 to-[#030711]/25 lg:from-[#030711]/85 lg:via-[#030711]/45 lg:to-[#030711]/20"
               : "absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/60"
           }
@@ -431,7 +442,8 @@ away_id:
         <div
           className={
             competition === "championsLeague" ||
-            competition === "europaLeague"
+            competition === "europaLeague" ||
+            competition === "conferenceLeague"
               ? "absolute inset-0 bg-gradient-to-t from-[#030711] via-[#030711]/10 to-[#030711]/35"
               : "absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70"
           }
