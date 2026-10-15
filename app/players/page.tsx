@@ -2,6 +2,8 @@ import StadiumBackground from "../../components/StadiumBackground";
 import SiteHeader from "../../components/public/SiteHeader";
 import SiteFooter from "../../components/public/SiteFooter";
 import { players } from "../../data/players";
+import PlayerEmblem from "../../components/PlayerEmblem";
+import { getPlayerEmblemUrls } from "../../lib/player-emblem-urls";
 
 import { season1 } from "../../data/seasons/season-1";
 import { season2 } from "../../data/seasons/season-2";
@@ -387,6 +389,8 @@ export default async function PlayersPage({
       season
     );
 
+  const emblemUrls = await getPlayerEmblemUrls();
+
   return (
     <main className="min-h-screen bg-[#030711] text-white">
 
@@ -626,9 +630,12 @@ export default async function PlayersPage({
                   {/* PLAYER INFO */}
                   <div className="relative flex min-w-0 items-center gap-3">
                     {/* AVATAR */}
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-400/25 bg-blue-500/10 text-base font-black text-blue-300 transition group-hover:border-blue-400/45 group-hover:bg-blue-500/15">
-                      {initials}
-                    </div>
+                    <PlayerEmblem
+                      nickname={player.nickname}
+                      initials={initials}
+                      src={emblemUrls[player.id]}
+                      variant="card"
+                    />
 
                     {/* NICKNAME AND ACCOUNT */}
                     <div className="min-w-0 flex-1">

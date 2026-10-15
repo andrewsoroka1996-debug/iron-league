@@ -1839,6 +1839,12 @@ setMatchId(
             >
               Новини
             </a>
+            <a
+  href="/admin/player-emblems"
+  className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
+>
+  Емблеми гравців
+</a>
 
           <Link
   href="/"
@@ -1877,6 +1883,12 @@ setMatchId(
               >
                 Новини
               </a>
+              <a
+  href="/admin/player-emblems"
+  className="rounded-xl px-4 py-3 font-bold text-blue-300 transition hover:bg-blue-500/10"
+>
+  Емблеми гравців
+</a>
 
               <div className="my-1 border-t border-white/10" />
 

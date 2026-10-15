@@ -1,4 +1,6 @@
 import StadiumBackground from "../../../components/StadiumBackground";
+import PlayerEmblem from "../../../components/PlayerEmblem";
+import { getPlayerEmblemUrls } from "../../../lib/player-emblem-urls";
 import SiteHeader from "../../../components/public/SiteHeader";
 import SiteFooter from "../../../components/public/SiteFooter";
 import { Suspense } from "react";
@@ -2060,6 +2062,8 @@ export default async function PlayerPage({
       player.nickname
     );
 
+  const emblemUrls = await getPlayerEmblemUrls();
+
   return (
     <main className="min-h-screen bg-[#030711] text-white">
       {/* HEADER */}
@@ -2091,9 +2095,12 @@ export default async function PlayerPage({
 
             <div className="mt-5 flex min-w-0 items-center gap-4 sm:gap-6">
               {/* AVATAR */}
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-blue-400/30 bg-blue-500/10 text-xl font-black text-blue-300 shadow-[0_0_40px_rgba(59,130,246,0.08)] sm:h-24 sm:w-24 sm:rounded-3xl sm:text-3xl">
-                {initials}
-              </div>
+              <PlayerEmblem
+                nickname={player.nickname}
+                initials={initials}
+                src={emblemUrls[playerId]}
+                variant="profile"
+              />
 
               {/* PLAYER NAME */}
               <div className="min-w-0 flex-1">
