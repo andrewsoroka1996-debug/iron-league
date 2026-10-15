@@ -1038,8 +1038,17 @@ match.away_goals !== null
 
 <section
   id="matches"
-  className="mx-auto max-w-7xl scroll-mt-24 px-4 py-8 sm:px-6 sm:py-14"
+  className="relative isolate mx-auto max-w-7xl scroll-mt-24 px-4 py-8 sm:px-6 sm:py-14"
 >
+  {/* BACKGROUND: RECENT RESULTS */}
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2 bg-cover bg-center"
+    style={{
+      backgroundImage:
+        "linear-gradient(to bottom, #030711 0%, rgba(3,7,17,0.66) 30%, rgba(3,7,17,0.70) 75%, #030711 100%), url('/backgrounds/iron-league-results-bg.webp')",
+    }}
+  />
   {/* SECTION HEADER */}
   <div className="mb-5 flex items-end justify-between gap-3">
     <div>
