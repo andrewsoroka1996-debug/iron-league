@@ -424,19 +424,19 @@ export default async function QualificationPage({
       {/* HEADER */}
 
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#030711]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
           <a
             href="/"
-            className="flex items-center gap-4"
+            className="flex min-w-0 items-center gap-3 sm:gap-4"
           >
             <img
               src="/iron-league-logo.jpg"
               alt="Iron League"
-              className="h-14 w-auto object-contain"
+              className="h-10 w-auto shrink-0 object-contain sm:h-14"
             />
 
             <div>
-              <div className="font-black tracking-[0.18em]">
+              <div className="text-sm font-black tracking-[0.14em] sm:text-base sm:tracking-[0.18em]">
                 IRON LEAGUE
               </div>
 
@@ -489,29 +489,57 @@ export default async function QualificationPage({
               Історія
             </a>
           </nav>
+
+          {/* Mobile navigation; no JavaScript required. */}
+          <details className="relative shrink-0 lg:hidden">
+            <summary
+              aria-label="Відкрити меню сайту"
+              className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-xl text-white/80 [&::-webkit-details-marker]:hidden"
+            >
+              ☰
+            </summary>
+            <nav className="absolute right-0 top-full z-50 mt-3 flex w-48 flex-col rounded-xl border border-white/15 bg-[#0b1220] p-2 text-sm font-semibold shadow-2xl">
+              {[
+                { href: "/", label: "Головна" },
+                { href: "/matches", label: "Матчі" },
+                { href: "/divisions", label: "Дивізіони" },
+                { href: "/#tournaments", label: "Турніри" },
+                { href: "/players", label: "Гравці" },
+                { href: "/history", label: "Історія" },
+              ].map(({ href, label }) => (
+                <a
+                  key={href}
+                  href={href}
+                  className="rounded-lg px-3 py-2.5 text-white/75 transition hover:bg-white/10 hover:text-white"
+                >
+                  {label}
+                </a>
+              ))}
+            </nav>
+          </details>
         </div>
       </header>
 
       {/* HERO */}
 
       <section className="border-b border-white/10">
-        <div className="mx-auto max-w-7xl px-6 py-14">
+        <div className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-14">
           <div className="text-xs font-bold uppercase tracking-[0.3em] text-blue-400">
             Iron League
           </div>
 
-          <h1 className="mt-3 text-4xl font-black tracking-tight md:text-6xl">
+          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl md:text-6xl">
             Кваліфікація
           </h1>
 
-          <p className="mt-4 max-w-3xl text-white/50">
+          <p className="mt-3 max-w-3xl text-sm text-white/50 sm:mt-4 sm:text-base">
             Кваліфікаційний етап
             Iron League.
           </p>
 
           {/* SEASON SELECTOR */}
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-6 grid grid-cols-4 gap-2 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3">
             {(
               [
                 1,
@@ -529,13 +557,21 @@ export default async function QualificationPage({
                   }
                   href={`/tournaments/qualification?season=${seasonNumber}`}
                   className={`
+                    flex
+                    min-w-0
+                    items-center
+                    justify-center
+                    whitespace-nowrap
                     rounded-xl
                     border
-                    px-5
+                    px-1
                     py-3
-                    text-sm
+                    text-center
+                    text-[11px]
                     font-bold
                     transition
+                    sm:px-5
+                    sm:text-sm
 
                     ${
                       season ===
@@ -556,25 +592,25 @@ export default async function QualificationPage({
 
           {/* SUMMARY */}
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <div className="text-xs uppercase tracking-wider text-white/40">
+          <div className="mt-6 grid grid-cols-2 gap-2 sm:mt-8 sm:gap-4 lg:grid-cols-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-5">
+              <div className="text-[10px] uppercase leading-tight tracking-wide text-white/40 sm:text-xs sm:tracking-wider">
                 Учасники
               </div>
 
-              <div className="mt-2 text-3xl font-black">
+              <div className="mt-2 text-2xl font-black sm:text-3xl">
                 {
                   table.length
                 }
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <div className="text-xs uppercase tracking-wider text-white/40">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-5">
+              <div className="text-[10px] uppercase leading-tight tracking-wide text-white/40 sm:text-xs sm:tracking-wider">
                 Зіграно матчів
               </div>
 
-              <div className="mt-2 text-3xl font-black">
+              <div className="mt-2 text-2xl font-black sm:text-3xl">
                 {
                   playedMatches
                 }
@@ -582,7 +618,7 @@ export default async function QualificationPage({
 
               {scheduledMatches >
                 0 && (
-                <div className="mt-1 text-xs text-white/30">
+                <div className="mt-1 text-[10px] leading-tight text-white/30 sm:text-xs">
                   Ще{" "}
                   {
                     scheduledMatches
@@ -592,25 +628,25 @@ export default async function QualificationPage({
               )}
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <div className="text-xs uppercase tracking-wider text-white/40">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-5">
+              <div className="text-[10px] uppercase leading-tight tracking-wide text-white/40 sm:text-xs sm:tracking-wider">
                 Тури
               </div>
 
-              <div className="mt-2 text-3xl font-black">
+              <div className="mt-2 text-2xl font-black sm:text-3xl">
                 {
                   rounds.length
                 }
               </div>
             </div>
 
-            <div className="rounded-2xl border border-green-400/20 bg-green-400/[0.05] p-5">
-              <div className="text-xs uppercase tracking-wider text-green-300/60">
+            <div className="rounded-2xl border border-green-400/20 bg-green-400/[0.05] p-3 sm:p-5">
+              <div className="text-[10px] uppercase leading-tight tracking-wide text-green-300/60 sm:text-xs sm:tracking-wider">
                 Пройшли
                 кваліфікацію
               </div>
 
-              <div className="mt-2 text-3xl font-black text-green-300">
+              <div className="mt-2 text-2xl font-black text-green-300 sm:text-3xl">
                 {
                   qualifiedCount
                 }
@@ -624,9 +660,9 @@ export default async function QualificationPage({
 
       {databaseMatches.length ===
         0 && (
-        <section className="mx-auto max-w-7xl px-6 py-16">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-8">
-            <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+        <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5 sm:p-8">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs sm:tracking-[0.25em]">
               Сезон{" "}
               {season}
             </div>
@@ -653,7 +689,7 @@ export default async function QualificationPage({
       {databaseMatches.length >
         0 && (
         <>
-          <section className="mx-auto max-w-7xl px-6 py-12">
+          <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
             <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
               <div>
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-white/35">
@@ -661,13 +697,13 @@ export default async function QualificationPage({
                   {season}
                 </div>
 
-                <h2 className="mt-2 text-2xl font-black">
+                <h2 className="mt-2 text-xl font-black sm:text-2xl">
                   Турнірна
                   таблиця
                 </h2>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-xs">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] sm:text-xs">
                 <span className="flex items-center gap-2 text-white/50">
                   <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
 
@@ -684,51 +720,52 @@ export default async function QualificationPage({
 
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] border-collapse">
+                <table className="w-full table-fixed border-collapse lg:min-w-[900px] lg:table-auto">
                   <thead className="border-b border-white/10 bg-white/[0.03]">
-                    <tr className="text-xs uppercase tracking-wider text-white/40">
-                      <th className="px-4 py-4 text-center">
+                    <tr className="text-[10px] uppercase tracking-wide text-white/40 lg:text-xs lg:tracking-wider">
+                      <th className="w-10 px-1 py-3 text-center sm:px-2 lg:w-auto lg:px-4 lg:py-4">
                         #
                       </th>
 
-                      <th className="px-5 py-4 text-left">
+                      <th className="min-w-0 px-1 py-3 text-left sm:px-2 lg:px-5 lg:py-4">
                         Гравець
                       </th>
 
-                      <th className="px-4 py-4 text-center">
+                      <th className="w-7 px-1 py-3 text-center lg:w-auto lg:px-4 lg:py-4">
                         І
                       </th>
 
-                      <th className="px-4 py-4 text-center">
+                      <th className="hidden px-4 py-4 text-center lg:table-cell">
                         В
                       </th>
 
-                      <th className="px-4 py-4 text-center">
+                      <th className="hidden px-4 py-4 text-center lg:table-cell">
                         Н
                       </th>
 
-                      <th className="px-4 py-4 text-center">
+                      <th className="hidden px-4 py-4 text-center lg:table-cell">
                         П
                       </th>
 
-                      <th className="px-4 py-4 text-center">
+                      <th className="hidden px-4 py-4 text-center lg:table-cell">
                         ЗМ
                       </th>
 
-                      <th className="px-4 py-4 text-center">
+                      <th className="hidden px-4 py-4 text-center lg:table-cell">
                         ПМ
                       </th>
 
-                      <th className="px-4 py-4 text-center">
+                      <th className="hidden px-4 py-4 text-center lg:table-cell">
                         РМ
                       </th>
 
-                      <th className="px-5 py-4 text-center">
+                      <th className="w-9 px-1 py-3 text-center lg:w-auto lg:px-5 lg:py-4">
                         О
                       </th>
 
-                      <th className="px-5 py-4 text-center">
-                        Статус
+                      <th className="w-10 px-1 py-3 text-center lg:w-auto lg:px-5 lg:py-4">
+                        <span className="lg:hidden">Ст.</span>
+                        <span className="hidden lg:inline">Статус</span>
                       </th>
                     </tr>
                   </thead>
@@ -777,8 +814,8 @@ export default async function QualificationPage({
                           >
                             {/* POSITION */}
 
-                            <td className="px-4 py-4 text-center">
-                              <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] text-sm font-black text-white/70">
+                            <td className="px-1 py-3 text-center sm:px-2 lg:px-4 lg:py-4">
+                              <div className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.04] text-xs font-black text-white/70 lg:h-8 lg:w-8 lg:text-sm">
                                 {
                                   position
                                 }
@@ -787,12 +824,13 @@ export default async function QualificationPage({
 
                             {/* PLAYER */}
 
-                            <td className="px-5 py-4">
+                            <td className="min-w-0 px-1 py-3 sm:px-2 lg:px-5 lg:py-4">
                               <a
                                 href={`/players/${row.player.id}?season=${season}`}
-                                className="group"
+                                title={row.player.nickname}
+                                className="group block min-w-0"
                               >
-                                <div className="font-bold transition group-hover:text-blue-300">
+                                <div className="truncate text-xs font-bold transition group-hover:text-blue-300 sm:text-sm lg:text-base">
                                   {
                                     row
                                       .player
@@ -803,7 +841,7 @@ export default async function QualificationPage({
                                 {row
                                   .player
                                   .account && (
-                                  <div className="mt-1 text-xs text-white/30">
+                                  <div className="mt-1 truncate text-[10px] text-white/30 lg:text-xs">
                                     @
                                     {
                                       row
@@ -817,7 +855,7 @@ export default async function QualificationPage({
 
                             {/* PLAYED */}
 
-                            <td className="px-4 py-4 text-center text-white/60">
+                            <td className="px-1 py-3 text-center text-xs text-white/60 lg:px-4 lg:py-4 lg:text-base">
                               {
                                 row.played
                               }
@@ -825,7 +863,7 @@ export default async function QualificationPage({
 
                             {/* WINS */}
 
-                            <td className="px-4 py-4 text-center text-white/60">
+                            <td className="hidden px-4 py-4 text-center text-white/60 lg:table-cell">
                               {
                                 row.wins
                               }
@@ -833,7 +871,7 @@ export default async function QualificationPage({
 
                             {/* DRAWS */}
 
-                            <td className="px-4 py-4 text-center text-white/60">
+                            <td className="hidden px-4 py-4 text-center text-white/60 lg:table-cell">
                               {
                                 row.draws
                               }
@@ -841,7 +879,7 @@ export default async function QualificationPage({
 
                             {/* LOSSES */}
 
-                            <td className="px-4 py-4 text-center text-white/60">
+                            <td className="hidden px-4 py-4 text-center text-white/60 lg:table-cell">
                               {
                                 row.losses
                               }
@@ -849,7 +887,7 @@ export default async function QualificationPage({
 
                             {/* GF */}
 
-                            <td className="px-4 py-4 text-center text-white/60">
+                            <td className="hidden px-4 py-4 text-center text-white/60 lg:table-cell">
                               {
                                 row.goalsFor
                               }
@@ -857,7 +895,7 @@ export default async function QualificationPage({
 
                             {/* GA */}
 
-                            <td className="px-4 py-4 text-center text-white/60">
+                            <td className="hidden px-4 py-4 text-center text-white/60 lg:table-cell">
                               {
                                 row.goalsAgainst
                               }
@@ -867,10 +905,12 @@ export default async function QualificationPage({
 
                             <td
                               className={`
+                                hidden
                                 px-4
                                 py-4
                                 text-center
                                 font-semibold
+                                lg:table-cell
 
                                 ${
                                   row.goalDifference >
@@ -891,7 +931,7 @@ export default async function QualificationPage({
 
                             {/* POINTS */}
 
-                            <td className="px-5 py-4 text-center text-lg font-black">
+                            <td className="px-1 py-3 text-center text-sm font-black lg:px-5 lg:py-4 lg:text-lg">
                               {
                                 row.points
                               }
@@ -899,10 +939,19 @@ export default async function QualificationPage({
 
                             {/* STATUS */}
 
-                            <td className="px-5 py-4 text-center">
+                            <td className="px-1 py-3 text-center lg:px-5 lg:py-4">
+                              <span
+                                title={qualified ? "Пройшов" : "Не пройшов"}
+                                role="img"
+                                aria-label={qualified ? "Пройшов" : "Не пройшов"}
+                                className={`inline-block h-2.5 w-2.5 rounded-full lg:hidden ${
+                                  qualified ? "bg-green-400" : "bg-red-400"
+                                }`}
+                              />
                               <span
                                 className={`
-                                  inline-flex
+                                  hidden
+                                  lg:inline-flex
                                   rounded-full
                                   px-3
                                   py-1
@@ -934,7 +983,7 @@ export default async function QualificationPage({
 
             {/* TABLE LEGEND */}
 
-            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-xs text-white/35">
+            <div className="mt-6 hidden flex-wrap gap-x-6 gap-y-3 text-xs text-white/35 lg:flex">
               <span>
                 <b className="text-white/60">
                   І
@@ -995,9 +1044,13 @@ export default async function QualificationPage({
               </span>
             </div>
 
+            <p className="mt-3 text-[11px] text-white/35 lg:hidden">
+              І — ігри · О — очки · колір — статус кваліфікації
+            </p>
+
             {/* QUALIFICATION RULE */}
 
-            <div className="mt-6 rounded-xl border border-blue-400/15 bg-blue-500/[0.04] px-5 py-4 text-sm leading-6 text-white/45">
+            <div className="mt-5 rounded-xl border border-blue-400/15 bg-blue-500/[0.04] px-4 py-3 text-xs leading-5 text-white/45 sm:mt-6 sm:px-5 sm:py-4 sm:text-sm sm:leading-6">
               Статус проходження
               визначається за
               фактичним складом
@@ -1016,20 +1069,20 @@ export default async function QualificationPage({
           {/* MATCHES */}
 
           <section className="border-t border-white/10">
-            <div className="mx-auto max-w-7xl px-6 py-12">
-              <div className="mb-8">
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
+              <div className="mb-6 sm:mb-8">
                 <div className="text-xs font-bold uppercase tracking-[0.25em] text-white/35">
                   Сезон{" "}
                   {season}
                 </div>
 
-                <h2 className="mt-2 text-3xl font-black">
+                <h2 className="mt-2 text-2xl font-black sm:text-3xl">
                   Матчі
                   кваліфікації
                 </h2>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {rounds.map(
                   ([
                     round,
@@ -1045,13 +1098,13 @@ export default async function QualificationPage({
                       }
                       className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]"
                     >
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 transition hover:bg-white/[0.035]">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 transition hover:bg-white/[0.035] sm:px-6 sm:py-5">
                         <div>
-                          <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs sm:tracking-[0.25em]">
                             Кваліфікація
                           </div>
 
-                          <div className="mt-1 text-xl font-black">
+                          <div className="mt-1 text-lg font-black sm:text-xl">
                             Тур{" "}
                             {
                               round
@@ -1059,8 +1112,8 @@ export default async function QualificationPage({
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-5">
-                          <div className="text-sm text-white/40">
+                        <div className="flex items-center gap-3 sm:gap-5">
+                          <div className="whitespace-nowrap text-xs text-white/40 sm:text-sm">
                             {
                               matches.length
                             }{" "}
@@ -1073,8 +1126,8 @@ export default async function QualificationPage({
                         </div>
                       </summary>
 
-                      <div className="border-t border-white/10 p-4 md:p-6">
-                        <div className="grid gap-3 lg:grid-cols-2">
+                      <div className="border-t border-white/10 p-3 sm:p-4 md:p-6">
+                        <div className="grid gap-2 sm:gap-3 lg:grid-cols-2">
                           {matches.map(
                             (
                               match
@@ -1092,15 +1145,57 @@ export default async function QualificationPage({
                                   key={
                                     match.id
                                   }
-                                  className="rounded-xl border border-white/[0.08] bg-black/20 px-4 py-4 transition hover:border-white/15 hover:bg-white/[0.025]"
+                                  className="rounded-xl border border-white/[0.08] bg-black/20 px-3 py-3 transition hover:border-white/15 hover:bg-white/[0.025] sm:px-4 sm:py-4"
                                 >
-                                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                  {/* On phones, give each full player name its own line. */}
+                                  <div className="space-y-2 sm:hidden">
+                                    <div className="flex items-start gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <a
+                                          href={`/players/${match.home_id}?season=${season}`}
+                                          className="block break-words text-sm font-bold leading-snug transition hover:text-blue-300 [overflow-wrap:anywhere]"
+                                        >
+                                          {getPlayerName(match.home_id)}
+                                        </a>
+                                        {getPlayerAccount(match.home_id) && (
+                                          <div className="mt-1 truncate text-[10px] text-white/30">
+                                            @{getPlayerAccount(match.home_id)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-base font-black">
+                                        {isFinished ? match.home_goals : "—"}
+                                      </span>
+                                    </div>
+                                    <div className="border-t border-white/[0.06]" />
+                                    <div className="flex items-start gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <a
+                                          href={`/players/${match.away_id}?season=${season}`}
+                                          className="block break-words text-sm font-bold leading-snug transition hover:text-blue-300 [overflow-wrap:anywhere]"
+                                        >
+                                          {getPlayerName(match.away_id)}
+                                        </a>
+                                        {getPlayerAccount(match.away_id) && (
+                                          <div className="mt-1 truncate text-[10px] text-white/30">
+                                            @{getPlayerAccount(match.away_id)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-base font-black">
+                                        {isFinished ? match.away_goals : "—"}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* On larger screens, keep the familiar three-column view. */}
+                                  <div className="hidden grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid">
                                     {/* HOME */}
 
                                     <div className="min-w-0 text-right">
                                       <a
                                         href={`/players/${match.home_id}?season=${season}`}
-                                        className="font-bold transition hover:text-blue-300"
+                                        className="block min-w-0 break-words text-sm font-bold leading-snug transition hover:text-blue-300 [overflow-wrap:anywhere] lg:text-base"
                                       >
                                         {getPlayerName(
                                           match.home_id
@@ -1148,7 +1243,7 @@ export default async function QualificationPage({
                                     <div className="min-w-0">
                                       <a
                                         href={`/players/${match.away_id}?season=${season}`}
-                                        className="font-bold transition hover:text-blue-300"
+                                        className="block min-w-0 break-words text-sm font-bold leading-snug transition hover:text-blue-300 [overflow-wrap:anywhere] lg:text-base"
                                       >
                                         {getPlayerName(
                                           match.away_id
