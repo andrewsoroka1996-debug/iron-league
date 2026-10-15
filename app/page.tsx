@@ -664,19 +664,28 @@ export default async function Home() {
 
       <section className="relative overflow-hidden border-b border-white/10">
 
-        <Image
-          src="/stadium-bg.jpg"
-          alt=""
-          fill
-          preload
-          sizes="100vw"
-          quality={70}
-          className="object-cover object-center"
-        />
+        {/* Responsive stadium background: on smaller screens it stays near
+            the top instead of stretching over the entire tall hero. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[800px] sm:h-[860px] lg:inset-0 lg:h-auto"
+        >
+          <Image
+            src="/backgrounds/iron-league-home-bg.webp"
+            alt=""
+            fill
+            preload
+            sizes="100vw"
+            quality={75}
+            className="object-cover object-[73%_40%] sm:object-[65%_center] lg:object-center"
+          />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-[#020611]/95 via-[#030711]/80 to-[#020611]/60" />
+          {/* Keep the content readable without hiding the right-side lights. */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#020611]/75 via-[#030711]/50 to-[#020611]/25 lg:from-[#020611]/90 lg:via-[#030711]/65 lg:to-[#020611]/35" />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/40" />
+          {/* Fade the image naturally into the site's dark background. */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#030711]/10 via-[#030711]/20 to-[#030711] lg:bg-gradient-to-t lg:from-[#030711] lg:via-transparent lg:to-[#030711]/35" />
+        </div>
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:min-h-[640px] lg:grid-cols-2 lg:gap-12 lg:py-20">
 
@@ -708,12 +717,12 @@ export default async function Home() {
 
             </div>
 
-            <p className="mt-7 max-w-xl text-lg leading-8 text-white/65">
-              Єдина платформа Iron League: матчі,
-              дивізіони, єврокубки, статистика,
-              результати, турнірні таблиці та
-              історія ліги.
-            </p>
+            <p className="mt-7 max-w-xl text-lg leading-8 text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">
+  Єдина платформа Iron League: матчі,
+  дивізіони, єврокубки, статистика,
+  результати, турнірні таблиці та
+  історія ліги.
+</p>
 
             {/* HERO BUTTONS */}
 
@@ -728,7 +737,7 @@ export default async function Home() {
 
               <a
                 href="/divisions"
-                className="flex min-h-12 min-w-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-2 py-3 text-center text-sm font-bold leading-snug text-white transition hover:bg-white/10 sm:px-6 sm:py-3.5 sm:text-base"
+                className="flex min-h-12 min-w-0 items-center justify-center rounded-xl border border-white/15 bg-[#07101d]/80 backdrop-blur-sm px-2 py-3 text-center text-sm font-bold leading-snug text-white transition hover:bg-white/10 sm:px-6 sm:py-3.5 sm:text-base"
               >
                 Турнірні таблиці
               </a>
