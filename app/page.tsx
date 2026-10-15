@@ -704,16 +704,15 @@ export default async function Home() {
             <div className="max-w-2xl">
 
               <Image
-                src="/iron-league-logo.jpg"
-                alt="Iron League"
-                width={420}
-                height={420}
-                preload
-                fetchPriority="high"
-                sizes="(max-width: 768px) 90vw, 420px"
-                quality={75}
-                className="h-auto w-52 max-w-full object-contain drop-shadow-lg sm:w-72 lg:w-80"
-              />
+  src="/iron-league-logo.jpg"
+  alt="Iron League"
+  width={420}
+  height={420}
+  fetchPriority="high"
+  sizes="(min-width: 1024px) 320px, (min-width: 640px) 288px, 208px"
+  quality={75}
+  className="h-auto w-52 max-w-full object-contain drop-shadow-lg sm:w-72 lg:w-80"
+/>
 
             </div>
 
