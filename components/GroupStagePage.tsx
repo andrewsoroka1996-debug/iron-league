@@ -15,6 +15,7 @@ import {
   applyPlayerReplacements,
 } from "../lib/player-replacements";
 import { supabase } from "../lib/supabase";
+import Image from "next/image";
 
 type Competition =
   | "championsLeague"
@@ -393,11 +394,39 @@ away_id:
 
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-white/10">
-        <StadiumBackground opacity="25" preload />
+        {competition === "championsLeague" ? (
+  <Image
+    src="/backgrounds/iron-league-champions-league-bg.webp"
+    alt=""
+    fill
+    preload
+    sizes="100vw"
+    quality={75}
+    className={
+  competition === "championsLeague"
+    ? "object-cover object-[88%_center] opacity-85 sm:object-[75%_center] lg:object-[center_30%]"
+    : "object-cover object-center opacity-60"
+}
+  />
+) : (
+  <StadiumBackground opacity="25" preload />
+)}
 
         {/* BACKGROUND */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/60" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70" />
+        <div
+  className={
+    competition === "championsLeague"
+      ? "absolute inset-0 bg-gradient-to-r from-[#030711]/90 via-[#030711]/60 to-[#030711]/25 lg:from-[#030711]/85 lg:via-[#030711]/45 lg:to-[#030711]/20"
+      : "absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/60"
+  }
+/>
+        <div
+  className={
+    competition === "championsLeague"
+      ? "absolute inset-0 bg-gradient-to-t from-[#030711] via-[#030711]/10 to-[#030711]/35"
+      : "absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70"
+  }
+/>
 
         <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
 
