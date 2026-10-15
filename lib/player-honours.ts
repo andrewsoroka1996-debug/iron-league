@@ -428,9 +428,9 @@ function getFinalWinner(
 */
 
 const getAllMatches = cache(
-  async (): Promise<
-    MatchRow[]
-  > => {
+  async (
+    onlySeason?: SeasonNumber
+  ): Promise<MatchRow[]> => {
     const PAGE_SIZE = 1000;
 
     const allMatches:
@@ -466,9 +466,11 @@ const getAllMatches = cache(
           `
         )
         .in(
-          "season",
-          [1, 2, 3, 4]
-        )
+  "season",
+  onlySeason === undefined
+    ? [1, 2, 3, 4]
+    : [onlySeason]
+)
         .order(
           "id",
           {
@@ -569,15 +571,16 @@ const getAllCoopTeams = cache(
   у межах серверного рендера.
 */
 
-const getCachedAssociationLeague =
-  cache(
-    async (
-      season: 2 | 3 | 4
-    ) =>
-      getAssociationLeague(
-        season
-      )
-  );
+/*
+  ========================================
+  ЛІГА АСОЦІАЦІЙ — КЕШУВАННЯ
+  ========================================
+*/
+
+const getCachedAssociationLeague = cache(
+  async (season: 2 | 3 | 4) =>
+    getAssociationLeague(season)
+);
 
 /*
   ========================================
@@ -588,28 +591,32 @@ const getCachedAssociationLeague =
   також кешується.
 */
 
-export const getPlayerHonours =
-  cache(
-    async (
-      playerId: string
-    ): Promise<
-      PlayerHonour[]
-    > => {
-      const honours:
-        PlayerHonour[] = [];
+export const getPlayerHonours = cache(
+  async (
+    playerId: string,
+    onlySeason?: SeasonNumber
+  ): Promise<PlayerHonour[]> => {
+    const honours: PlayerHonour[] = [];
 
-      /*
-        ========================================
-        ВСІ МАТЧІ
-        ========================================
-      */
+    const relevantSeasons: SeasonNumber[] =
+      onlySeason === undefined
+        ? seasons
+        : [onlySeason];
+
+    /*
+      ========================================
+      ВСІ МАТЧІ
+      ========================================
+    */
 
       let matches:
         MatchRow[] = [];
 
       try {
         matches =
-          await getAllMatches();
+  await getAllMatches(
+    onlySeason
+  );
       } catch (error) {
         console.error(
           "PLAYER HONOURS MATCHES ERROR:",
@@ -637,7 +644,7 @@ export const getPlayerHonours =
 
       for (
         const season of
-          seasons
+          relevantSeasons
       ) {
         const divisions:
           DivisionNumber[] =
@@ -816,7 +823,7 @@ export const getPlayerHonours =
 
       for (
         const season of
-          seasons
+          relevantSeasons
       ) {
         for (
           const cup of
@@ -897,7 +904,7 @@ export const getPlayerHonours =
 
       for (
         const season of
-          seasons
+          relevantSeasons
       ) {
         for (
           const cup of
@@ -952,7 +959,7 @@ export const getPlayerHonours =
 
       for (
         const season of
-          seasons
+          relevantSeasons
       ) {
         const finalMatches =
           matches.filter(
@@ -1019,6 +1026,12 @@ export const getPlayerHonours =
         const associationSeason of
           [2, 3, 4] as const
       ) {
+        if (
+  onlySeason !== undefined &&
+  associationSeason !== onlySeason
+) {
+  continue;
+}
         try {
           const league =
             await getCachedAssociationLeague(
@@ -1109,12 +1122,11 @@ export const getPlayerHonours =
         члени команди-переможця.
       */
 
-      const coopTeams =
-        await getAllCoopTeams();
+      let coopTeams: CoopTeamRow[] | null = null;
 
       for (
         const season of
-          seasons
+          relevantSeasons
       ) {
         const finalMatches =
           matches.filter(
@@ -1142,7 +1154,9 @@ export const getPlayerHonours =
         if (!winnerTeamRef) {
           continue;
         }
-
+if (coopTeams === null) {
+  coopTeams = await getAllCoopTeams();
+}
         /*
           У matches команда може
           зберігатися як через ID,

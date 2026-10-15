@@ -119,15 +119,15 @@ export default async function SeasonWinners({
         start,
         start + BATCH_SIZE
       );
-
     const results =
       await Promise.all(
         batch.map(
           async (player) => {
             const honours =
-              await getPlayerHonours(
-                player.id
-              );
+  await getPlayerHonours(
+    player.id,
+    season
+  );
 
             return {
               player,
@@ -141,7 +141,6 @@ export default async function SeasonWinners({
           }
         )
       );
-
     for (const result of results) {
       for (
         const honour of
@@ -215,7 +214,7 @@ export default async function SeasonWinners({
       }
     );
 
-  /*
+/*
     ========================================
     ПОКИ ПЕРЕМОЖЦІВ НЕМАЄ
     ========================================
