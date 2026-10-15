@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 
 import { players } from "../../../../data/players";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 const BUCKET = "player-emblems";
 const TABLE = "player_emblems";
 const MAX_FILE_SIZE = 3 * 1024 * 1024;
+const MAX_INPUT_PIXELS = 16_777_216;
 
 const allowedMimeTypes: Record<string, string> = {
   "image/png": "png",
@@ -159,6 +161,54 @@ export async function POST(request: Request) {
       );
     }
 
+    let optimizedBytes: Buffer;
+
+    try {
+      const input = Buffer.from(bytes);
+      const options = {
+        limitInputPixels: MAX_INPUT_PIXELS,
+        failOn: "error" as const,
+      };
+
+      const metadata = await sharp(input, options).metadata();
+      const expectedFormat =
+        file.type === "image/jpeg" ? "jpeg" : extension;
+
+      if (
+        metadata.format !== expectedFormat ||
+        !metadata.width ||
+        !metadata.height ||
+        metadata.width * metadata.height > MAX_INPUT_PIXELS
+      ) {
+        return NextResponse.json(
+          { error: "Невірний формат або завелика роздільність емблеми" },
+          { status: 400 }
+        );
+      }
+
+      optimizedBytes = await sharp(input, options)
+        .rotate()
+        .resize({
+          width: 512,
+          height: 512,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({
+          quality: 82,
+          alphaQuality: 90,
+          effort: 4,
+        })
+        .toBuffer();
+    } catch (error) {
+      console.warn("PLAYER EMBLEM IMAGE PROCESS ERROR:", error);
+
+      return NextResponse.json(
+        { error: "Не вдалося обробити зображення. Перевірте файл та його роздільність." },
+        { status: 400 }
+      );
+    }
+
     const { data: previous, error: previousError } = await supabaseAdmin
       .from(TABLE)
       .select("image_path")
@@ -174,12 +224,12 @@ export async function POST(request: Request) {
     }
 
     // Унікальна назва запобігає показу старої версії через кеш.
-    const path = `${playerId}/${randomUUID()}.${extension}`;
+    const path = `${playerId}/${randomUUID()}.webp`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(BUCKET)
-      .upload(path, bytes, {
-        contentType: file.type,
+      .upload(path, optimizedBytes, {
+        contentType: "image/webp",
         cacheControl: "31536000",
         upsert: false,
       });
