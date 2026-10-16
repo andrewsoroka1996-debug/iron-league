@@ -413,15 +413,15 @@ away_id:
           backgroundRepeat: "no-repeat",
         }
           : competition === "championsLeague"
-      ? {
-          backgroundImage:
-  'linear-gradient(to bottom, rgba(3,7,17,0.12) 0px, rgba(3,7,17,0.40) 600px, rgba(3,7,17,0.85) 1050px, #030711 1450px), url("/backgrounds/iron-league-champions-league-full-bg.webp")',
-          backgroundSize:
-            "100% 2400px, max(100%, 1250px) auto",
-          backgroundPosition:
-            "center top, 73% 55px",
-          backgroundRepeat: "no-repeat",
-        }
+  ? {
+      backgroundImage:
+        'linear-gradient(to bottom, rgba(3,7,17,0.12) 0px, rgba(3,7,17,0.28) 600px, rgba(3,7,17,0.35) 1150px, rgba(3,7,17,0.35) 1550px, rgba(3,7,17,0.40) 1750px, rgba(3,7,17,0.65) 1900px, #030711 2050px), url("/backgrounds/iron-league-champions-league-full-bg.webp")',
+      backgroundSize:
+        "100% 100%, max(100%, 1900px) auto",
+      backgroundPosition:
+        "center top, 73% clamp(-700px, calc(1450px - 85vw), -250px)",
+      backgroundRepeat: "no-repeat",
+    }
       : undefined
   }
   >
