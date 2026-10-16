@@ -387,13 +387,36 @@ away_id:
   }[competition];
 
   return (
-    <main className="min-h-screen bg-[#030711] text-white">
+  <main
+    className={
+      competition === "conferenceLeague"
+        ? "min-h-screen overflow-x-clip bg-[#030711] text-white"
+        : "min-h-screen bg-[#030711] text-white"
+    }
+    style={
+      competition === "conferenceLeague"
+        ? {
+            backgroundImage:
+              'linear-gradient(to bottom, rgba(3,7,17,0.12) 0px, rgba(3,7,17,0.25) 450px, rgba(3,7,17,0.75) 1050px, #030711 1600px), url("/backgrounds/iron-league-conference-full-bg.webp")',
+            backgroundSize: "100% 1600px, 100% auto",
+            backgroundPosition: "center top, center 55px",
+            backgroundRepeat: "no-repeat",
+          }
+        : undefined
+    }
+  >
 
       {/* HEADER */}
       <SiteHeader />
 
                   {/* HERO */}
-      <section className="relative overflow-hidden border-b border-white/10">
+<section
+  className={
+    competition === "conferenceLeague"
+      ? "relative overflow-hidden before:pointer-events-none before:absolute before:inset-0 before:bg-gradient-to-r before:from-[#030711]/85 before:via-[#030711]/75 before:to-[#030711]/55 before:content-[''] sm:before:hidden"
+      : "relative overflow-hidden border-b border-white/10"
+  }
+>
         {competition === "championsLeague" ? (
           <Image
             src="/backgrounds/iron-league-champions-league-bg.webp"
@@ -414,38 +437,30 @@ away_id:
             quality={75}
             className="object-cover object-[88%_center] opacity-85 sm:object-[78%_center] lg:object-[center_30%]"
           />
-        ) : competition === "conferenceLeague" ? (
-          <Image
-            src="/backgrounds/iron-league-conference-league-bg.webp"
-            alt=""
-            fill
-            preload
-            sizes="100vw"
-            quality={75}
-            className="object-cover object-[86%_center] opacity-85 sm:object-[76%_center] lg:object-[center_30%]"
-          />
-        ) : (
-          <StadiumBackground opacity="25" preload />
-        )}
+        ) : competition === "conferenceLeague" ? null : (
+  <StadiumBackground opacity="25" preload />
+)}
 
-        {/* BACKGROUND */}
+                {/* BACKGROUND */}
         <div
           className={
-            competition === "championsLeague" ||
-            competition === "europaLeague" ||
             competition === "conferenceLeague"
-              ? "absolute inset-0 bg-gradient-to-r from-[#030711]/90 via-[#030711]/60 to-[#030711]/25 lg:from-[#030711]/85 lg:via-[#030711]/45 lg:to-[#030711]/20"
-              : "absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/60"
+              ? "hidden"
+              : competition === "championsLeague" ||
+                  competition === "europaLeague"
+                ? "absolute inset-0 bg-gradient-to-r from-[#030711]/90 via-[#030711]/60 to-[#030711]/25 lg:from-[#030711]/85 lg:via-[#030711]/45 lg:to-[#030711]/20"
+                : "absolute inset-0 bg-gradient-to-r from-[#030711] via-[#030711]/85 to-[#030711]/60"
           }
         />
 
         <div
           className={
-            competition === "championsLeague" ||
-            competition === "europaLeague" ||
             competition === "conferenceLeague"
-              ? "absolute inset-0 bg-gradient-to-t from-[#030711] via-[#030711]/10 to-[#030711]/35"
-              : "absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70"
+              ? "hidden"
+              : competition === "championsLeague" ||
+                  competition === "europaLeague"
+                ? "absolute inset-0 bg-gradient-to-t from-[#030711] via-[#030711]/10 to-[#030711]/35"
+                : "absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-[#030711]/70"
           }
         />
 
@@ -590,10 +605,9 @@ away_id:
       </section>
 
 
-      {/* GROUPS */}
-
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
-        <div className="mb-10">
+            {/* GROUPS */}
+<section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
+  <div className="mb-10">
           <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
             Груповий етап
           </div>
