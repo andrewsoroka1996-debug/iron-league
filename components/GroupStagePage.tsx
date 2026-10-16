@@ -390,7 +390,7 @@ away_id:
   <main
     className={
   competition === "conferenceLeague"
-    ? "min-h-screen overflow-x-clip bg-[#030711] text-white"
+  ? "min-h-screen overflow-x-clip bg-[#030711] text-white [--lk-bg-y:55px] lg:[--lk-bg-y:-220px]"
     : competition === "championsLeague"
       ? "champions-league-mobile-bg min-h-screen overflow-x-clip bg-[#030711] text-white"
       : "min-h-screen bg-[#030711] text-white"
@@ -400,8 +400,8 @@ away_id:
         ? {
             backgroundImage:
               'linear-gradient(to bottom, rgba(3,7,17,0.12) 0px, rgba(3,7,17,0.25) 450px, rgba(3,7,17,0.75) 1050px, #030711 1600px), url("/backgrounds/iron-league-conference-full-bg.webp")',
-            backgroundSize: "100% 1600px, 100% auto",
-            backgroundPosition: "center top, center 55px",
+            backgroundSize: "100% 100%, 100% auto",
+            backgroundPosition: "center top, center var(--lk-bg-y)",
             backgroundRepeat: "no-repeat",
           }
             : competition === "europaLeague"
