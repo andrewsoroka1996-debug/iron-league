@@ -76,3 +76,20 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* Champions League: mobile background */
+@media (max-width: 639px) {
+  .champions-league-mobile-bg {
+    background-size: 100% 2400px, 650px auto !important;
+background-position: center top, calc(100% + 60px) -75px !important;
+
+    background-image:
+  linear-gradient(
+    to bottom,
+    rgba(3, 7, 17, 0.12) 0px,
+    rgba(3, 7, 17, 0.40) 450px,
+    rgba(3, 7, 17, 0.85) 570px,
+    #030711 710px
+  ),
+  url("/backgrounds/iron-league-champions-league-full-bg.webp") !important;
+  }
+}

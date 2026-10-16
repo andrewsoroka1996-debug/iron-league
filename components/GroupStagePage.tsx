@@ -389,10 +389,12 @@ away_id:
   return (
   <main
     className={
-      competition === "conferenceLeague"
-        ? "min-h-screen overflow-x-clip bg-[#030711] text-white"
-        : "min-h-screen bg-[#030711] text-white"
-    }
+  competition === "conferenceLeague"
+    ? "min-h-screen overflow-x-clip bg-[#030711] text-white"
+    : competition === "championsLeague"
+      ? "champions-league-mobile-bg min-h-screen overflow-x-clip bg-[#030711] text-white"
+      : "min-h-screen bg-[#030711] text-white"
+}
     style={
       competition === "conferenceLeague"
         ? {
@@ -410,8 +412,18 @@ away_id:
           backgroundPosition: "center top, center 55px",
           backgroundRepeat: "no-repeat",
         }
+          : competition === "championsLeague"
+      ? {
+          backgroundImage:
+  'linear-gradient(to bottom, rgba(3,7,17,0.12) 0px, rgba(3,7,17,0.40) 600px, rgba(3,7,17,0.85) 1050px, #030711 1450px), url("/backgrounds/iron-league-champions-league-full-bg.webp")',
+          backgroundSize:
+            "100% 2400px, max(100%, 1250px) auto",
+          backgroundPosition:
+            "center top, 73% 55px",
+          backgroundRepeat: "no-repeat",
+        }
       : undefined
-    }
+  }
   >
 
       {/* HEADER */}
@@ -424,20 +436,14 @@ away_id:
       ? "relative overflow-hidden before:pointer-events-none before:absolute before:inset-0 before:bg-gradient-to-r before:from-[#030711]/85 before:via-[#030711]/75 before:to-[#030711]/55 before:content-[''] sm:before:hidden"
       : competition === "europaLeague"
   ? "relative overflow-hidden before:pointer-events-none before:absolute before:inset-0 before:bg-gradient-to-r before:from-[#030711]/90 before:via-[#030711]/78 before:to-[#030711]/55 before:content-[''] sm:before:hidden"
+  : competition === "championsLeague"
+  ? "relative overflow-hidden before:pointer-events-none before:absolute before:inset-0 before:bg-gradient-to-r before:from-[#030711]/85 before:via-[#030711]/60 before:to-[#030711]/10 before:content-[''] sm:before:hidden"
   : "relative overflow-hidden border-b border-white/10"
   }
 >
-        {competition === "championsLeague" ? (
-          <Image
-            src="/backgrounds/iron-league-champions-league-bg.webp"
-            alt=""
-            fill
-            preload
-            sizes="100vw"
-            quality={75}
-            className="object-cover object-[88%_center] opacity-85 sm:object-[75%_center] lg:object-[center_30%]"
-          />
-        ) : competition === "europaLeague" ? null : competition === "conferenceLeague" ? null : (
+        {competition === "championsLeague" ||
+competition === "europaLeague" ||
+competition === "conferenceLeague" ? null : (
   <StadiumBackground opacity="25" preload />
 )}
 
@@ -445,7 +451,8 @@ away_id:
         <div
           className={
             competition === "conferenceLeague" ||
-competition === "europaLeague"
+competition === "europaLeague" ||
+competition === "championsLeague"
   ? "hidden"
               : competition === "championsLeague" ||
                   competition === "europaLeague"
@@ -457,7 +464,8 @@ competition === "europaLeague"
         <div
           className={
             competition === "conferenceLeague" ||
-competition === "europaLeague"
+competition === "europaLeague" ||
+competition === "championsLeague"
   ? "hidden"
               : competition === "championsLeague" ||
                   competition === "europaLeague"
