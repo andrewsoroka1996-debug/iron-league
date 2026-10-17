@@ -11,7 +11,7 @@ export const season1Division3Cup = {
       ["mao", "nf-dr-k"],
       ["glorytoukraine", "mikha-too-easy"],
       ["deyl", "parabellum"],
-      ["vasylhladysh", "jack0o"],
+      ["vasylhladysh", "lack0o"],
       ["mokasi", "ruslan228"],
     ],
 
@@ -19,12 +19,12 @@ export const season1Division3Cup = {
       ["romario", "maks191"],
       ["cybercothlete", "nf-dr-k"],
       ["glorytoukraine", "deyl"],
-      ["jack0o", "mokasi"],
+      ["lack0o", "mokasi"],
     ],
 
     semifinals: [
       ["romario", "cybercothlete"],
-      ["deyl", "jack0o"],
+      ["deyl", "lack0o"],
     ],
 
     final: [

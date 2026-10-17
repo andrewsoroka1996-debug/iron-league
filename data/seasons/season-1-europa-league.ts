@@ -13,7 +13,7 @@ export const season1EuropaLeague = {
     B: [
       "parabellum",
       "mokasi",
-      "jack0o",
+      "lack0o",
       "maks191",
     ],
 

@@ -20,7 +20,7 @@ export const season2Qualification = {
     "edikzhuk",
     "mykyta",
     "torre-odor",
-    "jack0o",
+    "lack0o",
     "klinovuy",
     "a",
     "rufer",

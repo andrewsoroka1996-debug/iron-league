@@ -31,7 +31,7 @@ export const season1Qualification = {
     "goall-getter",
     "ha4truka4pro",
     "holy",
-    "jack0o",
+    "lack0o",
     "joker-pes",
     "kandrat94",
     "klinovuy",

@@ -54,7 +54,7 @@ export const season1 = {
       "senatoreua",
       "ruslan228",
       "mykyta",
-      "jack0o",
+      "lack0o",
       "mikha-too-easy",
       "maks191",
       "arthurchamp07",

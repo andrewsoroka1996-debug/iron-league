@@ -67,7 +67,7 @@ export const season2 = {
   division4: {
     players: [
       "shtepaua",
-      "jack0o",
+      "lack0o",
       "klinovuy",
       "mykyta",
       "maks191",
