@@ -552,7 +552,7 @@ export const season1Coefficients:
 
   {
     place: 36,
-    playerName: "Jack0o",
+    playerName: "lack0o",
     division: 3,
     divisionMatchPoints: 29,
     divisionPlaceBonus: 0,

@@ -231,7 +231,7 @@ export const players = [
   },
   {
     id: "jack0o",
-    nickname: "Jack0o",
+    nickname: "lack0o",
     account: "Jack09663",
   },
   {
