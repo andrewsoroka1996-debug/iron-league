@@ -432,84 +432,146 @@ const getAllMatches = cache(
     onlySeason?: SeasonNumber
   ): Promise<MatchRow[]> => {
     const PAGE_SIZE = 1000;
+    const CONCURRENT_PAGES = 5;
 
-    const allMatches:
-      MatchRow[] = [];
+    const seasonsToLoad =
+      onlySeason === undefined
+        ? [1, 2, 3, 4]
+        : [onlySeason];
 
-    let from = 0;
+    const MATCH_COLUMNS = `
+      id,
+      season,
+      competition,
+      division,
+      stage,
+      round,
+      leg,
+      participant_type,
+      home_id,
+      away_id,
+      home_goals,
+      away_goals,
+      status,
+      series_id,
+      series_home_id,
+      series_away_id,
+      is_tiebreak
+    `;
 
-    while (true) {
-      const {
-        data,
-        error,
-      } = await supabaseAdmin
-        .from("matches")
-        .select(
-          `
-            id,
-            season,
-            competition,
-            division,
-            stage,
-            round,
-            leg,
-            participant_type,
-            home_id,
-            away_id,
-            home_goals,
-            away_goals,
-            status,
-            series_id,
-            series_home_id,
-            series_away_id,
-            is_tiebreak
-          `
-        )
-        .in(
-  "season",
-  onlySeason === undefined
-    ? [1, 2, 3, 4]
-    : [onlySeason]
-)
-        .order(
-          "id",
-          {
+    const loadPage = async (
+      pageIndex: number,
+      withCount = false
+    ) => {
+      const from = pageIndex * PAGE_SIZE;
+
+      const { data, error, count } =
+        await supabaseAdmin
+          .from("matches")
+          .select(
+            MATCH_COLUMNS,
+            withCount
+              ? { count: "exact" }
+              : {}
+          )
+          .in("season", seasonsToLoad)
+          .order("id", {
             ascending: true,
-          }
-        )
-        .range(
-          from,
-          from +
-            PAGE_SIZE -
-            1
-        );
+          })
+          .range(
+            from,
+            from + PAGE_SIZE - 1
+          );
 
       if (error) {
         throw error;
       }
 
-      const batch =
-        (data ??
-          []) as MatchRow[];
+      return {
+        rows: (data ?? []) as MatchRow[],
+        count,
+      };
+    };
 
-      allMatches.push(
-        ...batch
+    // Перша сторінка та кількість матчів
+    const firstPage = await loadPage(0, true);
+
+    if (firstPage.count === null) {
+      throw new Error(
+        "Не вдалося отримати кількість матчів"
+      );
+    }
+
+    const totalCount = firstPage.count;
+
+    const allMatches: MatchRow[] = [
+      ...firstPage.rows,
+    ];
+
+    if (
+      allMatches.length !==
+      Math.min(PAGE_SIZE, totalCount)
+    ) {
+      throw new Error(
+        "Неповна перша сторінка матчів"
+      );
+    }
+
+    const totalPages = Math.ceil(
+      totalCount / PAGE_SIZE
+    );
+
+    // Решту сторінок завантажуємо паралельно
+    for (
+      let startPage = 1;
+      startPage < totalPages;
+      startPage += CONCURRENT_PAGES
+    ) {
+      const pageIndexes = Array.from(
+        {
+          length: Math.min(
+            CONCURRENT_PAGES,
+            totalPages - startPage
+          ),
+        },
+        (_, index) => startPage + index
       );
 
-      /*
-        Якщо повернулося менше
-        ніж PAGE_SIZE —
-        це остання сторінка.
-      */
+      const results = await Promise.all(
+        pageIndexes.map((pageIndex) =>
+          loadPage(pageIndex)
+        )
+      );
 
-      if (
-        batch.length <
-        PAGE_SIZE
-      ) {
-        break;
+      for (let i = 0; i < results.length; i++) {
+        const pageIndex = pageIndexes[i];
+        const rows = results[i].rows;
+
+        const expectedCount = Math.min(
+          PAGE_SIZE,
+          totalCount - pageIndex * PAGE_SIZE
+        );
+
+        if (rows.length !== expectedCount) {
+          throw new Error(
+            `Неповна сторінка матчів: ${pageIndex}`
+          );
+        }
+
+        allMatches.push(...rows);
       }
+    }
 
-      from += PAGE_SIZE;
+    // Перевірка цілісності
+    if (
+      allMatches.length !== totalCount ||
+      new Set(
+        allMatches.map((match) => match.id)
+      ).size !== totalCount
+    ) {
+      throw new Error(
+        "Помилка цілісності списку матчів"
+      );
     }
 
     return allMatches;
@@ -602,7 +664,36 @@ export const getPlayerHonours = cache(
       onlySeason === undefined
         ? seasons
         : [onlySeason];
+// Паралельне завантаження Ліги асоціацій
+const associationLeagueRequests = new Map<
+  2 | 3 | 4,
+  Promise<
+    Awaited<
+      ReturnType<typeof getCachedAssociationLeague>
+    > | null
+  >
+>();
 
+for (const season of [2, 3, 4] as const) {
+  if (
+    onlySeason !== undefined &&
+    onlySeason !== season
+  ) {
+    continue;
+  }
+
+  associationLeagueRequests.set(
+    season,
+    getCachedAssociationLeague(season).catch((error) => {
+  console.error(
+    `[PLAYER HONOURS] Помилка Ліги асоціацій, сезон ${season}:`,
+    error
+  );
+
+  return null;
+})
+  );
+}
     /*
       ========================================
       ВСІ МАТЧІ
@@ -613,10 +704,7 @@ export const getPlayerHonours = cache(
         MatchRow[] = [];
 
       try {
-        matches =
-  await getAllMatches(
-    onlySeason
-  );
+        matches = await getAllMatches(onlySeason);
       } catch (error) {
         console.error(
           "PLAYER HONOURS MATCHES ERROR:",
@@ -1033,10 +1121,13 @@ export const getPlayerHonours = cache(
   continue;
 }
         try {
-          const league =
-            await getCachedAssociationLeague(
-              associationSeason
-            );
+          const league = await associationLeagueRequests.get(
+  associationSeason
+);
+
+if (!league) {
+  continue;
+}
 
           /*
             Поки Кубок
@@ -1100,14 +1191,12 @@ export const getPlayerHonours = cache(
                 "Ліга Асоціацій",
             }
           );
-        } catch {
-          /*
-            Якщо для сезону
-            ще немає повних даних
-            Ліги Асоціацій —
-            нагороду не додаємо.
-          */
-        }
+        } catch (error) {
+  console.error(
+    `[PLAYER HONOURS] Помилка обчислення нагород Ліги асоціацій, сезон ${associationSeason}:`,
+    error
+  );
+}
       }
 
       /*
@@ -1155,7 +1244,15 @@ export const getPlayerHonours = cache(
           continue;
         }
 if (coopTeams === null) {
-  coopTeams = await getAllCoopTeams();
+  const coopStartedAt = performance.now();
+
+coopTeams = await getAllCoopTeams();
+
+console.log(
+  `[HONOURS COOP TEAMS] ${Math.round(
+    performance.now() - coopStartedAt
+  )}ms`
+);
 }
         /*
           У matches команда може
