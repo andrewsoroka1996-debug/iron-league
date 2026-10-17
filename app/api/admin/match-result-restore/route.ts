@@ -444,259 +444,59 @@ export async function POST(
 
     /*
       ========================================
-      RESTORE MATCH
-      ========================================
-
-      Optimistic lock:
-
-      UPDATE виконується лише якщо матч
-      досі scheduled/null/null/null.
-
-      Тобто Restore ніколи не перезапише
-      новий введений результат.
+      ATOMIC RESTORE RESULT
       ========================================
     */
 
     const {
-      data: restoredMatches,
+      data: restoreData,
       error: restoreError,
-    } = await supabaseAdmin
-      .from("matches")
-      .update({
-        home_goals:
-          snapshot.home_goals,
-
-        away_goals:
-          snapshot.away_goals,
-
-        status:
-          snapshot.status,
-
-        played_at:
-          snapshot.played_at,
-      })
-      .eq(
-        "id",
-        match.id
-      )
-      .eq(
-        "status",
-        "scheduled"
-      )
-      .is(
-        "home_goals",
-        null
-      )
-      .is(
-        "away_goals",
-        null
-      )
-      .is(
-        "played_at",
-        null
-      )
-      .select(
-        `
-          id,
-          season,
-          competition,
-          division,
-          round,
-          stage,
-          group_name,
-          leg,
-          participant_type,
-          home_id,
-          away_id,
-          home_goals,
-          away_goals,
-          status,
-          played_at,
-          series_id,
-          series_home_id,
-          series_away_id,
-          is_tiebreak
-        `
-      );
-
-    if (
-      restoreError
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            restoreError.message,
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    /*
-      ========================================
-      RACE CONDITION CHECK
-      ========================================
-    */
-
-    if (
-      !restoredMatches ||
-      restoredMatches.length !==
-        1
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-
-          error:
-            "Стан матчу змінився під час Restore. Онови дані та повтори перевірку.",
-        },
-        {
-          status: 409,
-        }
-      );
-    }
-
-    const restoredMatch =
-      restoredMatches[0];
-
-    /*
-      ========================================
-      CLOSE SNAPSHOT
-      ========================================
-
-      Матч уже відновлений.
-
-      Тепер позначаємо snapshot
-      використаним.
-      ========================================
-    */
-
-    const restoredAt =
-      new Date().toISOString();
-
-    const {
-      data: closedSnapshots,
-      error: closeError,
-    } = await supabaseAdmin
-      .from(
-        "match_result_revert_log"
-      )
-      .update({
-        restored_at:
-          restoredAt,
-      })
-      .eq(
-        "id",
-        snapshot.id
-      )
-      .is(
-        "restored_at",
-        null
-      )
-      .select(
-        `
-          id,
-          restored_at
-        `
-      );
-
-    /*
-      ========================================
-      CLOSE ERROR -> COMPENSATING ROLLBACK
-      ========================================
-
-      Supabase JS тут не дає нам одну
-      SQL-транзакцію для двох таблиць.
-
-      Якщо матч відновився,
-      але snapshot не закрився,
-      пробуємо повернути матч назад
-      у reverted state.
-
-      Тоді Restore можна буде
-      повторити без подвійного стану.
-      ========================================
-    */
-
-    if (
-      closeError ||
-      !closedSnapshots ||
-      closedSnapshots.length !==
-        1
-    ) {
-      const {
-        error: rollbackError,
-      } = await supabaseAdmin
-        .from("matches")
-        .update({
-          home_goals: null,
-
-          away_goals: null,
-
-          status:
-            "scheduled",
-
-          played_at: null,
-        })
-        .eq(
-          "id",
-          restoredMatch.id
-        )
-        .eq(
-          "status",
-          snapshot.status
-        )
-        .eq(
-          "home_goals",
-          snapshot.home_goals
-        )
-        .eq(
-          "away_goals",
-          snapshot.away_goals
-        );
-
-      if (
-        rollbackError
-      ) {
-        console.error(
-          "MATCH RESULT RESTORE ROLLBACK ERROR:",
-          rollbackError
-        );
-
-        return NextResponse.json(
-          {
-            success: false,
-
-            error:
-              "Результат відновлено, але snapshot не вдалося закрити і автоматичний rollback також не вдався. Потрібна ручна перевірка.",
-          },
-          {
-            status: 500,
-          }
-        );
+    } = await supabaseAdmin.rpc(
+      "admin_restore_match_result_atomic",
+      {
+        p_match_id: match_id,
       }
+    );
 
+    if (restoreError) {
       return NextResponse.json(
         {
           success: false,
+          error: restoreError.message,
+        },
+        {
+          status:
+            restoreError.code === "P0001"
+              ? 409
+              : 500,
+        }
+      );
+    }
 
+    type AtomicRestoreResult = {
+      match: Record<string, unknown>;
+      snapshot: {
+        id: string;
+        reverted_at: string | null;
+        restored_at: string;
+      };
+    };
+
+    const result =
+      restoreData as AtomicRestoreResult | null;
+
+    if (!result?.match || !result.snapshot) {
+      return NextResponse.json(
+        {
+          success: false,
           error:
-            closeError?.message ??
-            "Не вдалося закрити snapshot. Відновлення автоматично відкочено.",
+            "Restore повернув некоректну відповідь. Перевірте стан матчу та журнал.",
         },
         {
           status: 500,
         }
       );
     }
-
-    /*
-      ========================================
-      SUCCESS
-      ========================================
-    */
 
     return NextResponse.json({
       success: true,
@@ -706,33 +506,21 @@ export async function POST(
       message:
         "Результат матчу точно відновлено",
 
-      match:
-        restoredMatch,
+      match: result.match,
 
       restored_result: {
-        home_goals:
-          snapshot.home_goals,
-
-        away_goals:
-          snapshot.away_goals,
-
-        status:
-          snapshot.status,
-
-        played_at:
-          snapshot.played_at,
+        home_goals: snapshot.home_goals,
+        away_goals: snapshot.away_goals,
+        status: snapshot.status,
+        played_at: snapshot.played_at,
       },
 
       snapshot: {
-        id:
-          snapshot.id,
-
+        id: result.snapshot.id,
         reverted_at:
-          snapshot.reverted_at,
-
+          result.snapshot.reverted_at,
         restored_at:
-          closedSnapshots[0]
-            .restored_at,
+          result.snapshot.restored_at,
       },
     });
   } catch (
