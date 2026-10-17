@@ -232,7 +232,7 @@ export const players = [
   {
     id: "lack0o",
     nickname: "lack0o",
-    account: "Jack09663",
+    account: "lack09663",
   },
   {
     id: "pes-duke",
