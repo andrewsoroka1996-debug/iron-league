@@ -162,6 +162,7 @@ export async function POST(
         "restored_at",
         null
       )
+      .is("superseded_at", null)
       .limit(1);
 
     if (
