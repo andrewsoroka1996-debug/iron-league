@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import StadiumBackground from "../../../components/StadiumBackground";
 import SiteHeader from "../../../components/public/SiteHeader";
 import { players } from "../../../data/players";
@@ -152,18 +153,18 @@ function MatchCard({
       match.home_goals!;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-[#081321]">
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-[#081321] xl:flex xl:h-full xl:flex-col">
       {/* HOME */}
 
       <div
-        className={`flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 ${
+        className={`flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 xl:min-h-0 xl:flex-1 xl:gap-2 xl:px-3 xl:py-1.5 ${
           homeWinner
             ? "bg-blue-500/15"
             : ""
         }`}
       >
         <div
-          className={`h-5 w-1 shrink-0 rounded-full ${
+          className={`h-5 w-1 shrink-0 rounded-full xl:h-4 ${
             homeWinner
               ? "bg-blue-400"
               : "bg-transparent"
@@ -172,7 +173,7 @@ function MatchCard({
 
         <a
           href={`/players/${match.home_id}?season=${season}`}
-          className={`min-w-0 flex-1 truncate font-bold transition hover:text-blue-300 ${
+          className={`min-w-0 flex-1 truncate font-bold transition hover:text-blue-300 xl:text-sm ${
             homeWinner
               ? "text-white"
               : "text-white/80"
@@ -184,7 +185,7 @@ function MatchCard({
         </a>
 
         <div
-          className={`w-8 text-right text-lg font-black ${
+          className={`w-8 text-right text-lg font-black xl:w-6 xl:text-base ${
             homeWinner
               ? "text-blue-300"
               : "text-white"
@@ -199,14 +200,14 @@ function MatchCard({
       {/* AWAY */}
 
       <div
-        className={`flex items-center gap-3 px-4 py-3 ${
+        className={`flex items-center gap-3 px-4 py-3 xl:min-h-0 xl:flex-1 xl:gap-2 xl:px-3 xl:py-1.5 ${
           awayWinner
             ? "bg-blue-500/15"
             : ""
         }`}
       >
         <div
-          className={`h-5 w-1 shrink-0 rounded-full ${
+          className={`h-5 w-1 shrink-0 rounded-full xl:h-4 ${
             awayWinner
               ? "bg-blue-400"
               : "bg-transparent"
@@ -215,7 +216,7 @@ function MatchCard({
 
         <a
           href={`/players/${match.away_id}?season=${season}`}
-          className={`min-w-0 flex-1 truncate font-bold transition hover:text-blue-300 ${
+          className={`min-w-0 flex-1 truncate font-bold transition hover:text-blue-300 xl:text-sm ${
             awayWinner
               ? "text-white"
               : "text-white/80"
@@ -227,7 +228,7 @@ function MatchCard({
         </a>
 
         <div
-          className={`w-8 text-right text-lg font-black ${
+          className={`w-8 text-right text-lg font-black xl:w-6 xl:text-base ${
             awayWinner
               ? "text-blue-300"
               : "text-white"
@@ -248,6 +249,72 @@ function MatchCard({
   ========================================
 */
 
+// Геометрія турнірної сітки на великих екранах.
+// Розташування прив'язане до match.round (номера пари), а не до
+// порядку завантаження чи кількості вже створених матчів.
+const BRACKET_CARD_HEIGHT = 76;
+const BRACKET_CARD_GAP = 10;
+const BRACKET_STEP = BRACKET_CARD_HEIGHT + BRACKET_CARD_GAP;
+const BRACKET_HEIGHT = 8 * BRACKET_CARD_HEIGHT + 7 * BRACKET_CARD_GAP;
+const CONNECTOR_WIDTH = 28;
+const CONNECTOR_MIDDLE = CONNECTOR_WIDTH / 2;
+
+const CUP_STAGES = [
+  "round-of-16",
+  "quarterfinal",
+  "semifinal",
+  "final",
+] as const;
+
+const MATCHES_PER_STAGE = [8, 4, 2, 1] as const;
+
+function bracketMatchTop(stageIndex: number, slotIndex: number) {
+  const scale = 2 ** stageIndex;
+  return (
+    (slotIndex * scale + (scale - 1) / 2) * BRACKET_STEP
+  );
+}
+
+function bracketMatchCenter(stageIndex: number, slotIndex: number) {
+  return bracketMatchTop(stageIndex, slotIndex) + BRACKET_CARD_HEIGHT / 2;
+}
+
+// Колонка SVG між стадіями з'єднує дві попередні пари
+// з однією наступною. Лінії масштабуються разом із сіткою.
+function BracketConnectors({ stageIndex }: { stageIndex: number }) {
+  const pairCount = MATCHES_PER_STAGE[stageIndex + 1] ?? 0;
+
+  return (
+    <div className="pointer-events-none pt-[60px]" aria-hidden="true">
+      <svg
+        width={CONNECTOR_WIDTH}
+        height={BRACKET_HEIGHT}
+        viewBox={`0 0 ${CONNECTOR_WIDTH} ${BRACKET_HEIGHT}`}
+        className="block overflow-visible"
+        fill="none"
+      >
+        {Array.from({ length: pairCount }, (_, pairIndex) => {
+          const upper = bracketMatchCenter(stageIndex, pairIndex * 2);
+          const lower = bracketMatchCenter(stageIndex, pairIndex * 2 + 1);
+          const middle = (upper + lower) / 2;
+
+          return (
+            <path
+              key={pairIndex}
+              d={`M 0 ${upper} H ${CONNECTOR_MIDDLE} V ${lower} H 0 M ${CONNECTOR_MIDDLE} ${middle} H ${CONNECTOR_WIDTH}`}
+              stroke="#4f86bd"
+              strokeWidth="1.6"
+              strokeOpacity="0.65"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function CupBracket({
   matches,
   season,
@@ -255,100 +322,150 @@ function CupBracket({
   matches: CupMatch[];
   season: SeasonNumber;
 }) {
-  const stages = [
-    "round-of-16",
-    "quarterfinal",
-    "semifinal",
-    "final",
-  ];
+  const stageGroups = CUP_STAGES.map((stage, index) => {
+    const stageMatches = matches
+      .filter((match) => match.stage === stage)
+      .sort((a, b) => (a.round ?? 0) - (b.round ?? 0));
+
+    const slots = new Map<number, CupMatch>();
+    const unpositioned: CupMatch[] = [];
+
+    for (const match of stageMatches) {
+      const slot = match.round;
+      if (
+        slot !== null &&
+        Number.isInteger(slot) &&
+        slot >= 1 &&
+        slot <= MATCHES_PER_STAGE[index] &&
+        !slots.has(slot)
+      ) {
+        slots.set(slot, match);
+      } else {
+        // Некоректні/повторні слоти не зникають: нижче є окремий список.
+        unpositioned.push(match);
+      }
+    }
+
+    return { stage, stageMatches, slots, unpositioned };
+  });
+
+  const unpositionedMatches = stageGroups.flatMap((group) =>
+    group.unpositioned
+  );
 
   return (
-  <div className="overflow-visible pb-0 xl:overflow-x-auto xl:pb-3">
-    <div className="grid grid-cols-1 gap-4 xl:min-w-[1080px] xl:grid-cols-4 xl:gap-6">
-        {stages.map(
-          (stage) => {
-            const stageMatches =
-              matches
-                .filter(
-                  (match) =>
-                    match.stage ===
-                    stage
-                )
-                .sort(
-                  (a, b) =>
-                    (a.round ??
-                      0) -
-                    (b.round ??
-                      0)
-                );
+    <>
+      {/* Мобільна версія: зберігаємо чинне розташування та картки. */}
+      <div className="grid grid-cols-1 gap-4 xl:hidden">
+        {stageGroups.map(({ stage, stageMatches }) => (
+          <div key={stage} className="min-w-0">
+            <div className="mb-3 border-b border-white/10 pb-2">
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">
+                {getStageTitle(stage)}
+              </div>
+              <div className="mt-1 text-xs text-white/70">
+                {stageMatches.length} {stageMatches.length === 1 ? "матч" : "матчів"}
+              </div>
+            </div>
 
-            return (
-              <div
-                key={stage}
-                className="min-w-0"
-              >
-                {/* STAGE HEADER */}
-
-                <div className="mb-3 border-b border-white/10 pb-2 xl:mb-5 xl:pb-3">
-                  <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">
-                    {getStageTitle(
-                      stage
-                    )}
+            {stageMatches.length > 0 ? (
+              <div className={stage === "round-of-16" ? "space-y-4" : "space-y-3"}>
+                {stageMatches.map((match) => (
+                  <div
+                    key={match.id}
+                    className="rounded-xl ring-1 ring-blue-400/25 shadow-[0_8px_24px_rgba(0,0,0,0.30)]"
+                  >
+                    <MatchCard match={match} season={season} />
                   </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-8 text-center text-sm text-white/25">
+                Даних немає
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
 
+      {/* ПК: фіксовані слоти і реальні з'єднувальні лінії. */}
+      <div className="hidden xl:block xl:overflow-x-auto xl:pb-1">
+        <div
+          className="grid min-w-[1000px] gap-0"
+          style={{
+            gridTemplateColumns:
+              "minmax(0, 1fr) 28px minmax(0, 1fr) 28px minmax(0, 1fr) 28px minmax(0, 1fr)",
+          }}
+        >
+          {stageGroups.map(({ stage, stageMatches, slots }, stageIndex) => (
+            <Fragment key={stage}>
+              <section className="min-w-0">
+                <div className="mb-3 h-12 border-b border-white/10 pb-2">
+                  <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">
+                    {getStageTitle(stage)}
+                  </div>
                   <div className="mt-1 text-xs text-white/70">
-                    {
-                      stageMatches.length
-                    }{" "}
-                    {stageMatches.length ===
-                    1
-                      ? "матч"
-                      : "матчів"}
+                    {stageMatches.length} {stageMatches.length === 1 ? "матч" : "матчів"}
                   </div>
                 </div>
 
-                {/* MATCHES */}
+                <div className="relative" style={{ height: BRACKET_HEIGHT }}>
+                  {Array.from(
+                    { length: MATCHES_PER_STAGE[stageIndex] },
+                    (_, slotIndex) => {
+                      const match = slots.get(slotIndex + 1);
+                      return (
+                        <div
+                          key={match?.id ?? `empty-${slotIndex}`}
+                          className="absolute inset-x-0"
+                          style={{
+                            top: bracketMatchTop(stageIndex, slotIndex),
+                            height: BRACKET_CARD_HEIGHT,
+                          }}
+                        >
+                          {match ? (
+                            <div className="h-full rounded-xl shadow-[0_6px_18px_rgba(0,0,0,0.20)] [&>div]:h-full">
+                              <MatchCard match={match} season={season} />
+                            </div>
+                          ) : (
+                            <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-blue-300/10 bg-white/[0.015] px-3 text-center text-[11px] text-white/25">
+                              Пара ще не сформована
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              </section>
 
-                {stageMatches.length >
-                0 ? (
+              {stageIndex < CUP_STAGES.length - 1 && (
+                <BracketConnectors stageIndex={stageIndex} />
+              )}
+            </Fragment>
+          ))}
+        </div>
 
-<div
-  className={
-    stage === "round-of-16"
-  ? "space-y-4 xl:space-y-4"
-      : stage === "quarterfinal"
-        ? "space-y-3 xl:space-y-10 xl:pt-8"
-        : stage === "semifinal"
-          ? "space-y-3 xl:space-y-24 xl:pt-28"
-          : "space-y-3 xl:pt-64"
-  }
->
-
-
-{stageMatches.map((match) => (
-  <div
-    key={match.id}
-    className="rounded-xl ring-1 ring-blue-400/25 shadow-[0_8px_24px_rgba(0,0,0,0.30)] xl:ring-0 xl:shadow-none"
-  >
-    <MatchCard
-      match={match}
-      season={season}
-    />
-  </div>
-))}
-
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-8 text-center text-sm text-white/25">
-                    Даних немає
-                  </div>
-                )}
-              </div>
-            );
-          }
+        {/* Якщо у даних немає коректного round, не приховуємо матч. */}
+        {unpositionedMatches.length > 0 && (
+          <div className="mt-6 border-t border-white/10 pt-5">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-amber-200/80">
+              Матчі без визначеної позиції в сітці
+            </p>
+            <div className="grid grid-cols-4 gap-4">
+              {unpositionedMatches.map((match) => (
+                <div key={match.id}>
+                  <p className="mb-2 text-xs text-white/50">
+                    {getStageTitle(match.stage ?? "")}
+                  </p>
+                  <MatchCard match={match} season={season} />
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
 
