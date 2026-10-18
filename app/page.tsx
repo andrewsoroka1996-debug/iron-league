@@ -5,11 +5,14 @@ import SiteFooter from "../components/public/SiteFooter";
 import { seasonCompetitions } from "../data/competitions/season-competitions";
 import { players } from "../data/players";
 import { season3 } from "../data/seasons/season-3";
-import {
-  calculateStandings,
-  type LeagueMatch,
-} from "../lib/calculateStandings";
+import { buildStandings } from "../lib/standings";
 import { supabase } from "../lib/supabase";
+import { supabaseAdmin } from "../lib/supabase-admin";
+import {
+  applyPlayerReplacements,
+  getSeasonPlayerReplacements,
+  resolveReplacementPlayerId,
+} from "../lib/player-replacements";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -511,106 +514,102 @@ export default async function Home() {
 
   /* ========================================
      DIVISIONS
+
+     Use the same matches, replacement rules and
+     standings algorithm as components/DivisionPage.tsx.
   ======================================== */
 
-  const {
-    data: divisionMatchesData,
-    error: divisionMatchesError,
-  } = await supabase
-    .from("matches")
-    .select(
-      `id,
-       division,
-       round,
-       home_id,
-       away_id,
-       home_goals,
-       away_goals,
-       status`
-    )
-    .eq("season", currentSeason)
-    .eq("competition", "division")
-    .eq("status", "finished")
-    .not("home_goals", "is", null)
-    .not("away_goals", "is", null);
+  const divisionNumbers: DivisionNumber[] = [1, 2, 3, 4];
 
-  if (divisionMatchesError) {
-    console.error(
-      "HOME DIVISIONS ERROR:",
-      divisionMatchesError
+  // Each division has its own query, as on the official division page.
+  // This also avoids the default row limit for a combined all-division query.
+  const [seasonReplacements, divisionMatchResults] = await Promise.all([
+    getSeasonPlayerReplacements(currentSeason),
+    Promise.all(
+      divisionNumbers.map((division) =>
+        supabaseAdmin
+          .from("matches")
+          .select(
+            `id,
+             division,
+             round,
+             home_id,
+             away_id,
+             home_goals,
+             away_goals,
+             status`
+          )
+          .eq("season", currentSeason)
+          .eq("competition", "division")
+          .eq("division", division)
+          .order("round", {
+            ascending: true,
+            nullsFirst: false,
+          })
+      )
+    ),
+  ]);
+
+  const divisions = divisionNumbers.map((division, index) => {
+    const result = divisionMatchResults[index];
+
+    if (result.error) {
+      console.error("HOME DIVISION MATCHES ERROR:", division, result.error);
+    }
+
+    const databaseMatches =
+      (result.data ?? []) as DivisionDatabaseMatch[];
+
+    const replacements = seasonReplacements.filter(
+      (replacement) => replacement.division === division
     );
-  }
 
-  const divisionMatches =
-    (divisionMatchesData ??
-      []) as DivisionDatabaseMatch[];
+    const participantIds = applyPlayerReplacements(
+      getSeason3DivisionPlayers(division),
+      replacements
+    );
 
-  const divisionNumbers:
-    DivisionNumber[] = [1, 2, 3, 4];
+    // Preserve the original home-page empty state before any results.
+    const hasFinishedMatches = databaseMatches.some(
+      (match) =>
+        match.status === "finished" &&
+        match.home_goals !== null &&
+        match.away_goals !== null
+    );
 
-  const divisions = divisionNumbers.map(
-    (division) => {
-      const finishedMatches:
-        LeagueMatch[] = divisionMatches
-        .filter(
-          (match) =>
-            match.division === division
-        )
-        .map((match) => ({
-          id: match.id,
-
-          round:
-            match.round ?? undefined,
-
-          home: match.home_id,
-
-          away: match.away_id,
-
-          homeGoals: match.home_goals!,
-
-          awayGoals: match.away_goals!,
-        }));
-
-      if (finishedMatches.length === 0) {
-        return {
-          number: String(division).padStart(
-            2,
-            "0"
-          ),
-
-          name: `${division} Дивізіон`,
-
-          leader: "—",
-
-          points: 0,
-        };
-      }
-
-      const standings = calculateStandings(
-        getSeason3DivisionPlayers(
-          division
-        ),
-        finishedMatches
-      );
-
-      const leader = standings[0];
-
+    if (!hasFinishedMatches) {
       return {
-        number: String(division).padStart(
-          2,
-          "0"
-        ),
-
+        number: String(division).padStart(2, "0"),
         name: `${division} Дивізіон`,
-
-        leader: leader
-          ? getPlayerName(leader.playerId)
-          : "—",
-
-        points: leader?.points ?? 0,
+        leader: "—",
+        points: 0,
       };
     }
-  );
+
+    const standings = buildStandings({
+      participantIds,
+      matches: databaseMatches.map((match) => ({
+        home_id: resolveReplacementPlayerId(match.home_id, replacements),
+        away_id: resolveReplacementPlayerId(match.away_id, replacements),
+        home_goals: match.home_goals,
+        away_goals: match.away_goals,
+        status: match.status,
+      })),
+      format: "division-qualification",
+    });
+
+    // Same visible rows/order as the official table: only known players.
+    const leader = standings.find((row) =>
+      players.some((player) => player.id === row.playerId)
+    );
+
+    return {
+      number: String(division).padStart(2, "0"),
+      name: `${division} Дивізіон`,
+      leader: leader ? getPlayerName(leader.playerId) : "—",
+      points: leader?.points ?? 0,
+    };
+  });
 
   /* ========================================
      LATEST NEWS
