@@ -687,13 +687,13 @@ export default async function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-[#030711]/10 via-[#030711]/20 to-[#030711] lg:bg-gradient-to-t lg:from-[#030711] lg:via-transparent lg:to-[#030711]/35" />
         </div>
 
-        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:min-h-[640px] lg:grid-cols-2 lg:gap-12 lg:py-20">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-5 px-4 py-7 sm:gap-10 sm:px-6 sm:py-16 lg:min-h-[640px] lg:grid-cols-2 lg:gap-12 lg:py-20">
 
           {/* HERO LEFT */}
 
           <div>
 
-            <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
+            <div className="mb-3 inline-flex items-center gap-3 rounded-full border border-blue-400/20 sm:mb-6 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
 
               <span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_12px_#60a5fa]" />
 
@@ -701,7 +701,7 @@ export default async function Home() {
 
             </div>
 
-            <div className="max-w-2xl">
+            <div className="-mx-2 max-w-none sm:mx-0 sm:max-w-2xl">
 
               <Image
   src="/iron-league-logo.jpg"
@@ -709,14 +709,14 @@ export default async function Home() {
   width={420}
   height={420}
   fetchPriority="high"
-  sizes="(min-width: 1024px) 320px, (min-width: 640px) 288px, 208px"
+  sizes="(min-width: 1024px) 320px, (min-width: 640px) 288px, (min-width: 400px) 380px, calc(100vw - 16px)"
   quality={75}
-  className="h-auto w-52 max-w-full object-contain drop-shadow-lg sm:w-72 lg:w-80"
+  className="mx-auto h-auto w-full max-w-[380px] object-contain drop-shadow-lg sm:mx-0 sm:w-72 lg:w-80"
 />
 
             </div>
 
-            <p className="mt-7 max-w-xl text-lg leading-8 text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">
+            <p className="mt-4 max-w-xl text-base leading-7 text-white/85 sm:mt-7 sm:text-lg sm:leading-8 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">
   Єдина платформа Iron League: матчі,
   дивізіони, єврокубки, статистика,
   результати, турнірні таблиці та
@@ -725,7 +725,7 @@ export default async function Home() {
 
             {/* HERO BUTTONS */}
 
-            <div className="mt-7 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:flex sm:flex-wrap sm:gap-4">
 
               <a
                 href="/matches"
@@ -745,34 +745,34 @@ export default async function Home() {
 
             {/* HERO STATS */}
 
-            <div className="mt-12 grid max-w-xl grid-cols-3 gap-4">
+            <div className="mt-7 grid max-w-xl grid-cols-3 gap-2 sm:mt-12 sm:gap-4">
 
               <div>
-                <div className="text-3xl font-black">
+                <div className="text-2xl font-black sm:text-3xl">
                   4
                 </div>
 
-                <div className="mt-1 text-xs uppercase tracking-widest text-white/70">
+                <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest">
                   Дивізіони
                 </div>
               </div>
 
               <div>
-                <div className="text-3xl font-black">
+                <div className="text-2xl font-black sm:text-3xl">
                   {tournaments.length}+
                 </div>
 
-                <div className="mt-1 text-xs uppercase tracking-widest text-white/70">
+                <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest">
                   Турнірів
                 </div>
               </div>
 
               <div>
-                <div className="text-3xl font-black">
+                <div className="text-2xl font-black sm:text-3xl">
                   ∞
                 </div>
 
-                <div className="mt-1 text-xs uppercase tracking-widest text-white/70">
+                <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest">
                   Емоцій
                 </div>
               </div>
@@ -800,7 +800,7 @@ export default async function Home() {
 
                     {/* MATCH HEADER */}
 
-                    <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-7 py-5">
+                    <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3 sm:px-7 sm:py-5">
 
                       <div>
 
@@ -822,7 +822,7 @@ export default async function Home() {
 
                     {/* MAIN MATCH CONTENT */}
 
-                    <div className="px-7 py-8 text-center">
+                    <div className="px-4 py-5 text-center sm:px-7 sm:py-8">
 
                       <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-400">
                         {getTournamentName(
@@ -837,7 +837,7 @@ export default async function Home() {
                         </div>
                       )}
 
-                      <div className="mt-8 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                      <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:mt-8 sm:gap-4">
 
                         {/* HOME PLAYER */}
 
@@ -878,7 +878,7 @@ mainFeaturedMatch.away_goals !== null
 
                       </div>
 
-                      <div className="mt-8 text-sm text-white/35">
+                      <div className="mt-5 text-sm text-white/35 sm:mt-8">
                         {mainFeaturedMatch.status === "finished"
   ? "Матч завершено"
   : mainFeaturedMatch.status === "closed_unplayed"
@@ -900,7 +900,7 @@ mainFeaturedMatch.away_goals !== null
                         (match) => (
                           <div
                             key={match.id}
-                            className="rounded-2xl border border-white/10 bg-[#07101d]/90 p-5 backdrop-blur-xl"
+                            className="rounded-2xl border border-white/10 bg-[#07101d]/90 p-4 backdrop-blur-xl sm:p-5"
                           >
 
                             <div className="flex items-center justify-between gap-3">
@@ -918,7 +918,7 @@ mainFeaturedMatch.away_goals !== null
 
                             </div>
 
-                            <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm font-black">
+                            <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm font-black sm:mt-5">
 
                               <div className="truncate text-right">
                                 {getFeaturedParticipantName(
@@ -965,7 +965,7 @@ match.away_goals !== null
 
                   {/* EMPTY MATCH HEADER */}
 
-                  <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4 sm:px-7">
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-7 sm:py-4">
 
                     <div>
 
@@ -987,19 +987,19 @@ match.away_goals !== null
 
                   {/* EMPTY MATCH CONTENT */}
 
-                  <div className="flex items-center gap-4 px-5 py-6 sm:gap-5 sm:px-7 sm:py-8">
+                  <div className="flex items-center gap-3 px-4 py-4 sm:gap-5 sm:px-7 sm:py-8">
 
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-xl font-black text-blue-300">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/10 text-base font-black text-blue-300 sm:h-16 sm:w-16 sm:rounded-2xl sm:text-xl">
                       VS
                     </div>
 
                     <div className="min-w-0">
 
-                      <h3 className="text-lg font-black leading-tight text-white sm:text-xl">
+                      <h3 className="text-base font-black leading-tight text-white sm:text-xl">
                         Матч ще не призначено
                       </h3>
 
-                      <p className="mt-2 text-sm leading-6 text-white/50">
+                      <p className="mt-1 text-xs leading-5 text-white/50 sm:mt-2 sm:text-sm sm:leading-6">
                         Центральний матч з&apos;явиться
                         тут після його призначення.
                       </p>
@@ -1010,7 +1010,7 @@ match.away_goals !== null
 
                   {/* EMPTY MATCH FOOTER */}
 
-                  <div className="border-t border-white/10 px-5 py-3 sm:px-7">
+                  <div className="border-t border-white/10 px-4 py-2 sm:px-7 sm:py-3">
 
                     <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/70">
                       Iron League • Match of the Day
@@ -1037,7 +1037,7 @@ match.away_goals !== null
 
 <section
   id="matches"
-  className="relative isolate mx-auto max-w-7xl scroll-mt-24 px-4 py-8 sm:px-6 sm:py-14"
+  className="relative isolate mx-auto max-w-7xl scroll-mt-24 px-4 py-5 sm:px-6 sm:py-14"
 >
   {/* BACKGROUND: RECENT RESULTS */}
   <div
@@ -1049,13 +1049,13 @@ match.away_goals !== null
     }}
   />
   {/* SECTION HEADER */}
-  <div className="mb-5 flex items-end justify-between gap-3">
+  <div className="mb-3 flex items-end justify-between gap-3 sm:mb-5">
     <div>
       <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
         Матч-центр
       </div>
 
-      <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+      <h2 className="mt-1 text-2xl font-black sm:mt-2 sm:text-3xl">
         Останні результати
       </h2>
     </div>
@@ -1084,11 +1084,11 @@ match.away_goals !== null
       results.map((match) => (
         <div
           key={match.id}
-          className="rounded-xl border border-white/10 bg-[#07101d] px-3 py-3 transition hover:border-blue-400/30 sm:px-4 lg:py-3"
+          className="rounded-xl border border-white/10 bg-[#07101d] px-3 py-2.5 transition hover:border-blue-400/30 sm:px-4 sm:py-3"
         >
           {/* MOBILE AND TABLET VERSION */}
           <div className="lg:hidden">
-            <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="mb-1.5 flex items-center justify-between gap-2 sm:mb-2">
               <span className="text-[10px] font-bold uppercase tracking-wide text-blue-300 sm:text-xs">
                 {match.tournament}
               </span>
@@ -1103,7 +1103,7 @@ match.away_goals !== null
                 {match.home}
               </div>
 
-              <div className="flex min-w-16 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 px-2 py-2 text-base font-black tabular-nums text-blue-300 sm:text-lg">
+              <div className="flex min-w-16 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 px-2 py-1.5 text-base font-black tabular-nums text-blue-300 sm:py-2 sm:text-lg">
                 {match.score}
               </div>
 
