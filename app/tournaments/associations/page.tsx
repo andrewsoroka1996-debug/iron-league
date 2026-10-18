@@ -1,5 +1,7 @@
 import Link from "next/link";
 import SiteHeader from "../../../components/public/SiteHeader";
+import PlayerTableEmblem from "../../../components/PlayerTableEmblem";
+import { getPlayerEmblemUrls } from "../../../lib/player-emblem-urls";
 
 import { players } from "../../../data/players";
 
@@ -339,9 +341,10 @@ function Season2LeagueTable() {
 
 function Season3BaseRanking({
   rows,
+  emblemUrls,
 }: {
-  rows:
-    AssociationLeagueRow[];
+  rows: AssociationLeagueRow[];
+  emblemUrls: Record<string, string | null | undefined>;
 }) {
   const sorted = [
     ...rows,
@@ -432,9 +435,10 @@ function Season3BaseRanking({
           <Link
             href={`/players/${member.playerId}`}
             title={member.playerName}
-            className="min-w-0 truncate text-xs font-bold text-white/60 transition hover:text-blue-300"
+            className="flex min-w-0 items-center gap-2 text-xs font-bold text-white/60 transition hover:text-blue-300"
           >
-            {member.playerName}
+            <PlayerTableEmblem src={emblemUrls[member.playerId]} />
+            <span className="min-w-0 truncate">{member.playerName}</span>
           </Link>
 
           {/* РАНГ */}
@@ -696,6 +700,7 @@ export default async function AssociationsPage({
 }: PageProps) {
   const params =
     await searchParams;
+  const emblemUrls = await getPlayerEmblemUrls();
 
   const season:
     SeasonNumber =
@@ -852,9 +857,8 @@ export default async function AssociationsPage({
           <Season2BaseRanking />
         ) : liveLeague ? (
           <Season3BaseRanking
-            rows={
-              liveLeague.rows
-            }
+            rows={liveLeague.rows}
+            emblemUrls={emblemUrls}
           />
         ) : null}
       </section>

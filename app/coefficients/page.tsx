@@ -1,4 +1,6 @@
 import { Fragment } from "react";
+import PlayerTableEmblem from "../../components/PlayerTableEmblem";
+import { getPlayerEmblemUrls } from "../../lib/player-emblem-urls";
 import Link from "next/link";
 import SiteHeader from "../../components/public/SiteHeader";
 import SiteFooter from "../../components/public/SiteFooter";
@@ -682,12 +684,11 @@ function getPlaceStyles(
 function PlayerLink({
   playerId,
   playerName,
+  emblemUrl,
 }: {
-  playerId:
-    | string
-    | null;
-
+  playerId: string | null;
   playerName: string;
+  emblemUrl?: string | null;
 }) {
   if (!playerId) {
     return (
@@ -700,9 +701,10 @@ function PlayerLink({
   return (
     <Link
       href={`/players/${playerId}`}
-      className="font-black text-white transition hover:text-blue-300"
+      className="inline-flex max-w-full min-w-0 items-center gap-2.5 font-black text-white transition hover:text-blue-300"
     >
-      {playerName}
+      <PlayerTableEmblem src={emblemUrl} />
+      <span className="min-w-0 truncate">{playerName}</span>
     </Link>
   );
 }
@@ -719,9 +721,11 @@ function PlayerLink({
 
 function ArchivedCoefficientTable({
   rows,
+  emblemUrls,
 }: {
   rows:
     readonly ArchivedCoefficientRow[];
+  emblemUrls: Record<string, string | null | undefined>;
 }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-2xl shadow-black/20">
@@ -772,7 +776,7 @@ function ArchivedCoefficientTable({
               className="group transition-colors open:bg-white/[0.025]"
             >
               {/* COMPACT ROW */}
-              <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-4 [&::-webkit-details-marker]:hidden sm:px-5">
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-2 py-4 [&::-webkit-details-marker]:hidden sm:px-4">
                 {/* POSITION */}
                 <span
                   className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-xl border px-2 text-sm font-black ${styles.number}`}
@@ -782,8 +786,11 @@ function ArchivedCoefficientTable({
 
                 {/* PLAYER */}
                 <div className="min-w-0 flex-1">
-                  <div className="break-words text-sm font-black leading-5 text-white sm:text-base">
-                    {row.playerName}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <PlayerTableEmblem src={playerId ? emblemUrls[playerId] : undefined} />
+                    <span className="min-w-0 break-words text-sm font-black leading-5 text-white sm:text-base">
+                      {row.playerName}
+                    </span>
                   </div>
 
                   <div className="mt-1 text-[11px] font-medium text-white/40">
@@ -869,11 +876,11 @@ function ArchivedCoefficientTable({
         <table className="w-full min-w-[1350px] border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03] text-[10px] font-black uppercase tracking-[0.1em] text-white/30">
-              <th className="px-4 py-4 text-center">
+              <th className="pl-2 pr-1 py-4 text-center">
                 М
               </th>
 
-              <th className="px-4 py-4 text-left">
+              <th className="pl-2 pr-4 py-4 text-left">
                 Гравець
               </th>
 
@@ -941,7 +948,7 @@ function ArchivedCoefficientTable({
                     key={`${row.place}-${row.playerName}`}
                     className={`border-b border-white/[0.05] transition hover:bg-white/[0.025] ${styles.row}`}
                   >
-                    <td className="px-4 py-4 text-center">
+                    <td className="pl-2 pr-1 py-4 text-center">
                       <span
                         className={`inline-flex min-w-9 items-center justify-center rounded-lg border px-2 py-1.5 font-black ${styles.number}`}
                       >
@@ -949,7 +956,7 @@ function ArchivedCoefficientTable({
                       </span>
                     </td>
 
-                    <td className="px-4 py-4">
+                    <td className="pl-2 pr-4 py-4">
                       <PlayerLink
                         playerId={
                           playerId
@@ -957,6 +964,7 @@ function ArchivedCoefficientTable({
                         playerName={
                           row.playerName
                         }
+                        emblemUrl={playerId ? emblemUrls[playerId] : undefined}
                       />
                     </td>
 
@@ -1105,8 +1113,10 @@ function DetailCard({
 
 function LiveCoefficientTable({
   rows,
+  emblemUrls,
 }: {
   rows: CoefficientRow[];
+  emblemUrls: Record<string, string | null | undefined>;
 }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-2xl shadow-black/20">
@@ -1202,7 +1212,7 @@ function LiveCoefficientTable({
               className={`group transition-colors open:bg-white/[0.025] ${styles.row}`}
             >
               {/* COMPACT RANKING ROW */}
-              <summary className="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 focus-visible:outline-2 focus-visible:outline-blue-400 [&::-webkit-details-marker]:hidden sm:px-5">
+              <summary className="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 py-3 focus-visible:outline-2 focus-visible:outline-blue-400 [&::-webkit-details-marker]:hidden sm:px-5">
                 {/* POSITION */}
                 <span
                   className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-xl border px-2 text-sm font-black ${styles.number}`}
@@ -1212,8 +1222,11 @@ function LiveCoefficientTable({
 
                 {/* PLAYER */}
                 <div className="min-w-0">
-                  <div className="break-words text-sm font-black leading-5 text-white sm:text-base">
-                    {playerName}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <PlayerTableEmblem src={emblemUrls[row.playerId]} />
+                    <span className="min-w-0 break-words text-sm font-black leading-5 text-white sm:text-base">
+                      {playerName}
+                    </span>
                   </div>
 
                   <div className="mt-1 text-[11px] font-medium text-white/40">
@@ -1346,11 +1359,11 @@ function LiveCoefficientTable({
         <table className="w-full min-w-[950px] border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.14em] text-white/30">
-              <th className="px-5 py-4 text-center">
+              <th className="pl-2 pr-1 py-4 text-center">
                 М
               </th>
 
-              <th className="px-5 py-4 text-left">
+              <th className="pl-2 pr-5 py-4 text-left">
                 Гравець
               </th>
 
@@ -1403,7 +1416,7 @@ function LiveCoefficientTable({
                     <tr
                       className={`border-b border-white/[0.05] transition hover:bg-white/[0.025] ${styles.row}`}
                     >
-                      <td className="px-5 py-5 text-center">
+                      <td className="pl-2 pr-1 py-5 text-center">
                         <span
                           className={`inline-flex min-w-9 items-center justify-center rounded-lg border px-2 py-1.5 font-black ${styles.number}`}
                         >
@@ -1413,7 +1426,7 @@ function LiveCoefficientTable({
                         </span>
                       </td>
 
-                      <td className="px-5 py-5">
+                      <td className="pl-2 pr-5 py-5">
                         <PlayerLink
                           playerId={
                             row.playerId
@@ -1421,6 +1434,7 @@ function LiveCoefficientTable({
                           playerName={getPlayerName(
                             row.playerId
                           )}
+                          emblemUrl={emblemUrls[row.playerId]}
                         />
                       </td>
 
@@ -1700,8 +1714,10 @@ function LiveCoefficientTable({
 
 function AllTimeTable({
   rows,
+  emblemUrls,
 }: {
   rows: SummaryRow[];
+  emblemUrls: Record<string, string | null | undefined>;
 }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-2xl shadow-black/20">
@@ -1736,7 +1752,7 @@ function AllTimeTable({
               className={`group transition-colors open:bg-white/[0.025] ${styles.row}`}
             >
               {/* COMPACT RANKING ROW */}
-              <summary className="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 focus-visible:outline-2 focus-visible:outline-blue-400 [&::-webkit-details-marker]:hidden sm:px-5">
+              <summary className="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 py-3 focus-visible:outline-2 focus-visible:outline-blue-400 [&::-webkit-details-marker]:hidden sm:px-5">
                 {/* POSITION */}
                 <span
                   className={`inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-2 text-sm font-black ${styles.number}`}
@@ -1746,8 +1762,11 @@ function AllTimeTable({
 
                 {/* PLAYER */}
                 <div className="min-w-0">
-                  <div className="break-words text-sm font-black leading-5 text-white sm:text-base">
-                    {row.playerName}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <PlayerTableEmblem src={row.playerId ? emblemUrls[row.playerId] : undefined} />
+                    <span className="min-w-0 break-words text-sm font-black leading-5 text-white sm:text-base">
+                      {row.playerName}
+                    </span>
                   </div>
 
                   <div className="mt-1 text-[11px] text-white/40">
@@ -1832,11 +1851,11 @@ function AllTimeTable({
         <table className="w-full min-w-[850px] border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.14em] text-white/30">
-              <th className="px-5 py-4 text-center">
+              <th className="pl-2 pr-1 py-4 text-center">
                 М
               </th>
 
-              <th className="px-5 py-4 text-left">
+              <th className="pl-2 pr-5 py-4 text-left">
                 Гравець
               </th>
 
@@ -1883,7 +1902,7 @@ function AllTimeTable({
                     }
                     className={`border-b border-white/[0.05] transition hover:bg-white/[0.025] ${styles.row}`}
                   >
-                    <td className="px-5 py-5 text-center">
+                    <td className="pl-2 pr-1 py-5 text-center">
                       <span
                         className={`inline-flex min-w-9 items-center justify-center rounded-lg border px-2 py-1.5 font-black ${styles.number}`}
                       >
@@ -1893,7 +1912,7 @@ function AllTimeTable({
                       </span>
                     </td>
 
-                    <td className="px-5 py-5">
+                    <td className="pl-2 pr-5 py-5">
                       <PlayerLink
                         playerId={
                           row.playerId
@@ -1901,6 +1920,7 @@ function AllTimeTable({
                         playerName={
                           row.playerName
                         }
+                        emblemUrl={row.playerId ? emblemUrls[row.playerId] : undefined}
                       />
                     </td>
 
@@ -1957,6 +1977,7 @@ export default async function CoefficientsPage({
 }: PageProps) {
   const params =
     await searchParams;
+  const emblemUrls = await getPlayerEmblemUrls();
 
   const rawSeason =
     params.season ??
@@ -2361,6 +2382,7 @@ const season3Rows =
         ) : selected ===
           1 ? (
           <ArchivedCoefficientTable
+            emblemUrls={emblemUrls}
             rows={
               season1Coefficients
             }
@@ -2368,6 +2390,7 @@ const season3Rows =
         ) : selected ===
           2 ? (
           <ArchivedCoefficientTable
+            emblemUrls={emblemUrls}
             rows={
               season2Coefficients
             }
@@ -2375,12 +2398,14 @@ const season3Rows =
         ) : selected ===
           3 ? (
           <LiveCoefficientTable
+            emblemUrls={emblemUrls}
             rows={
               season3Rows
             }
           />
         ) : (
           <AllTimeTable
+            emblemUrls={emblemUrls}
             rows={
               summaryRows
             }

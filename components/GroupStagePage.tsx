@@ -1,4 +1,6 @@
 import StadiumBackground from "./StadiumBackground";
+import PlayerTableEmblem from "./PlayerTableEmblem";
+import { getPlayerEmblemUrls } from "../lib/player-emblem-urls";
 import SiteHeader from "./public/SiteHeader";
 import { connection } from "next/server";
 import Link from "next/link";
@@ -96,6 +98,7 @@ export default async function GroupStagePage({
   */
 
   await connection();
+  const emblemUrls = await getPlayerEmblemUrls();
 
   const competitionName =
     competitionNames[
@@ -688,7 +691,7 @@ competition === "championsLeague"
 
   {/* TABLE HEADER */}
 
-<div className="grid grid-cols-[28px_minmax(0,1fr)_26px_34px_14px] items-center gap-2 border-b border-white/10 bg-white/[0.035] px-3 py-1.5 text-[10px] font-bold uppercase text-white/80">
+<div className="grid grid-cols-[28px_minmax(0,1fr)_26px_34px_14px] items-center gap-1.5 border-b border-white/10 bg-white/[0.035] pl-2 pr-3 py-1.5 text-[10px] font-bold uppercase text-white/80">
     <span className="text-center">#</span>
     <span className="text-[9px] tracking-tight">
   Гравець
@@ -704,7 +707,7 @@ competition === "championsLeague"
       key={row.playerId}
       className="group border-b border-white/5 last:border-b-0"
     >
-      <summary className="grid cursor-pointer list-none grid-cols-[28px_minmax(0,1fr)_26px_34px_14px] items-center gap-2 px-3 py-2.5 transition-colors hover:bg-white/[0.04] [&::-webkit-details-marker]:hidden">
+      <summary className="grid cursor-pointer list-none grid-cols-[28px_minmax(0,1fr)_26px_34px_14px] items-center gap-1.5 pl-2 pr-3 py-2.5 transition-colors hover:bg-white/[0.04] [&::-webkit-details-marker]:hidden">
 
         {/* POSITION */}
         <span
@@ -718,16 +721,18 @@ competition === "championsLeague"
         </span>
 
         {/* PLAYER */}
-        <span className="min-w-0">
-          <span className="block truncate text-xs font-bold text-white">
-            {row.player.nickname}
-          </span>
-
-          {row.player.account && (
-            <span className="mt-0.5 block truncate text-[10px] text-white/75">
-              ({row.player.account})
+        <span className="flex min-w-0 items-center gap-1.5">
+          <PlayerTableEmblem src={emblemUrls[row.playerId]} />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-bold text-white">
+              {row.player.nickname}
             </span>
-          )}
+            {row.player.account && (
+              <span className="mt-0.5 block truncate text-[10px] text-white/75">
+                ({row.player.account})
+              </span>
+            )}
+          </span>
         </span>
 
         {/* PLAYED */}
@@ -816,11 +821,11 @@ competition === "championsLeague"
 
 <thead className="border-b border-white/10 bg-white/[0.025] [&_th]:py-1.5">
                         <tr className="text-[11px] font-bold uppercase text-white/35">
-                          <th className="px-3 py-3 text-center">
+                          <th className="pl-2 pr-1 py-3 text-center">
                             #
                           </th>
 
-                          <th className="px-3 py-3 text-left">
+                          <th className="pl-1 pr-3 py-3 text-left">
                             Гравець
                           </th>
 
@@ -870,7 +875,7 @@ competition === "championsLeague"
                               }
                               className="border-b border-white/5 last:border-b-0 hover:bg-white/[0.035]"
                             >
-                              <td className="px-3 py-4 text-center">
+                              <td className="pl-2 pr-1 py-4 text-center">
                                 <div
                                   className={`mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-sm font-black ${
                                     index <
@@ -884,32 +889,24 @@ competition === "championsLeague"
                                 </div>
                               </td>
 
-                              <td className="px-3 py-4">
+                              <td className="pl-1 pr-3 py-4">
                                 <a
                                   href={`/players/${row.player.id}?season=${season}`}
                                   className="group/player"
                                 >
-                                  <div className="font-bold transition group-hover/player:text-blue-300">
-                                    {
-                                      row
-                                        .player
-                                        .nickname
-                                    }
-                                  </div>
-
-                                  {row
-                                    .player
-                                    .account && (
-                                    <div className="mt-1 text-[11px] text-white/30">
-                                      (
-                                      {
-                                        row
-                                          .player
-                                          .account
-                                      }
-                                      )
+                                  <div className="flex min-w-0 items-center gap-2.5">
+                                    <PlayerTableEmblem src={emblemUrls[row.playerId]} />
+                                    <div className="min-w-0">
+                                      <div className="truncate font-bold transition group-hover/player:text-blue-300">
+                                        {row.player.nickname}
+                                      </div>
+                                      {row.player.account && (
+                                        <div className="mt-1 truncate text-[11px] text-white/30">
+                                          ({row.player.account})
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
+                                  </div>
                                 </a>
                               </td>
 

@@ -1,4 +1,6 @@
 import StadiumBackground from "./StadiumBackground";
+import PlayerTableEmblem from "./PlayerTableEmblem";
+import { getPlayerEmblemUrls } from "../lib/player-emblem-urls";
 import SiteHeader from "./public/SiteHeader";
 import { players } from "../data/players";
 import Link from "next/link";
@@ -284,6 +286,8 @@ const divisionPlayersIds = applyPlayerReplacements(
     ========================================
   */
 
+  const emblemUrls = await getPlayerEmblemUrls();
+
   const table =
     standings
       .map(
@@ -558,7 +562,7 @@ const divisionPlayersIds = applyPlayerReplacements(
 
   {/* MOBILE STANDINGS */}
   <div className="lg:hidden">
-    <div className="grid grid-cols-[28px_minmax(0,1fr)_30px_38px_14px] items-center gap-2 border-b border-white/10 bg-white/[0.04] px-3 py-3 text-[10px] font-bold uppercase text-white/70">
+    <div className="grid grid-cols-[28px_minmax(0,1fr)_30px_38px_14px] items-center gap-1.5 border-b border-white/10 bg-white/[0.04] pl-2 pr-3 py-3 text-[10px] font-bold uppercase text-white/70">
       <span className="text-center">#</span>
       <span>Гравець</span>
       <span className="text-center">І</span>
@@ -571,7 +575,7 @@ const divisionPlayersIds = applyPlayerReplacements(
         key={row.playerId}
         className="group border-b border-white/5 last:border-b-0"
       >
-        <summary className="grid cursor-pointer list-none grid-cols-[28px_minmax(0,1fr)_30px_38px_14px] items-center gap-2 px-3 py-3.5 transition-colors hover:bg-white/[0.04] [&::-webkit-details-marker]:hidden">
+        <summary className="grid cursor-pointer list-none grid-cols-[28px_minmax(0,1fr)_30px_38px_14px] items-center gap-1.5 pl-2 pr-3 py-3.5 transition-colors hover:bg-white/[0.04] [&::-webkit-details-marker]:hidden">
 
           {/* POSITION */}
           <span
@@ -585,16 +589,18 @@ const divisionPlayersIds = applyPlayerReplacements(
           </span>
 
           {/* PLAYER */}
-          <span className="min-w-0">
-            <span className="block truncate text-xs font-bold text-white">
-              {row.player.nickname}
-            </span>
-
-            {row.player.account && (
-              <span className="mt-0.5 block truncate text-[10px] text-white/75">
-                ({row.player.account})
+          <span className="flex min-w-0 items-center gap-1.5">
+            <PlayerTableEmblem src={emblemUrls[row.playerId]} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-bold text-white">
+                {row.player.nickname}
               </span>
-            )}
+              {row.player.account && (
+                <span className="mt-0.5 block truncate text-[10px] text-white/75">
+                  ({row.player.account})
+                </span>
+              )}
+            </span>
           </span>
 
           {/* MATCHES */}
@@ -682,11 +688,11 @@ const divisionPlayersIds = applyPlayerReplacements(
 
                   <thead className="border-b border-white/10 bg-white/[0.035]">
                     <tr className="text-xs font-bold uppercase tracking-wider text-white/70">
-                      <th className="px-5 py-4 text-center">
+                      <th className="pl-2 pr-1 py-4 text-center">
                         #
                       </th>
 
-                      <th className="px-5 py-4 text-left">
+                      <th className="pl-2 pr-5 py-4 text-left">
                         Гравець
                       </th>
 
@@ -736,7 +742,7 @@ const divisionPlayersIds = applyPlayerReplacements(
                           }
                           className="border-b border-white/5 transition last:border-b-0 hover:bg-white/[0.04]"
                         >
-                          <td className="px-5 py-4 text-center">
+                          <td className="pl-2 pr-1 py-4 text-center">
                             <div
                               className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg font-black ${
                                 index <
@@ -750,32 +756,24 @@ const divisionPlayersIds = applyPlayerReplacements(
                             </div>
                           </td>
 
-                          <td className="px-5 py-4">
+                          <td className="pl-2 pr-5 py-4">
                             <a
                               href={`/players/${row.player.id}?season=${season}`}
                               className="group"
                             >
-                              <div className="font-bold transition group-hover:text-blue-300">
-                                {
-                                  row
-                                    .player
-                                    .nickname
-                                }
-                              </div>
-
-                              {row
-                                .player
-                                .account && (
-                                <div className="mt-1 text-xs text-white/75">
-                                  (
-                                  {
-                                    row
-                                      .player
-                                      .account
-                                  }
-                                  )
+                              <div className="flex min-w-0 items-center gap-2.5">
+                                <PlayerTableEmblem src={emblemUrls[row.playerId]} />
+                                <div className="min-w-0">
+                                  <div className="truncate font-bold transition group-hover:text-blue-300">
+                                    {row.player.nickname}
+                                  </div>
+                                  {row.player.account && (
+                                    <div className="mt-1 truncate text-xs text-white/75">
+                                      ({row.player.account})
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </a>
                           </td>
 

@@ -1,4 +1,6 @@
 import { players } from "../../../data/players";
+import PlayerTableEmblem from "../../../components/PlayerTableEmblem";
+import { getPlayerEmblemUrls } from "../../../lib/player-emblem-urls";
 
 import { season1 } from "../../../data/seasons/season-1";
 import { season2 } from "../../../data/seasons/season-2";
@@ -161,6 +163,7 @@ export default async function QualificationPage({
   */
 
   const params = await searchParams;
+  const emblemUrls = await getPlayerEmblemUrls();
 
   const requestedSeason =
     Number(params.season);
@@ -758,6 +761,7 @@ export default async function QualificationPage({
                         </span>
                         <span className="min-w-0">
                           <span className="flex min-w-0 items-center gap-1">
+                            <PlayerTableEmblem src={emblemUrls[row.playerId]} />
                             <span className="block min-w-0 flex-1 truncate text-xs font-bold">
                               {row.player.nickname}
                             </span>
@@ -833,11 +837,11 @@ export default async function QualificationPage({
                 <table className="w-full table-fixed border-collapse lg:min-w-[900px] lg:table-auto">
                   <thead className="border-b border-white/10 bg-white/[0.03]">
                     <tr className="text-[10px] uppercase tracking-wide text-white/40 lg:text-xs lg:tracking-wider">
-                      <th className="w-10 px-1 py-3 text-center sm:px-2 lg:w-auto lg:px-4 lg:py-4">
+                      <th className="w-10 pl-1 pr-0 py-3 text-center sm:pl-2 sm:pr-1 lg:w-auto lg:pl-2 lg:pr-1 lg:py-4">
                         #
                       </th>
 
-                      <th className="min-w-0 px-1 py-3 text-left sm:px-2 lg:px-5 lg:py-4">
+                      <th className="min-w-0 pl-0 pr-1 py-3 text-left sm:pl-1 sm:pr-2 lg:pl-2 lg:pr-5 lg:py-4">
                         Гравець
                       </th>
 
@@ -924,7 +928,7 @@ export default async function QualificationPage({
                           >
                             {/* POSITION */}
 
-                            <td className="px-1 py-3 text-center sm:px-2 lg:px-4 lg:py-4">
+                            <td className="pl-1 pr-0 py-3 text-center sm:pl-2 sm:pr-1 lg:pl-2 lg:pr-1 lg:py-4">
                               <div className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.04] text-xs font-black text-white/70 lg:h-8 lg:w-8 lg:text-sm">
                                 {
                                   position
@@ -934,18 +938,17 @@ export default async function QualificationPage({
 
                             {/* PLAYER */}
 
-                            <td className="min-w-0 px-1 py-3 sm:px-2 lg:px-5 lg:py-4">
+                            <td className="min-w-0 pl-0 pr-1 py-3 sm:pl-1 sm:pr-2 lg:pl-2 lg:pr-5 lg:py-4">
                               <a
                                 href={`/players/${row.player.id}?season=${season}`}
                                 title={row.player.nickname}
                                 className="group block min-w-0"
                               >
-                                <div className="truncate text-xs font-bold transition group-hover:text-blue-300 sm:text-sm lg:text-base">
-                                  {
-                                    row
-                                      .player
-                                      .nickname
-                                  }
+                                <div className="flex min-w-0 items-center gap-2.5">
+                                  <PlayerTableEmblem src={emblemUrls[row.playerId]} />
+                                  <span className="min-w-0 truncate text-xs font-bold transition group-hover:text-blue-300 sm:text-sm lg:text-base">
+                                    {row.player.nickname}
+                                  </span>
                                 </div>
 
                                 {row
