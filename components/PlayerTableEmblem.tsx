@@ -4,13 +4,21 @@ import { useState } from "react";
 
 type Props = {
   src?: string | null;
+  // Optional smaller variants for compact homepage match cards.
+  // The default preserves the original size in tournament tables.
+  size?: "default" | "compact" | "featured";
 };
 
 // A compact, strictly constrained profile emblem inside the EXISTING name cell.
 // 28px on compact screens, up to 34px on desktop. No extra table column.
-const EMBLEM_SIZE = "clamp(28px, 2.2vw, 34px)";
+const EMBLEM_SIZES = {
+  default: "clamp(28px, 2.2vw, 34px)",
+  compact: "clamp(20px, 1.8vw, 26px)",
+  featured: "clamp(26px, 2vw, 32px)",
+} as const;
 
-export default function PlayerTableEmblem({ src }: Props) {
+export default function PlayerTableEmblem({ src, size = "default" }: Props) {
+  const emblemSize = EMBLEM_SIZES[size];
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const url = src?.trim() ?? "";
 
@@ -25,13 +33,13 @@ export default function PlayerTableEmblem({ src }: Props) {
       style={{
         display: "inline-flex",
         boxSizing: "border-box",
-        width: EMBLEM_SIZE,
-        height: EMBLEM_SIZE,
-        minWidth: EMBLEM_SIZE,
-        minHeight: EMBLEM_SIZE,
-        maxWidth: EMBLEM_SIZE,
-        maxHeight: EMBLEM_SIZE,
-        flex: `0 0 ${EMBLEM_SIZE}`,
+        width: emblemSize,
+        height: emblemSize,
+        minWidth: emblemSize,
+        minHeight: emblemSize,
+        maxWidth: emblemSize,
+        maxHeight: emblemSize,
+        flex: `0 0 ${emblemSize}`,
         overflow: "hidden",
       }}
     >

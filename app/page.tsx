@@ -1,5 +1,7 @@
 
 import Image from "next/image";
+import PlayerTableEmblem from "../components/PlayerTableEmblem";
+import { getPlayerEmblemUrls } from "../lib/player-emblem-urls";
 import SiteHeader from "../components/public/SiteHeader";
 import SiteFooter from "../components/public/SiteFooter";
 import { seasonCompetitions } from "../data/competitions/season-competitions";
@@ -252,6 +254,18 @@ function getFeaturedParticipantName(
   return participantId;
 }
 
+// Only individual players have profile emblems. Team/association IDs must
+// never be treated as player IDs (for example in Iron Co-op Cup matches).
+function getMatchPlayerEmblemUrl(
+  match: { participant_type: string },
+  participantId: string,
+  emblemUrls: Record<string, string>
+) {
+  return match.participant_type === "player"
+    ? emblemUrls[participantId]
+    : undefined;
+}
+
 /* ========================================
    KYIV DATE
 ======================================== */
@@ -334,6 +348,8 @@ function getSeason3DivisionPlayers(
 
 export default async function Home() {
   const today = getKyivDate();
+  // Same profile emblems as the division and European cup tables.
+  const emblemUrls = await getPlayerEmblemUrls();
 
   /* ========================================
      FEATURED MATCHES
@@ -499,8 +515,14 @@ export default async function Home() {
       id: match.id,
 
       home: getPlayerName(match.home_id),
+      homeEmblemUrl: getMatchPlayerEmblemUrl(
+        match, match.home_id, emblemUrls
+      ),
 
       away: getPlayerName(match.away_id),
+      awayEmblemUrl: getMatchPlayerEmblemUrl(
+        match, match.away_id, emblemUrls
+      ),
 
       score:
         `${match.home_goals} : ${match.away_goals}`,
@@ -582,6 +604,7 @@ export default async function Home() {
         number: String(division).padStart(2, "0"),
         name: `${division} Дивізіон`,
         leader: "—",
+        leaderId: null as string | null,
         points: 0,
       };
     }
@@ -607,6 +630,7 @@ export default async function Home() {
       number: String(division).padStart(2, "0"),
       name: `${division} Дивізіон`,
       leader: leader ? getPlayerName(leader.playerId) : "—",
+      leaderId: leader?.playerId ?? null,
       points: leader?.points ?? 0,
     };
   });
@@ -840,11 +864,21 @@ export default async function Home() {
 
                         {/* HOME PLAYER */}
 
-                        <div className="min-w-0 break-words text-right text-xl font-black sm:text-2xl">
-                          {getFeaturedParticipantName(
-                            mainFeaturedMatch,
-                            mainFeaturedMatch.home_id
-                          )}
+                        <div className="flex min-w-0 flex-col items-end justify-center gap-1 sm:flex-row sm:items-center sm:gap-2">
+                          <span className="min-w-0 break-words text-right text-xl font-black leading-tight sm:text-2xl">
+                            {getFeaturedParticipantName(
+                              mainFeaturedMatch,
+                              mainFeaturedMatch.home_id
+                            )}
+                          </span>
+                          <PlayerTableEmblem
+                            src={getMatchPlayerEmblemUrl(
+                              mainFeaturedMatch,
+                              mainFeaturedMatch.home_id,
+                              emblemUrls
+                            )}
+                            size="featured"
+                          />
                         </div>
 
                         {/* MATCH SCORE */}
@@ -868,11 +902,21 @@ mainFeaturedMatch.away_goals !== null
 
                         {/* AWAY PLAYER */}
 
-                        <div className="min-w-0 break-words text-left text-xl font-black sm:text-2xl">
-                          {getFeaturedParticipantName(
-                            mainFeaturedMatch,
-                            mainFeaturedMatch.away_id
-                          )}
+                        <div className="flex min-w-0 flex-col items-start justify-center gap-1 sm:flex-row sm:items-center sm:gap-2">
+                          <PlayerTableEmblem
+                            src={getMatchPlayerEmblemUrl(
+                              mainFeaturedMatch,
+                              mainFeaturedMatch.away_id,
+                              emblemUrls
+                            )}
+                            size="featured"
+                          />
+                          <span className="min-w-0 break-words text-left text-xl font-black leading-tight sm:text-2xl">
+                            {getFeaturedParticipantName(
+                              mainFeaturedMatch,
+                              mainFeaturedMatch.away_id
+                            )}
+                          </span>
                         </div>
 
                       </div>
@@ -919,11 +963,19 @@ mainFeaturedMatch.away_goals !== null
 
                             <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm font-black sm:mt-5">
 
-                              <div className="truncate text-right">
-                                {getFeaturedParticipantName(
-                                  match,
-                                  match.home_id
-                                )}
+                              <div className="flex min-w-0 items-center justify-end gap-1.5">
+                                <span className="min-w-0 truncate text-right">
+                                  {getFeaturedParticipantName(
+                                    match,
+                                    match.home_id
+                                  )}
+                                </span>
+                                <PlayerTableEmblem
+                                  src={getMatchPlayerEmblemUrl(
+                                    match, match.home_id, emblemUrls
+                                  )}
+                                  size="compact"
+                                />
                               </div>
 
                               <div className="rounded-lg bg-blue-500/10 px-2.5 py-1.5 text-blue-300">
@@ -936,11 +988,19 @@ match.away_goals !== null
     : "VS"}
                               </div>
 
-                              <div className="truncate">
-                                {getFeaturedParticipantName(
-                                  match,
-                                  match.away_id
-                                )}
+                              <div className="flex min-w-0 items-center gap-1.5">
+                                <PlayerTableEmblem
+                                  src={getMatchPlayerEmblemUrl(
+                                    match, match.away_id, emblemUrls
+                                  )}
+                                  size="compact"
+                                />
+                                <span className="min-w-0 truncate">
+                                  {getFeaturedParticipantName(
+                                    match,
+                                    match.away_id
+                                  )}
+                                </span>
                               </div>
 
                             </div>
@@ -1098,16 +1158,18 @@ match.away_goals !== null
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1 break-words text-right text-xs font-bold leading-4 text-white sm:text-sm">
-                {match.home}
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right text-xs font-bold leading-4 text-white sm:text-sm">
+                <span className="min-w-0 break-words">{match.home}</span>
+                <PlayerTableEmblem src={match.homeEmblemUrl} size="compact" />
               </div>
 
               <div className="flex min-w-16 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 px-2 py-1.5 text-base font-black tabular-nums text-blue-300 sm:py-2 sm:text-lg">
                 {match.score}
               </div>
 
-              <div className="min-w-0 flex-1 break-words text-left text-xs font-bold leading-4 text-white sm:text-sm">
-                {match.away}
+              <div className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-bold leading-4 text-white sm:text-sm">
+                <PlayerTableEmblem src={match.awayEmblemUrl} size="compact" />
+                <span className="min-w-0 break-words">{match.away}</span>
               </div>
             </div>
           </div>
@@ -1120,8 +1182,9 @@ match.away_goals !== null
             </div>
 
             {/* HOME PLAYER */}
-            <div className="col-span-3 min-w-0 break-words text-right text-sm font-bold text-white xl:text-base">
-              {match.home}
+            <div className="col-span-3 flex min-w-0 items-center justify-end gap-2 text-right text-sm font-bold text-white xl:text-base">
+              <span className="min-w-0 break-words">{match.home}</span>
+              <PlayerTableEmblem src={match.homeEmblemUrl} size="compact" />
             </div>
 
             {/* SCORE */}
@@ -1132,8 +1195,9 @@ match.away_goals !== null
             </div>
 
             {/* AWAY PLAYER */}
-            <div className="col-span-3 min-w-0 break-words text-left text-sm font-bold text-white xl:text-base">
-              {match.away}
+            <div className="col-span-3 flex min-w-0 items-center gap-2 text-left text-sm font-bold text-white xl:text-base">
+              <PlayerTableEmblem src={match.awayEmblemUrl} size="compact" />
+              <span className="min-w-0 break-words">{match.away}</span>
             </div>
 
             {/* MATCH STATUS */}
@@ -1201,8 +1265,11 @@ match.away_goals !== null
                 Лідер
               </div>
 
-              <div className="mt-1 break-words text-base font-black leading-tight text-white sm:text-lg">
-                {division.leader}
+              <div className="mt-1 flex min-w-0 items-center gap-2 text-base font-black leading-tight text-white sm:text-lg">
+                <PlayerTableEmblem
+                  src={division.leaderId ? emblemUrls[division.leaderId] : undefined}
+                />
+                <span className="min-w-0 break-words">{division.leader}</span>
               </div>
             </div>
 
