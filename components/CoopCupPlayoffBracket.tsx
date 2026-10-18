@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+import MobileCupBracketToggle from "./public/MobileCupBracketToggle";
 import { players } from "../data/players";
 
 import { supabase } from "../lib/supabase";
@@ -732,7 +734,7 @@ export default async function CoopCupPlayoffBracket({
             <div
               className={`text-[10px] font-bold uppercase tracking-[0.12em] ${
                 complete
-                  ? "text-green-300"
+                  ? "text-blue-300"
                   : "text-yellow-300"
               }`}
             >
@@ -753,7 +755,7 @@ export default async function CoopCupPlayoffBracket({
           className={`border-b border-white/5 px-4 py-4 ${
             slot.winnerId ===
             slot.teamA
-              ? "bg-green-500/[0.07]"
+              ? "bg-blue-500/[0.07]"
               : ""
           }`}
         >
@@ -798,7 +800,7 @@ export default async function CoopCupPlayoffBracket({
           className={`px-4 py-4 ${
             slot.winnerId ===
             slot.teamB
-              ? "bg-green-500/[0.07]"
+              ? "bg-blue-500/[0.07]"
               : ""
           }`}
         >
@@ -882,7 +884,7 @@ export default async function CoopCupPlayoffBracket({
             </div>
 
             {slot.winnerId && (
-              <div className="mt-3 border-t border-white/5 pt-3 text-xs font-bold text-green-300">
+              <div className="mt-3 border-t border-white/5 pt-3 text-xs font-bold text-blue-300">
                 Переможець:{" "}
                 {getTeamName(
                   slot.winnerId
@@ -892,6 +894,200 @@ export default async function CoopCupPlayoffBracket({
           </div>
         )}
       </div>
+    );
+  }
+
+  /*
+    ========================================
+    COMPACT BRACKET PRESENTATION
+    ========================================
+    The same slot geometry/connectors as division cups.
+    No fixture or winner logic is changed here.
+  */
+
+  const CARD_HEIGHT = 128;
+  const CARD_GAP = 12;
+  const CARD_STEP = CARD_HEIGHT + CARD_GAP;
+  const BRACKET_HEIGHT = 8 * CARD_HEIGHT + 7 * CARD_GAP;
+  const CONNECTOR_WIDTH = 26;
+  const stageCounts = stages.map((stage) => stage.count);
+
+  function cardTop(stageIndex: number, slotIndex: number) {
+    const scale = 2 ** stageIndex;
+    return (slotIndex * scale + (scale - 1) / 2) * CARD_STEP;
+  }
+
+  function cardCenter(stageIndex: number, slotIndex: number) {
+    return cardTop(stageIndex, slotIndex) + CARD_HEIGHT / 2;
+  }
+
+  function BracketConnectors({ stageIndex }: { stageIndex: number }) {
+    const pairCount = stageCounts[stageIndex + 1] ?? 0;
+    const middleX = CONNECTOR_WIDTH / 2;
+
+    return (
+      <div className="pointer-events-none pt-[60px]" aria-hidden="true">
+        <svg
+          width={CONNECTOR_WIDTH}
+          height={BRACKET_HEIGHT}
+          viewBox={`0 0 ${CONNECTOR_WIDTH} ${BRACKET_HEIGHT}`}
+          className="block overflow-visible"
+          fill="none"
+        >
+          {Array.from({ length: pairCount }, (_, pairIndex) => {
+            const upper = cardCenter(stageIndex, pairIndex * 2);
+            const lower = cardCenter(stageIndex, pairIndex * 2 + 1);
+            const center = (upper + lower) / 2;
+
+            return (
+              <path
+                key={pairIndex}
+                d={`M 0 ${upper} H ${middleX} V ${lower} H 0 M ${middleX} ${center} H ${CONNECTOR_WIDTH}`}
+                stroke="#4f86bd"
+                strokeWidth="1.6"
+                strokeOpacity="0.65"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          })}
+        </svg>
+      </div>
+    );
+  }
+
+  function CompactMatchCard({
+    slot,
+    stage,
+  }: {
+    slot: BracketSlot;
+    stage: StageId;
+  }) {
+    const first = slot.matches.find((match) => match.leg === 1) ?? null;
+    const second = slot.matches.find((match) => match.leg === 2) ?? null;
+    const complete = slot.winnerId !== null;
+
+    function legScore(match: CupMatch | null) {
+      if (!match || !isFinished(match)) return "—";
+      // Both legs are shown from Team A's point of view, even in the return leg.
+      return match.home_id === slot.teamA
+        ? `${match.home_goals}:${match.away_goals}`
+        : match.away_id === slot.teamA
+          ? `${match.away_goals}:${match.home_goals}`
+          : `${match.home_goals}:${match.away_goals}`;
+    }
+
+    function TeamRow({
+      teamId,
+      sourceLabel,
+      aggregate,
+    }: {
+      teamId: string | null;
+      sourceLabel: string | null;
+      aggregate: number | null;
+    }) {
+      const team = getTeam(teamId);
+      const name = teamId ? getTeamName(teamId) ?? teamId : sourceLabel ?? "Ще не визначено";
+      const roster = team?.players.map(getPlayerName).join(" + ") ?? "";
+      const isWinner = Boolean(slot.winnerId && slot.winnerId === teamId);
+
+      return (
+        <div className={`flex min-h-0 flex-1 items-center gap-2 border-b border-white/[0.06] px-2.5 py-1 ${
+          isWinner ? "bg-blue-500/15" : ""
+        }`}>
+          <span className={`h-4 w-0.5 shrink-0 rounded-full ${isWinner ? "bg-blue-400" : "bg-transparent"}`} />
+          <div className="min-w-0 flex-1">
+            <div
+              className={`truncate text-[12px] font-black leading-[15px] ${teamId ? "text-white" : "text-slate-500"}`}
+              title={name}
+            >
+              {name}
+            </div>
+            {roster && (
+              <div className="mt-0.5 truncate text-[9px] leading-3 text-slate-500" title={roster}>
+                {roster}
+              </div>
+            )}
+          </div>
+          <span className={`w-6 shrink-0 text-right text-[15px] font-black tabular-nums ${
+            isWinner ? "text-blue-300" : "text-white/85"
+          }`}>
+            {aggregate ?? "—"}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#081321] shadow-[0_6px_18px_rgba(0,0,0,0.20)]">
+        <div className="flex h-6 shrink-0 items-center justify-between gap-1.5 border-b border-white/[0.08] bg-white/[0.025] px-2.5">
+          <span className="text-[9px] font-black uppercase tracking-[0.12em] text-blue-400">
+            {stage === "final" ? "Фінал" : `Пара №${slot.number}`}
+          </span>
+          <span className={`truncate text-[9px] font-bold uppercase tracking-[0.06em] ${
+            slot.actual ? (complete ? "text-blue-300" : "text-amber-300") : "text-slate-500"
+          }`}>
+            {slot.actual ? (complete ? "Завершено" : "Триває") : "Очікує"}
+          </span>
+        </div>
+
+        <TeamRow teamId={slot.teamA} sourceLabel={slot.sourceALabel} aggregate={slot.aggregateA} />
+        <TeamRow teamId={slot.teamB} sourceLabel={slot.sourceBLabel} aggregate={slot.aggregateB} />
+
+        <div
+          className="flex h-6 shrink-0 items-center justify-between gap-2 bg-black/20 px-2.5 text-[10px] text-white/60"
+          title="Рахунки обох матчів показані з погляду першої команди"
+        >
+          {slot.actual ? (
+            <>
+              <span className="whitespace-nowrap">1-й: <b className="text-white/85">{legScore(first)}</b></span>
+              <span className="whitespace-nowrap">2-й: <b className="text-white/85">{legScore(second)}</b></span>
+            </>
+          ) : (
+            <span className="truncate">Очікує визначення учасників</span>
+          )}
+        </div>
+      </article>
+    );
+  }
+
+  function StageColumn({
+    stageIndex,
+    mobile,
+  }: {
+    stageIndex: number;
+    mobile: boolean;
+  }) {
+    const stage = stages[stageIndex];
+    const slots = bracket[stage.id];
+    const active = slots.filter((slot) => slot.actual).length;
+
+    return (
+      <section
+        className={`min-w-0 ${mobile ? "snap-start" : ""}`}
+        data-mobile-bracket-stage={mobile ? "" : undefined}
+      >
+        <div className="mb-3 h-12 border-b border-white/10 pb-2">
+          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-400">
+            {stage.label}
+          </div>
+          <div className="mt-1 text-[11px] text-white/65">
+            {active} / {stage.count} пар
+          </div>
+        </div>
+
+        <div className="relative" style={{ height: BRACKET_HEIGHT }}>
+          {slots.map((slot, index) => (
+            <div
+              key={`${stage.id}-${slot.number}`}
+              className="absolute inset-x-0"
+              style={{ top: cardTop(stageIndex, index), height: CARD_HEIGHT }}
+            >
+              <CompactMatchCard slot={slot} stage={stage.id} />
+            </div>
+          ))}
+        </div>
+      </section>
     );
   }
 
@@ -929,51 +1125,81 @@ export default async function CoopCupPlayoffBracket({
     ========================================
     BRACKET
     ========================================
+    Mobile/tablet: round navigation + list view.
+    Desktop: aligned bracket with real connecting lines.
   */
 
-
   return (
-    <div className="overflow-visible pb-0 xl:overflow-x-auto xl:pb-4">
-      <div className="grid grid-cols-1 gap-6 xl:min-w-[1180px] xl:grid-cols-4 xl:gap-5">
-        {stages.map((stage) => (
+    <>
+      <MobileCupBracketToggle
+        tournamentLabel="Iron Co-op Cup"
+        bracket={
           <div
-            key={stage.id}
-            className="min-w-0"
+            className="max-w-full snap-x snap-mandatory scroll-smooth overflow-x-auto overscroll-x-contain rounded-xl border border-white/[0.06] bg-[#06101d]/30 px-3 pb-3 pt-3 [scroll-padding-inline-start:12px] [scrollbar-color:#365b86_transparent] [scrollbar-width:thin]"
+            data-mobile-bracket-scroll
+            role="region"
+            tabIndex={0}
+            aria-label="Турнірна сітка Iron Co-op Cup. Гортайте горизонтально для переходу між раундами"
           >
-            {/* STAGE HEADER */}
-            <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-center xl:mb-5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">
-                Iron Co-op Cup
-              </div>
-
-              <div className="mt-1 text-sm font-black text-blue-300 sm:text-base">
-                {stage.label}
-              </div>
-            </div>
-
-            {/* STAGE MATCHES */}
             <div
-              className={
-                stage.id === "round-of-16"
-                  ? "space-y-3 sm:space-y-4"
-                  : stage.id === "quarterfinal"
-                    ? "space-y-3 sm:space-y-4 xl:space-y-12 xl:pt-16"
-                    : stage.id === "semifinal"
-                      ? "space-y-3 sm:space-y-4 xl:space-y-28 xl:pt-40"
-                      : "xl:pt-80"
-              }
+              className="grid w-max gap-0"
+              style={{
+                gridTemplateColumns:
+                  "238px 26px 238px 26px 238px 26px 238px",
+              }}
             >
-              {bracket[stage.id].map((slot) => (
-                <MatchCard
-                  key={`${stage.id}-${slot.number}`}
-                  slot={slot}
-                  stage={stage.id}
-                />
+              {stages.map((stage, stageIndex) => (
+                <Fragment key={stage.id}>
+                  <StageColumn stageIndex={stageIndex} mobile />
+                  {stageIndex < stages.length - 1 && (
+                    <BracketConnectors stageIndex={stageIndex} />
+                  )}
+                </Fragment>
               ))}
             </div>
           </div>
-        ))}
+        }
+        list={
+          <div className="grid grid-cols-1 gap-6">
+            {stages.map((stage) => (
+              <section key={stage.id} className="min-w-0">
+                <div className="mb-3 border-b border-white/10 pb-2">
+                  <h3 className="text-xs font-black uppercase tracking-[0.18em] text-blue-400">
+                    {stage.label}
+                  </h3>
+                  <p className="mt-1 text-xs text-white/60">
+                    {bracket[stage.id].filter((slot) => slot.actual).length} / {stage.count} пар
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {bracket[stage.id].map((slot) => (
+                    <MatchCard key={`${stage.id}-${slot.number}`} slot={slot} stage={stage.id} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        }
+      />
+
+      <div className="hidden xl:block xl:overflow-x-auto xl:pb-1">
+        <div
+          className="grid min-w-[1000px] gap-0"
+          style={{
+            gridTemplateColumns:
+              "minmax(0, 1fr) 26px minmax(0, 1fr) 26px minmax(0, 1fr) 26px minmax(0, 1fr)",
+          }}
+        >
+          {stages.map((stage, stageIndex) => (
+            <Fragment key={stage.id}>
+              <StageColumn stageIndex={stageIndex} mobile={false} />
+              {stageIndex < stages.length - 1 && (
+                <BracketConnectors stageIndex={stageIndex} />
+              )}
+            </Fragment>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

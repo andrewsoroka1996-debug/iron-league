@@ -14,9 +14,11 @@ const STAGES = [
 export default function MobileCupBracketToggle({
   bracket,
   list,
+  tournamentLabel = "Кубок дивізіону",
 }: {
   bracket: ReactNode;
   list: ReactNode;
+  tournamentLabel?: string;
 }) {
   const [view, setView] = useState<View>("bracket");
   const [activeStage, setActiveStage] = useState(0);
@@ -90,7 +92,7 @@ export default function MobileCupBracketToggle({
         <div
           className="inline-flex rounded-xl border border-white/10 bg-[#030b17] p-1"
           role="group"
-          aria-label="Режим перегляду Кубка дивізіону"
+          aria-label={`Режим перегляду: ${tournamentLabel}`}
         >
           <button
             type="button"
@@ -124,7 +126,7 @@ export default function MobileCupBracketToggle({
           <div
             className="mb-2 grid grid-cols-4 gap-1"
             role="group"
-            aria-label="Перехід між раундами кубка"
+            aria-label={`Перехід між раундами: ${tournamentLabel}`}
           >
             {STAGES.map((stage, index) => (
               <button
