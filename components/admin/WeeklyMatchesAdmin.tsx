@@ -82,12 +82,18 @@ function matchLabel(match: Match, index: number) {
     : `Матч ${index}`;
 }
 
+function tournamentFilterKey(match: Match): string {
+  return match.competition === "division" && match.division != null
+    ? `division:${match.division}`
+    : `competition:${match.competition}`;
+}
+
 function tournamentName(match: Match) {
   if (match.competition === "division" && match.division) return `${match.division} Дивізіон`;
   const labels: Record<string, string> = {
     "champions-league": "Ліга чемпіонів", "europa-league": "Ліга Європи",
     "conference-league": "Ліга конференцій", "european-super-cup": "Суперкубок Європи",
-    "season-qualification": "Кваліфікація", "associations-cup": "Кубок асоціацій",
+    "season-qualification": "Кваліфікація", "qualification": "Кваліфікація", "associations-cup": "Кубок асоціацій",
     "iron-coop-cup": "Iron Co-op Cup", "coop-cup": "Iron Co-op Cup",
   };
   const cup = match.competition.match(/^division-(\d)-cup$/);
@@ -161,11 +167,22 @@ export default function WeeklyMatchesAdmin({ season, password }: { season: numbe
     setMessage("");
   }, [season, password]);
 
-  const competitions = useMemo(() => [...new Set(matches.map(m => m.competition))].sort(), [matches]);
+  // Divisions share the DB competition value "division". Include the division number
+  // in the UI filter key, so 1/2/3/4 Divisions remain distinct options.
+  const competitions = useMemo(() => {
+    const byKey = new Map<string, string>();
+    for (const match of matches) {
+      const key = tournamentFilterKey(match);
+      byKey.set(key, tournamentName(match));
+    }
+    return [...byKey.entries()]
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "uk", { numeric: true }));
+  }, [matches]);
   const options = useMemo(() => {
     const q = search.trim().toLowerCase();
     return matches.filter(m => {
-      if (competition && m.competition !== competition) return false;
+      if (competition && tournamentFilterKey(m) !== competition) return false;
       if (!q) return true;
       return [getName(m.home_id, m.participant_type), getName(m.away_id, m.participant_type), tournamentName(m)]
         .some(s => s.toLowerCase().includes(q));
@@ -255,10 +272,9 @@ export default function WeeklyMatchesAdmin({ season, password }: { season: numbe
             <div><label className="text-xs font-bold text-white/60">Фільтр за турніром</label>
               <select className={fieldClass} value={competition} onChange={e => setCompetition(e.target.value)}>
                 <option value="">Усі турніри</option>
-                {competitions.map(c => {
-                  const sample = matches.find(m => m.competition === c);
-                  return <option key={c} value={c}>{sample ? tournamentName(sample) : c}</option>;
-                })}
+                {competitions.map(({ key, label }) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
               </select>
             </div>
             <div><label className="text-xs font-bold text-white/60">Знайти гравця або турнір</label>
