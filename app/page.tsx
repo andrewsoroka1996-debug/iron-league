@@ -151,10 +151,11 @@ type HomeNewsItem = {
 };
 
 type FeaturedAssignment = {
-  id: string;
+  id: number;
   match_id: string;
-  feature_date: string;
   position: number;
+  display_date: string | null;
+  display_time: string | null;
 };
 
 type FeaturedDatabaseMatch = {
@@ -175,6 +176,8 @@ type FeaturedDatabaseMatch = {
 type FeaturedMatch =
   FeaturedDatabaseMatch & {
     position: number;
+    display_date: string | null;
+    display_time: string | null;
   };
 
 /* ========================================
@@ -267,37 +270,8 @@ function getMatchPlayerEmblemUrl(
 }
 
 /* ========================================
-   KYIV DATE
-======================================== */
-
-function getKyivDate() {
-  const parts = new Intl.DateTimeFormat(
-    "en-GB",
-    {
-      timeZone: "Europe/Kyiv",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }
-  ).formatToParts(new Date());
-
-  const year = parts.find(
-    (part) => part.type === "year"
-  )?.value;
-
-  const month = parts.find(
-    (part) => part.type === "month"
-  )?.value;
-
-  const day = parts.find(
-    (part) => part.type === "day"
-  )?.value;
-
-  return `${year}-${month}-${day}`;
-}
-
-/* ========================================
-   DATE FORMATTING
+   OPTIONAL EDITORIAL DATE / TIME
+   Stored in Kyiv local time, independently from played_at.
 ======================================== */
 
 function formatFeaturedDate(date: string) {
@@ -347,7 +321,6 @@ function getSeason3DivisionPlayers(
 ======================================== */
 
 export default async function Home() {
-  const today = getKyivDate();
   // Same profile emblems as the division and European cup tables.
   const emblemUrls = await getPlayerEmblemUrls();
 
@@ -358,12 +331,12 @@ export default async function Home() {
   const {
     data: featuredAssignmentsData,
     error: featuredAssignmentsError,
-  } = await supabase
-    .from("featured_matches")
+  } = await supabaseAdmin
+    .from("weekly_featured_matches")
     .select(
-      "id, match_id, feature_date, position"
+      "id, match_id, position, display_date, display_time"
     )
-    .eq("feature_date", today)
+    .eq("season", currentSeason)
     .order("position", {
       ascending: true,
     });
@@ -443,6 +416,8 @@ export default async function Home() {
         return {
           ...match,
           position: assignment.position,
+          display_date: assignment.display_date,
+          display_time: assignment.display_time,
         };
       }
     )
@@ -453,21 +428,6 @@ export default async function Home() {
     .sort(
       (a, b) => a.position - b.position
     );
-
-  const mainFeaturedMatch =
-    featuredMatches.find(
-      (match) => match.position === 1
-    ) ??
-    featuredMatches[0] ??
-    null;
-
-  const secondaryFeaturedMatches =
-    mainFeaturedMatch
-      ? featuredMatches.filter(
-          (match) =>
-            match.id !== mainFeaturedMatch.id
-        )
-      : [];
 
   /* ========================================
      RECENT RESULTS
@@ -805,283 +765,76 @@ export default async function Home() {
           </div>
 
           {/* =====================================
-              MATCHES OF THE DAY
+              FIVE MANUALLY CURATED MATCHES OF THE WEEK
+              No expiry by date; display until removed by admin.
           ===================================== */}
-
-          <div className="relative">
-
-            <div className="absolute -inset-8 rounded-[40px] bg-blue-500/10 blur-3xl" />
-
-            <div className="relative space-y-4">
-
-              {mainFeaturedMatch ? (
-                <>
-
-                  {/* MAIN FEATURED MATCH */}
-
-                  <div className="overflow-hidden rounded-[28px] border border-blue-400/20 bg-[#07101d]/90 shadow-2xl backdrop-blur-xl">
-
-                    {/* MATCH HEADER */}
-
-                    <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3 sm:px-7 sm:py-5">
-
-                      <div>
-
-                        <div className="text-xs font-bold uppercase tracking-[0.28em] text-blue-300">
-                          Матч дня
-                        </div>
-
-                        <div className="mt-1 text-sm text-white/70">
-                          {formatFeaturedDate(today)}
-                        </div>
-
-                      </div>
-
-                      <div className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-blue-300">
-                        Головний
-                      </div>
-
-                    </div>
-
-                    {/* MAIN MATCH CONTENT */}
-
-                    <div className="px-4 py-5 text-center sm:px-7 sm:py-8">
-
-                      <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-400">
-                        {getTournamentName(
-                          mainFeaturedMatch.competition,
-                          mainFeaturedMatch.division
-                        )}
-                      </div>
-
-                      {mainFeaturedMatch.round && (
-                        <div className="mt-2 text-xs text-white/30">
-                          Тур {mainFeaturedMatch.round}
-                        </div>
-                      )}
-
-                      <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:mt-8 sm:gap-4">
-
-                        {/* HOME PLAYER */}
-
-                        <div className="flex min-w-0 flex-col items-end justify-center gap-1 sm:flex-row sm:items-center sm:gap-2">
-                          <span className="min-w-0 break-words text-right text-xl font-black leading-tight sm:text-2xl">
-                            {getFeaturedParticipantName(
-                              mainFeaturedMatch,
-                              mainFeaturedMatch.home_id
-                            )}
-                          </span>
-                          <PlayerTableEmblem
-                            src={getMatchPlayerEmblemUrl(
-                              mainFeaturedMatch,
-                              mainFeaturedMatch.home_id,
-                              emblemUrls
-                            )}
-                            size="featured"
-                          />
-                        </div>
-
-                        {/* MATCH SCORE */}
-
-                        <div
-                          className={`flex min-w-[88px] items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-4 font-black text-blue-300 ${
-                            mainFeaturedMatch.status ===
-                            "finished"
-                              ? "text-2xl"
-                              : "text-xl"
-                          }`}
-                        >
-                          {mainFeaturedMatch.status === "finished" &&
-mainFeaturedMatch.home_goals !== null &&
-mainFeaturedMatch.away_goals !== null
-  ? `${mainFeaturedMatch.home_goals} : ${mainFeaturedMatch.away_goals}`
-  : mainFeaturedMatch.status === "closed_unplayed"
-    ? "—"
-    : "VS"}
-                        </div>
-
-                        {/* AWAY PLAYER */}
-
-                        <div className="flex min-w-0 flex-col items-start justify-center gap-1 sm:flex-row sm:items-center sm:gap-2">
-                          <PlayerTableEmblem
-                            src={getMatchPlayerEmblemUrl(
-                              mainFeaturedMatch,
-                              mainFeaturedMatch.away_id,
-                              emblemUrls
-                            )}
-                            size="featured"
-                          />
-                          <span className="min-w-0 break-words text-left text-xl font-black leading-tight sm:text-2xl">
-                            {getFeaturedParticipantName(
-                              mainFeaturedMatch,
-                              mainFeaturedMatch.away_id
-                            )}
-                          </span>
-                        </div>
-
-                      </div>
-
-                      <div className="mt-5 text-sm text-white/35 sm:mt-8">
-                        {mainFeaturedMatch.status === "finished"
-  ? "Матч завершено"
-  : mainFeaturedMatch.status === "closed_unplayed"
-    ? "Завершено без результату"
-    : "Iron League • Match of the Day"}
-                      </div>
-
-                    </div>
-
+          <div className="relative min-w-0">
+            <div aria-hidden="true" className="pointer-events-none absolute -inset-6 rounded-[32px] bg-blue-500/10 blur-3xl" />
+            <div className="relative overflow-hidden rounded-[24px] border border-blue-400/25 bg-[#07101d]/95 shadow-2xl backdrop-blur-xl sm:rounded-[28px]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-white/[0.03] px-4 py-4 sm:px-6 sm:py-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden="true" className="text-lg text-blue-400">🏆</span>
+                    <h2 className="text-lg font-black uppercase tracking-wide text-white sm:text-2xl">5 матчів тижня</h2>
                   </div>
+                  <p className="mt-1 text-xs text-white/55">Сезон {currentSeason} · Вибір організаторів</p>
+                </div>
+                <span className="rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1.5 text-xs font-bold text-blue-300">
+                  {featuredMatches.length} із 5
+                </span>
+              </div>
 
-                  {/* SECONDARY FEATURED MATCHES */}
-
-                  {secondaryFeaturedMatches.length >
-                    0 && (
-                    <div className="grid gap-3 sm:grid-cols-2">
-
-                      {secondaryFeaturedMatches.map(
-                        (match) => (
-                          <div
-                            key={match.id}
-                            className="rounded-2xl border border-white/10 bg-[#07101d]/90 p-4 backdrop-blur-xl sm:p-5"
-                          >
-
-                            <div className="flex items-center justify-between gap-3">
-
-                              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-400">
-                                Матч дня {match.position}
+              {featuredMatches.length > 0 ? (
+                <div className="space-y-2 p-3 sm:space-y-2.5 sm:p-4">
+                  {featuredMatches.map(match => {
+                    const played = match.status === "finished" && match.home_goals !== null && match.away_goals !== null;
+                    const hasDate = Boolean(match.display_date);
+                    const hasTime = Boolean(match.display_time);
+                    return (
+                      <a key={match.id} href="/matches"
+                        className={`block min-w-0 rounded-xl border bg-[#0b1729]/95 p-3 transition hover:border-blue-400/50 hover:bg-blue-500/10 sm:px-4 sm:py-3.5 ${match.position === 1 ? "border-amber-400/45" : "border-white/10"}`}>
+                        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+                          <span className={`flex h-8 w-7 shrink-0 items-center justify-center text-base font-black tabular-nums ${match.position === 1 ? "text-amber-300" : "text-white/65"}`}>{match.position}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+                              <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
+                                <span className="min-w-0 truncate text-right text-xs font-black text-white sm:text-sm" title={getFeaturedParticipantName(match,match.home_id)}>{getFeaturedParticipantName(match,match.home_id)}</span>
+                                <PlayerTableEmblem src={getMatchPlayerEmblemUrl(match,match.home_id,emblemUrls)} size="featured" />
                               </div>
-
-                              <div className="text-[10px] text-white/25">
-                                {getTournamentName(
-                                  match.competition,
-                                  match.division
-                                )}
+                              <span className="shrink-0 rounded-lg bg-blue-500/10 px-2 py-1.5 text-center text-xs font-black tabular-nums text-blue-300 sm:text-sm">
+                                {played ? `${match.home_goals}:${match.away_goals}` : match.status === "closed_unplayed" ? "—" : "VS"}
+                              </span>
+                              <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                                <PlayerTableEmblem src={getMatchPlayerEmblemUrl(match,match.away_id,emblemUrls)} size="featured" />
+                                <span className="min-w-0 truncate text-left text-xs font-black text-white sm:text-sm" title={getFeaturedParticipantName(match,match.away_id)}>{getFeaturedParticipantName(match,match.away_id)}</span>
                               </div>
-
                             </div>
-
-                            <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm font-black sm:mt-5">
-
-                              <div className="flex min-w-0 items-center justify-end gap-1.5">
-                                <span className="min-w-0 truncate text-right">
-                                  {getFeaturedParticipantName(
-                                    match,
-                                    match.home_id
-                                  )}
-                                </span>
-                                <PlayerTableEmblem
-                                  src={getMatchPlayerEmblemUrl(
-                                    match, match.home_id, emblemUrls
-                                  )}
-                                  size="compact"
-                                />
-                              </div>
-
-                              <div className="rounded-lg bg-blue-500/10 px-2.5 py-1.5 text-blue-300">
-                                {match.status === "finished" &&
-match.home_goals !== null &&
-match.away_goals !== null
-  ? `${match.home_goals}:${match.away_goals}`
-  : match.status === "closed_unplayed"
-    ? "—"
-    : "VS"}
-                              </div>
-
-                              <div className="flex min-w-0 items-center gap-1.5">
-                                <PlayerTableEmblem
-                                  src={getMatchPlayerEmblemUrl(
-                                    match, match.away_id, emblemUrls
-                                  )}
-                                  size="compact"
-                                />
-                                <span className="min-w-0 truncate">
-                                  {getFeaturedParticipantName(
-                                    match,
-                                    match.away_id
-                                  )}
-                                </span>
-                              </div>
-
+                            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[10px] sm:text-[11px]">
+                              <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-2 py-0.5 font-bold text-blue-300">{getTournamentName(match.competition,match.division)}</span>
+                              {played ? <span className="font-semibold text-emerald-300">Зіграно</span> : match.status === "closed_unplayed" ? <span className="text-white/50">Не відбувся</span> : null}
+                              <span className="text-white/50">
+                                {hasDate ? formatFeaturedDate(match.display_date!) : played ? "Дата не вказана" : "Дата уточнюється"}
+                                {hasDate && (hasTime ? ` · ${match.display_time!.slice(0,5)}` : " · Час уточнюється")}
+                              </span>
                             </div>
-
                           </div>
-                        )
-                      )}
-
-                    </div>
-                  )}
-
-                </>
+                          <span aria-hidden="true" className="shrink-0 text-blue-300/65">›</span>
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
               ) : (
-
-                /* =====================================
-                   EMPTY FEATURED MATCH
-                   ONLY ONE CARD
-                ===================================== */
-
-                <div className="overflow-hidden rounded-2xl border border-blue-400/20 bg-[#07101d]/95 shadow-2xl backdrop-blur-xl">
-
-                  {/* EMPTY MATCH HEADER */}
-
-                  <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-7 sm:py-4">
-
-                    <div>
-
-                      <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-300">
-                        Матч дня
-                      </div>
-
-                      <div className="mt-1 text-xs text-white/50">
-                        Сезон {currentSeason}
-                      </div>
-
-                    </div>
-
-                    <div className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-300">
-                      Очікується
-                    </div>
-
-                  </div>
-
-                  {/* EMPTY MATCH CONTENT */}
-
-                  <div className="flex items-center gap-3 px-4 py-4 sm:gap-5 sm:px-7 sm:py-8">
-
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/10 text-base font-black text-blue-300 sm:h-16 sm:w-16 sm:rounded-2xl sm:text-xl">
-                      VS
-                    </div>
-
-                    <div className="min-w-0">
-
-                      <h3 className="text-base font-black leading-tight text-white sm:text-xl">
-                        Матч ще не призначено
-                      </h3>
-
-                      <p className="mt-1 text-xs leading-5 text-white/50 sm:mt-2 sm:text-sm sm:leading-6">
-                        Центральний матч з&apos;явиться
-                        тут після його призначення.
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  {/* EMPTY MATCH FOOTER */}
-
-                  <div className="border-t border-white/10 px-4 py-2 sm:px-7 sm:py-3">
-
-                    <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/70">
-                      Iron League • Match of the Day
-                    </div>
-
-                  </div>
-
+                <div className="px-5 py-10 text-center">
+                  <div className="text-3xl text-blue-300/50">⚽</div>
+                  <h3 className="mt-3 text-base font-black">Матчі тижня ще не обрано</h3>
+                  <p className="mt-2 text-sm text-white/50">П'ять найцікавіших протистоянь з'являться тут після публікації організатором.</p>
                 </div>
               )}
-
+              <div className="border-t border-white/10 px-5 py-3">
+                <a href="/matches" className="text-xs font-bold uppercase tracking-[0.12em] text-blue-300 transition hover:text-blue-200">Усі матчі →</a>
+              </div>
             </div>
-
           </div>
 
         </div>
