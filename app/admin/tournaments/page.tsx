@@ -810,6 +810,57 @@ useEffect(() => {
     );
   }
 
+  const [coopTeamNames, setCoopTeamNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!matches.some((match) => match.participant_type === "team")) {
+      setCoopTeamNames({});
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadCoopTeamNames() {
+      try {
+        const response = await fetch(
+          `/api/admin/coop-teams?season=${season}`,
+          { cache: "no-store", signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Team names request failed: ${response.status}`);
+        }
+
+        const data = (await response.json()) as {
+          success?: boolean;
+          teams?: { id: string; name: string }[];
+        };
+
+        if (data.success !== true || !Array.isArray(data.teams)) {
+          throw new Error("Invalid coop teams response");
+        }
+
+        const names: Record<string, string> = {};
+        for (const team of data.teams) {
+          if (typeof team.id === "string" && typeof team.name === "string") {
+            names[team.id] = team.name;
+          }
+        }
+
+        if (!controller.signal.aborted) {
+          setCoopTeamNames(names);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("COOP TEAM NAMES ERROR:", error);
+        }
+      }
+    }
+
+    void loadCoopTeamNames();
+    return () => controller.abort();
+  }, [season, matches]);
+
   function getParticipantName(
     id: string,
     type: string
@@ -817,7 +868,7 @@ useEffect(() => {
     if (
       type === "team"
     ) {
-      return id;
+      return coopTeamNames[id] ?? id;
     }
 
     return getPlayerName(
