@@ -203,6 +203,25 @@ export default async function EuropeanCupCalendar({
         roundA - roundB
     );
 
+  // Якщо номер туру відсутній, не втрачаємо реальні матчі.
+  // Їх відображаємо окремо за групами без вигаданих турів.
+  const groupMatchesWithoutRound = groupMatches.filter(
+    (match) => match.round === null
+  );
+
+  const unnumberedGroupMatches = new Map<string, Match[]>();
+
+  for (const match of groupMatchesWithoutRound) {
+    const groupName = match.group_name?.trim() || "Без групи";
+    const existing = unnumberedGroupMatches.get(groupName) ?? [];
+    existing.push(match);
+    unnumberedGroupMatches.set(groupName, existing);
+  }
+
+  const sortedUnnumberedGroups = Array.from(
+    unnumberedGroupMatches.entries()
+  ).sort(([a], [b]) => a.localeCompare(b, "uk"));
+
   /*
     ========================================
     PLAYOFF
@@ -215,6 +234,11 @@ export default async function EuropeanCupCalendar({
     "semifinal",
     "final",
   ];
+
+
+  const hasPlayoffMatches = matches.some(
+    (match) => match.stage !== null && playoffStages.includes(match.stage)
+  );
 
   /*
     ========================================
@@ -434,9 +458,64 @@ export default async function EuropeanCupCalendar({
           </div>
         )}
 
+        {/* GROUP MATCHES WITHOUT ROUND NUMBER */}
+        {sortedUnnumberedGroups.length > 0 && (
+          <div className={sortedGroupRounds.length > 0 ? "mt-10" : ""}>
+            <div className="mb-6">
+              <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
+                Груповий етап
+              </div>
+              <h3 className="mt-2 text-2xl font-black text-white">
+                {sortedGroupRounds.length > 0
+                  ? "Матчі без номера туру"
+                  : "Матчі групового етапу"}
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">
+                Матчі показано за групами. Номери турів у базі даних не зазначені.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {sortedUnnumberedGroups.map(([groupName, groupRoundlessMatches], index) => (
+                <details
+                  key={`unnumbered-${groupName}`}
+                  open={index === 0}
+                  className="group overflow-hidden rounded-2xl border border-white/10 bg-[#07101d]"
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition hover:bg-white/[0.04] sm:px-6 sm:py-5">
+                    <div>
+                      <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">
+                        Груповий етап
+                      </div>
+                      <div className="mt-1 text-xl font-black text-white">
+                        {groupName === "Без групи" ? groupName : `Група ${groupName}`}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 sm:gap-5">
+                      <span className="text-sm font-medium text-white/50">
+                        {groupRoundlessMatches.length} матчів
+                      </span>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/60 transition group-open:rotate-180">
+                        ↓
+                      </span>
+                    </div>
+                  </summary>
+                  <div className="border-t border-white/10 bg-[#050c16] p-2 sm:p-4 md:p-6">
+                    <div className="grid gap-2 sm:gap-3 lg:grid-cols-2">
+                      {groupRoundlessMatches.map((match) => (
+                        <MatchCard key={match.id} match={match} />
+                      ))}
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* PLAYOFF */}
 
-        <div className="mt-16">
+        {hasPlayoffMatches && <div className="mt-16">
           <div className="mb-6">
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
               Плей-оф
@@ -636,7 +715,7 @@ export default async function EuropeanCupCalendar({
               }
             )}
           </div>
-        </div>
+        </div>}
       </div>
     </section>
   );

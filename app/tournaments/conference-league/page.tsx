@@ -1,4 +1,5 @@
 import GroupStagePage from "../../../components/GroupStagePage";
+import EuropeanCupCalendar from "../../../components/EuropeanCupCalendar";
 
 type PageProps = {
   searchParams: Promise<{
@@ -19,9 +20,15 @@ export default async function Page({
       : 3;
 
   return (
-    <GroupStagePage
-      competition="conferenceLeague"
-      season={season}
-    />
+    <>
+      <GroupStagePage
+        competition="conferenceLeague"
+        season={season}
+      />
+      <EuropeanCupCalendar
+        season={season}
+        competition="conference-league"
+      />
+    </>
   );
 }
