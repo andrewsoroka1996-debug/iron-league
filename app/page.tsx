@@ -515,16 +515,65 @@ export default async function Home() {
     (recentMatchesData ??
       []) as RecentMatch[];
 
+  // Team participants in Iron Co-op Cup use UUIDs; resolve public team names
+  // only for the finished matches displayed in Recent Results.
+  const recentCoopTeamIds = Array.from(
+    new Set(
+      recentMatches
+        .filter(
+          (match) =>
+            match.participant_type === "team" ||
+            match.competition === "iron-coop-cup" ||
+            match.competition === "coop-cup"
+        )
+        .flatMap((match) => [match.home_id, match.away_id])
+    )
+  );
+
+  const recentCoopTeamNames = new Map<string, string>();
+
+  if (recentCoopTeamIds.length > 0) {
+    const { data: coopTeamsData, error: coopTeamsError } = await supabaseAdmin
+      .from("coop_teams")
+      .select("id, name")
+      .eq("season", currentSeason)
+      .in("id", recentCoopTeamIds);
+
+    if (coopTeamsError) {
+      console.error("HOME RECENT COOP TEAM NAMES ERROR:", coopTeamsError);
+    } else {
+      for (const team of coopTeamsData ?? []) {
+        if (
+          typeof team.id === "string" &&
+          typeof team.name === "string" &&
+          team.name.trim().length > 0
+        ) {
+          recentCoopTeamNames.set(team.id, team.name);
+        }
+      }
+    }
+  }
+
+  function getRecentMatchParticipantName(match: RecentMatch, participantId: string) {
+    if (
+      match.participant_type === "team" ||
+      match.competition === "iron-coop-cup" ||
+      match.competition === "coop-cup"
+    ) {
+      return recentCoopTeamNames.get(participantId) ?? participantId;
+    }
+    return getPlayerName(participantId);
+  }
   const results = recentMatches.map(
     (match) => ({
       id: match.id,
 
-      home: getPlayerName(match.home_id),
+      home: getRecentMatchParticipantName(match, match.home_id),
       homeEmblemUrl: getMatchPlayerEmblemUrl(
         match, match.home_id, emblemUrls
       ),
 
-      away: getPlayerName(match.away_id),
+      away: getRecentMatchParticipantName(match, match.away_id),
       awayEmblemUrl: getMatchPlayerEmblemUrl(
         match, match.away_id, emblemUrls
       ),
