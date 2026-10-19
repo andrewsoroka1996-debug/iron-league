@@ -9,6 +9,14 @@ import { getCompetitionPlayers } from "../../../../data/competitions/get-competi
 
 import type { SeasonNumber } from "../../../../data/competitions/season-competitions";
 
+import {
+  filterZeroPointGroupPlaces,
+  selectBestFourthPlaces,
+} from "../../../../lib/european-qualification-rules";
+import type {
+  GroupPlace,
+} from "../../../../lib/european-qualification-rules";
+
 type EuropeanCompetition =
   | "champions-league"
   | "europa-league"
@@ -51,6 +59,8 @@ type GroupCompletion = {
 
 type CompetitionResult = {
   qualifiers: Qualifier[];
+  eligible_places: GroupPlace[];
+  excluded_zero_points: GroupPlace[];
 
   groups: GroupCompletion[];
 
@@ -157,6 +167,8 @@ async function getGroupPositions({
   ) {
     return {
       qualifiers: [],
+      eligible_places: [],
+      excluded_zero_points: [],
       groups: [],
       complete: false,
     };
@@ -207,6 +219,9 @@ async function getGroupPositions({
 
   const qualifiers:
     Qualifier[] = [];
+
+  const eligiblePlaces: GroupPlace[] = [];
+  const excludedZeroPoints: GroupPlace[] = [];
 
   const groups:
     GroupCompletion[] = [];
@@ -348,18 +363,33 @@ async function getGroupPositions({
         continue;
       }
 
-      qualifiers.push({
-        player_id:
-          row.playerId,
-
-        source_competition:
-          competition,
-
-        group_name:
-          groupName,
-
+      const place: GroupPlace = {
+        player_id: row.playerId,
+        source_competition: competition,
+        group_name: groupName,
         position,
-      });
+        points: row.points,
+        goal_difference: row.goalDifference,
+        goals_for: row.goalsFor,
+      };
+
+      // Історичні сезони 1–2 не змінюємо заднім числом.
+      const checked = filterZeroPointGroupPlaces(
+        [place],
+        season >= 3
+      );
+
+      eligiblePlaces.push(...checked.eligible);
+      excludedZeroPoints.push(...checked.excluded);
+
+      if (checked.eligible.length > 0) {
+        qualifiers.push({
+          player_id: row.playerId,
+          source_competition: competition,
+          group_name: groupName,
+          position,
+        });
+      }
     }
   }
 
@@ -378,6 +408,8 @@ async function getGroupPositions({
 
   return {
     qualifiers,
+    eligible_places: eligiblePlaces,
+    excluded_zero_points: excludedZeroPoints,
     groups,
     complete,
   };
@@ -502,6 +534,12 @@ export async function GET(
     let groupStageComplete =
       false;
 
+    let excludedZeroPoints: GroupPlace[] = [];
+    let additionalFourthPlaces: GroupPlace[] = [];
+    let missingSlots = 0;
+    let expectedQualifiers = 0;
+    const warnings: string[] = [];
+
     /*
       ========================================
       ЛІГА ЧЕМПІОНІВ
@@ -531,6 +569,7 @@ export async function GET(
 
       allGroups =
         champions.groups;
+      expectedQualifiers = champions.groups.length * 2;
 
       /*
         Учасників 1/8 видаємо
@@ -543,6 +582,7 @@ export async function GET(
       ) {
         qualifiers =
           champions.qualifiers;
+        excludedZeroPoints = champions.excluded_zero_points;
       }
     }
 
@@ -580,8 +620,10 @@ export async function GET(
           competition:
             "champions-league",
 
+          // 4-ті місця потрібні лише за наявності
+          // виключеного 3-го місця з 0 очок.
           positions:
-            [3],
+            seasonNumber >= 3 ? [3, 4] : [3],
         });
 
       /*
@@ -600,14 +642,70 @@ export async function GET(
         ...europa.groups,
         ...champions.groups,
       ];
+      expectedQualifiers = europa.groups.length * 2 + champions.groups.length;
 
       if (
         groupStageComplete
       ) {
+        const championsThird = champions.qualifiers.filter(
+          (place) => place.position === 3
+        );
+
+        excludedZeroPoints = [
+          ...europa.excluded_zero_points,
+          ...champions.excluded_zero_points.filter(
+            (place) => place.position === 3
+          ),
+        ];
+
         qualifiers = [
           ...europa.qualifiers,
-          ...champions.qualifiers,
+          ...championsThird,
         ];
+
+        // Лише вакантні путівки від третіх місць ЛЧ із 0 очок.
+        const vacantThirdPlaces = champions.excluded_zero_points.filter(
+          (place) => place.position === 3
+        ).length;
+
+        if (seasonNumber >= 3 && vacantThirdPlaces > 0) {
+          const replacements = selectBestFourthPlaces({
+            vacantThirdPlaces,
+            candidates: champions.eligible_places.filter(
+              (place) => place.position === 4
+            ),
+            alreadyQualifiedIds: qualifiers.map((place) => place.player_id),
+          });
+
+          if (replacements.tied_at_cutoff.length > 0) {
+            // Без визначеного регламентом додаткового критерію
+            // не дозволяємо випадково вибрати одного із рівних.
+            return NextResponse.json(
+              {
+                success: false,
+                error: "Неможливо однозначно визначити найкраще 4-те місце ЛЧ: рівні очки, різниця м’ячів і забиті голи. Потрібне рішення організатора.",
+                tied_candidates: replacements.tied_at_cutoff,
+              },
+              { status: 409 }
+            );
+          }
+
+          additionalFourthPlaces = replacements.selected;
+          missingSlots = replacements.missing;
+
+          qualifiers.push(...additionalFourthPlaces.map((place) => ({
+            player_id: place.player_id,
+            source_competition: place.source_competition,
+            group_name: place.group_name,
+            position: place.position,
+          })));
+
+          if (missingSlots > 0) {
+            warnings.push(
+              `Не вистачає ${missingSlots} придатних 4-х місць ЛЧ для заповнення вакантних путівок у ЛЄ.`
+            );
+          }
+        }
       }
     }
 
@@ -665,6 +763,7 @@ export async function GET(
         ...conference.groups,
         ...europa.groups,
       ];
+      expectedQualifiers = conference.groups.length * 3 + europa.groups.length;
 
       if (
         groupStageComplete
@@ -672,6 +771,10 @@ export async function GET(
         qualifiers = [
           ...conference.qualifiers,
           ...europa.qualifiers,
+        ];
+        excludedZeroPoints = [
+          ...conference.excluded_zero_points,
+          ...europa.excluded_zero_points,
         ];
       }
     }
@@ -692,6 +795,38 @@ export async function GET(
         ),
       ];
 
+    if (groupStageComplete && excludedZeroPoints.length > 0) {
+      warnings.push(
+        `${excludedZeroPoints.length} учасник(ів) з 0 очок не допущено до плей-оф / переходу в інший єврокубок.`
+      );
+    }
+
+    if (
+      seasonNumber >= 3 &&
+      groupStageComplete &&
+      uniquePlayerIds.length !== expectedQualifiers
+    ) {
+      // Не повертаємо як успішну повну кваліфікацію неповний
+      // список із 0-очковими учасниками або без заміни.
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Недостатньо учасників для повної сітки: ${uniquePlayerIds.length} із ${expectedQualifiers}. Потрібне рішення організатора.`,
+          season: seasonNumber,
+          competition,
+          group_stage_complete: true,
+          qualifiers: uniquePlayerIds,
+          details: qualifiers,
+          excluded_zero_points: excludedZeroPoints,
+          additional_fourth_places: additionalFourthPlaces,
+          missing_replacement_slots: missingSlots,
+          qualification_ready: false,
+          warnings,
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
 
@@ -709,11 +844,22 @@ export async function GET(
       count:
         uniquePlayerIds.length,
 
+      expected_count: expectedQualifiers,
+
       details:
         qualifiers,
 
       groups:
         allGroups,
+
+      excluded_zero_points: excludedZeroPoints,
+      additional_fourth_places: additionalFourthPlaces,
+      missing_replacement_slots: missingSlots,
+      qualification_ready:
+        groupStageComplete &&
+        missingSlots === 0 &&
+        uniquePlayerIds.length === expectedQualifiers,
+      warnings,
     });
   } catch (error) {
     console.error(
