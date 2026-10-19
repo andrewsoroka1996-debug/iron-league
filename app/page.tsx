@@ -699,7 +699,7 @@ export default async function Home() {
           className="pointer-events-none absolute inset-x-0 top-0 h-[800px] sm:h-[860px] lg:inset-0 lg:h-auto"
         >
           <Image
-            src="/backgrounds/iron-league-home-bg.webp"
+            src="/backgrounds/iron-league-stadium-symmetric-v2.webp"
             alt=""
             fill
             preload
@@ -709,7 +709,7 @@ export default async function Home() {
           />
 
           {/* Keep the content readable without hiding the right-side lights. */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#020611]/75 via-[#030711]/50 to-[#020611]/25 lg:from-[#020611]/90 lg:via-[#030711]/65 lg:to-[#020611]/35" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#020611]/75 via-[#030711]/50 to-[#020611]/25 lg:from-[#020611]/45 lg:via-[#030711]/40 lg:to-[#020611]/30" />
 
           {/* Fade the image naturally into the site's dark background. */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#030711]/10 via-[#030711]/20 to-[#030711] lg:bg-gradient-to-t lg:from-[#030711] lg:via-transparent lg:to-[#030711]/35" />
