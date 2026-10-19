@@ -24,11 +24,21 @@ type Assignment = {
   season: number;
   position: number;
   match_id: string;
+  match_id_2: string | null;
   display_date: string | null;
   display_time: string | null;
+  display_date_2: string | null;
+  display_time_2: string | null;
 };
 type CoopTeam = { id: string; name: string };
-type Draft = { match_id: string; display_date: string; display_time: string };
+type Draft = {
+  match_id: string;
+  match_id_2: string;
+  display_date: string;
+  display_time: string;
+  display_date_2: string;
+  display_time_2: string;
+};
 type ApiResponse = {
   success?: boolean;
   error?: string;
@@ -37,7 +47,40 @@ type ApiResponse = {
   coop_teams?: CoopTeam[];
 };
 const POSITIONS = [1, 2, 3, 4, 5];
-const EMPTY: Draft = { match_id: "", display_date: "", display_time: "" };
+const EMPTY: Draft = {
+  match_id: "", match_id_2: "",
+  display_date: "", display_time: "",
+  display_date_2: "", display_time_2: "",
+};
+
+// Keep home/away reversal legal: Divisions' return fixture is often a distant round.
+function sameFixture(first: Match, second: Match) {
+  return first.id !== second.id &&
+    first.season === second.season &&
+    first.competition === second.competition &&
+    first.division === second.division &&
+    first.stage === second.stage &&
+    first.group_name === second.group_name &&
+    first.participant_type === second.participant_type &&
+    ((first.home_id === second.home_id && first.away_id === second.away_id) ||
+      (first.home_id === second.away_id && first.away_id === second.home_id));
+}
+
+function displayScore(match: Match, reference: Match) {
+  if (match.status !== "finished" || match.home_goals === null || match.away_goals === null) {
+    return match.status === "closed_unplayed" ? "Не відбувся" : "Не зіграно";
+  }
+  return match.home_id === reference.home_id
+    ? `${match.home_goals}:${match.away_goals}`
+    : `${match.away_goals}:${match.home_goals}`;
+}
+
+function matchLabel(match: Match, index: number) {
+  // Group-stage European games have no meaningful round index.
+  return match.competition === "division" && match.round != null
+    ? `Тур ${match.round}`
+    : `Матч ${index}`;
+}
 
 function tournamentName(match: Match) {
   if (match.competition === "division" && match.division) return `${match.division} Дивізіон`;
@@ -90,8 +133,11 @@ export default function WeeklyMatchesAdmin({ season, password }: { season: numbe
         const saved = rows.find(r => r.position === slot);
         nextDrafts[slot] = saved ? {
           match_id: saved.match_id,
+          match_id_2: saved.match_id_2 ?? "",
           display_date: saved.display_date ?? "",
           display_time: saved.display_time?.slice(0, 5) ?? "",
+          display_date_2: saved.display_date_2 ?? "",
+          display_time_2: saved.display_time_2?.slice(0, 5) ?? "",
         } : { ...EMPTY };
       }
       setAssignments(rows);
@@ -133,9 +179,17 @@ export default function WeeklyMatchesAdmin({ season, password }: { season: numbe
   async function save(position: number) {
     const draft = drafts[position] ?? EMPTY;
     if (!draft.match_id) return;
-    if (draft.display_time && !draft.display_date) {
+    if ((draft.display_time && !draft.display_date) ||
+        (draft.display_time_2 && !draft.display_date_2)) {
       setIsError(true);
-      setMessage("Щоб вказати час, спочатку вкажіть дату.");
+      setMessage("Щоб вказати час, спочатку вкажіть дату відповідного матчу.");
+      return;
+    }
+    const first = matches.find(m => m.id === draft.match_id);
+    const second = matches.find(m => m.id === draft.match_id_2);
+    if (draft.match_id_2 && (!first || !second || !sameFixture(first, second))) {
+      setIsError(true);
+      setMessage("Другий матч має бути між тими самими суперниками в тому самому турнірі та групі.");
       return;
     }
     if (!password.trim()) {
@@ -186,7 +240,7 @@ export default function WeeklyMatchesAdmin({ season, password }: { season: numbe
       <div className="rounded-3xl border border-blue-400/20 bg-[#07101d] p-4 sm:p-7">
         <div className="text-xs font-bold uppercase tracking-[0.24em] text-blue-400">Головна сторінка · Ручна публікація</div>
         <h2 className="mt-2 text-2xl font-black sm:text-3xl">5 матчів тижня</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/55">Вибирай будь-які матчі сезону, навіть завершені. Редагуй дату й час анонсу пізніше. Матчі не зникають автоматично — лише коли ти їх прибереш або заміниш.</p>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/55">Публікуй до 5 протистоянь: кожне може містити два офіційні матчі між тими самими суперниками. Матчі можуть бути завершені. Дату й час кожного встановлюй пізніше. Добірка не зникає автоматично.</p>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <button type="button" onClick={() => void load()} disabled={busy !== null}
             className="rounded-xl bg-blue-500 px-5 py-3 text-sm font-bold text-white hover:bg-blue-400 disabled:opacity-40">
@@ -216,13 +270,19 @@ export default function WeeklyMatchesAdmin({ season, password }: { season: numbe
               const draft = drafts[position] ?? EMPTY;
               const current = assignments.find(a => a.position === position);
               const match = matches.find(m => m.id === draft.match_id);
+              const secondMatch = matches.find(m => m.id === draft.match_id_2);
+              const secondOptions = match ? matches.filter(m => sameFixture(match, m)) : [];
               return <section key={position} className="min-w-0 rounded-2xl border border-white/10 bg-[#07101d] p-4 sm:p-6">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-black">Матч №{position}</h3>
+                  <h3 className="text-lg font-black">Протистояння №{position}</h3>
                   <span className={`rounded-full px-3 py-1 text-xs font-bold ${current ? "bg-emerald-500/10 text-emerald-300" : "bg-white/5 text-white/40"}`}>{current ? "На головній" : "Вільно"}</span>
                 </div>
-                <div className="mt-4"><label className="text-xs font-bold text-white/60">Матч сезону</label>
-                  <select className={fieldClass} value={draft.match_id} onChange={e => change(position, { match_id: e.target.value, display_date: "", display_time: "" })}>
+                <div className="mt-4"><label className="text-xs font-bold text-white/60">Перший матч сезону</label>
+                  <select className={fieldClass} value={draft.match_id} onChange={e => change(position, {
+                    match_id: e.target.value, match_id_2: "",
+                    display_date: "", display_time: "",
+                    display_date_2: "", display_time_2: "",
+                  })}>
                     <option value="">Оберіть матч</option>
                     {draft.match_id && !options.some(m => m.id === draft.match_id) && match &&
                       <option value={match.id}>{tournamentName(match)} · {getName(match.home_id, match.participant_type)} — {getName(match.away_id, match.participant_type)}</option>}
@@ -232,19 +292,57 @@ export default function WeeklyMatchesAdmin({ season, password }: { season: numbe
                   </select>
                 </div>
                 {match && <div className="mt-3 rounded-xl border border-blue-400/10 bg-blue-500/[0.05] px-3 py-3 text-sm text-white/80">
-                  <div className="font-bold text-white">{getName(match.home_id, match.participant_type)} <span className="text-blue-300">{match.status === "finished" && match.home_goals !== null && match.away_goals !== null ? `${match.home_goals} : ${match.away_goals}` : "VS"}</span> {getName(match.away_id, match.participant_type)}</div>
-                  <div className="mt-1 text-xs text-blue-300">{tournamentName(match)} · {match.status === "finished" ? "Матч зіграний" : "Матч не завершений"}</div>
+                  <div className="font-bold text-white">{getName(match.home_id, match.participant_type)} <span className="text-blue-300">VS</span> {getName(match.away_id, match.participant_type)}</div>
+                  <div className="mt-1 text-xs text-blue-300">{tournamentName(match)}</div>
+                  {[match, secondMatch].filter((m): m is Match => Boolean(m)).map((m, i) => (
+                    <div key={m.id} className="mt-2 flex items-center justify-between gap-2 text-xs text-white/70">
+                      <span>{matchLabel(m, i + 1)}</span>
+                      <span className="font-bold text-white">
+                        {displayScore(m, match)}
+                      </span>
+                    </div>
+                  ))}
                 </div>}
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div><label className="text-xs font-bold text-white/60">Дата анонсу (необов'язково)</label>
+                {match && <div className="mt-4">
+                  <label className="text-xs font-bold text-white/60">Другий матч між цими суперниками (необов'язково)</label>
+                  <select className={fieldClass} value={draft.match_id_2}
+                    onChange={e => change(position, {
+                      match_id_2: e.target.value, display_date_2: "", display_time_2: "",
+                    })}>
+                    <option value="">Поки лише один матч</option>
+                    {secondOptions.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.status === "finished" ? "✓ " : ""}{matchLabel(m, 2)} · {getName(m.home_id, m.participant_type)} — {getName(m.away_id, m.participant_type)}
+                        {m.status === "finished" && m.home_goals !== null && m.away_goals !== null ? ` (${m.home_goals}:${m.away_goals})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-white/40">Для дивізіонів це може бути матч іншого туру, наприклад 1 і 16. Для груп єврокубків покажемо «Матч 1» та «Матч 2».</p>
+                </div>}
+                <div className="mt-4 border-t border-white/10 pt-3">
+                  <div className="text-xs font-bold text-blue-300">{match ? matchLabel(match, 1) : "Перший матч"} · Розклад (необов'язково)</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                  <div><label className="text-xs font-bold text-white/60">Дата</label>
                     <input type="date" className={fieldClass} value={draft.display_date} onChange={e => change(position, { display_date: e.target.value, display_time: e.target.value ? draft.display_time : "" })}/></div>
-                  <div><label className="text-xs font-bold text-white/60">Час за Києвом (необов'язково)</label>
+                  <div><label className="text-xs font-bold text-white/60">Час за Києвом</label>
                     <input type="time" className={fieldClass} value={draft.display_time} disabled={!draft.display_date} onChange={e => change(position, { display_time: e.target.value })}/></div>
+                  </div>
                 </div>
-                <p className="mt-2 text-xs text-white/40">Поля анонсу не змінюють офіційний календар або рахунок. Якщо перенесеш матч на зайняту позицію, два матчі поміняються місцями.</p>
+                {secondMatch && <div className="mt-3 border-t border-white/10 pt-3">
+                  <div className="text-xs font-bold text-blue-300">{matchLabel(secondMatch, 2)} · Розклад (необов'язково)</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <div><label className="text-xs font-bold text-white/60">Дата</label>
+                      <input type="date" className={fieldClass} value={draft.display_date_2}
+                        onChange={e => change(position, { display_date_2: e.target.value, display_time_2: e.target.value ? draft.display_time_2 : "" })}/></div>
+                    <div><label className="text-xs font-bold text-white/60">Час за Києвом</label>
+                      <input type="time" className={fieldClass} value={draft.display_time_2}
+                        disabled={!draft.display_date_2} onChange={e => change(position, { display_time_2: e.target.value })}/></div>
+                  </div>
+                </div>}
+                <p className="mt-2 text-xs text-white/40">Обидва розклади — лише для анонсу, вони не змінюють офіційні матчі. Перестановка з зайнятою позицією міняє протистояння місцями.</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" onClick={() => void save(position)} disabled={busy !== null || !draft.match_id}
-                    className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold hover:bg-blue-500 disabled:opacity-40">{busy === position ? "Збереження..." : current ? "Зберегти зміни" : "Опублікувати матч"}</button>
+                    className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold hover:bg-blue-500 disabled:opacity-40">{busy === position ? "Збереження..." : current ? "Зберегти зміни" : "Опублікувати протистояння"}</button>
                   {current && <button type="button" onClick={() => void remove(position)} disabled={busy !== null} className="rounded-xl border border-red-400/20 px-4 py-3 text-sm font-bold text-red-300 hover:bg-red-500/10 disabled:opacity-40">Прибрати</button>}
                 </div>
               </section>;

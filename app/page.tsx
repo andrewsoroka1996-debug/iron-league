@@ -153,9 +153,12 @@ type HomeNewsItem = {
 type FeaturedAssignment = {
   id: number;
   match_id: string;
+  match_id_2: string | null;
   position: number;
   display_date: string | null;
   display_time: string | null;
+  display_date_2: string | null;
+  display_time_2: string | null;
 };
 
 type FeaturedDatabaseMatch = {
@@ -165,6 +168,7 @@ type FeaturedDatabaseMatch = {
   stage: string | null;
   group_name: string | null;
   round: number | null;
+  leg: number | null;
   participant_type: string;
   home_id: string;
   away_id: string;
@@ -176,8 +180,11 @@ type FeaturedDatabaseMatch = {
 type FeaturedMatch =
   FeaturedDatabaseMatch & {
     position: number;
+    second_match: FeaturedDatabaseMatch | null;
     display_date: string | null;
     display_time: string | null;
+    display_date_2: string | null;
+    display_time_2: string | null;
   };
 
 /* ========================================
@@ -279,6 +286,35 @@ function formatFeaturedDate(date: string) {
   return `${day}.${month}.${year}`;
 }
 
+function weeklyMatchLabel(match: FeaturedDatabaseMatch, index: number) {
+  // European group games do not have a reliable round number.
+  return match.competition === "division" && match.round !== null
+    ? `Тур ${match.round}`
+    : `Матч ${index}`;
+}
+
+function weeklyMatchScore(
+  match: FeaturedDatabaseMatch,
+  firstMatch: FeaturedDatabaseMatch
+) {
+  if (match.status === "closed_unplayed") return "— : —";
+  if (match.status !== "finished" || match.home_goals === null || match.away_goals === null) {
+    return "— : —";
+  }
+  // Display both scores consistently in the order of players printed above.
+  return match.home_id === firstMatch.home_id
+    ? `${match.home_goals} : ${match.away_goals}`
+    : `${match.away_goals} : ${match.home_goals}`;
+}
+
+function weeklyMatchSchedule(date: string | null, time: string | null, match: FeaturedDatabaseMatch) {
+  if (date) {
+    return `${formatFeaturedDate(date)}${time ? ` · ${time.slice(0, 5)}` : " · Час уточнюється"}`;
+  }
+  return match.status === "finished" ? "Зіграно" :
+    match.status === "closed_unplayed" ? "Не відбувся" : "Дата уточнюється";
+}
+
 function formatNewsDate(date: string | null) {
   if (!date) {
     return "";
@@ -334,7 +370,7 @@ export default async function Home() {
   } = await supabaseAdmin
     .from("weekly_featured_matches")
     .select(
-      "id, match_id, position, display_date, display_time"
+      "id, match_id, match_id_2, position, display_date, display_time, display_date_2, display_time_2"
     )
     .eq("season", currentSeason)
     .order("position", {
@@ -352,10 +388,13 @@ export default async function Home() {
     (featuredAssignmentsData ??
       []) as FeaturedAssignment[];
 
-  const featuredMatchIds =
-    featuredAssignments.map(
-      (item) => item.match_id
-    );
+  const featuredMatchIds = [
+    ...new Set(
+      featuredAssignments.flatMap((item) =>
+        item.match_id_2 ? [item.match_id, item.match_id_2] : [item.match_id]
+      )
+    ),
+  ];
 
   let featuredDatabaseMatches:
     FeaturedDatabaseMatch[] = [];
@@ -373,6 +412,7 @@ export default async function Home() {
          stage,
          group_name,
          round,
+         leg,
          participant_type,
          home_id,
          away_id,
@@ -416,8 +456,13 @@ export default async function Home() {
         return {
           ...match,
           position: assignment.position,
+          second_match: assignment.match_id_2
+            ? featuredMatchMap.get(assignment.match_id_2) ?? null
+            : null,
           display_date: assignment.display_date,
           display_time: assignment.display_time,
+          display_date_2: assignment.display_date_2,
+          display_time_2: assignment.display_time_2,
         };
       }
     )
@@ -636,7 +681,7 @@ export default async function Home() {
   ======================================== */
 
   return (
-    <main className="min-h-screen bg-[#030711] text-white">
+    <main className="min-h-screen overflow-x-clip bg-[#030711] text-white">
 
       {/* GLOBAL HEADER */}
       <SiteHeader />
@@ -670,98 +715,140 @@ export default async function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-[#030711]/10 via-[#030711]/20 to-[#030711] lg:bg-gradient-to-t lg:from-[#030711] lg:via-transparent lg:to-[#030711]/35" />
         </div>
 
-        <div className="relative mx-auto grid max-w-7xl items-center gap-5 px-4 py-7 sm:gap-10 sm:px-6 sm:py-16 lg:min-h-[640px] lg:grid-cols-2 lg:gap-12 lg:py-20">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-5 px-4 py-7 sm:gap-10 sm:px-6 sm:py-16 lg:min-h-[640px] lg:grid-cols-2 lg:items-start lg:gap-12 lg:py-8">
 
-          {/* HERO LEFT */}
-
-          <div>
-
-            <div className="mb-3 inline-flex items-center gap-3 rounded-full border border-blue-400/20 sm:mb-6 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
-
-              <span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_12px_#60a5fa]" />
-
-              eFootball Competition
-
-            </div>
-
-            <div className="-mx-2 max-w-none sm:mx-0 sm:max-w-2xl">
-
-              <Image
-  src="/iron-league-logo.jpg"
-  alt="Iron League"
-  width={420}
-  height={420}
-  fetchPriority="high"
-  sizes="(min-width: 1024px) 320px, (min-width: 640px) 288px, (min-width: 400px) 380px, calc(100vw - 16px)"
-  quality={75}
-  className="mx-auto h-auto w-full max-w-[380px] object-contain drop-shadow-lg sm:mx-0 sm:w-72 lg:w-80"
-/>
-
-            </div>
-
-            <p className="mt-4 max-w-xl text-base leading-7 text-white/85 sm:mt-7 sm:text-lg sm:leading-8 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">
-  Єдина платформа Iron League: матчі,
-  дивізіони, єврокубки, статистика,
-  результати, турнірні таблиці та
-  історія ліги.
-</p>
-
-            {/* HERO BUTTONS */}
-
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:flex sm:flex-wrap sm:gap-4">
-
-              <a
-                href="/matches"
-                className="flex min-h-12 min-w-0 items-center justify-center rounded-xl bg-blue-700 px-2 py-3 text-center text-sm font-bold leading-snug text-white transition hover:bg-blue-600 sm:px-6 sm:py-3.5 sm:text-base"
-              >
-                Переглянути матчі
-              </a>
-
-              <a
-                href="/divisions"
-                className="flex min-h-12 min-w-0 items-center justify-center rounded-xl border border-white/15 bg-[#07101d]/80 backdrop-blur-sm px-2 py-3 text-center text-sm font-bold leading-snug text-white transition hover:bg-white/10 sm:px-6 sm:py-3.5 sm:text-base"
-              >
-                Турнірні таблиці
-              </a>
-
-            </div>
-
-            {/* HERO STATS */}
-
-            <div className="mt-7 grid max-w-xl grid-cols-3 gap-2 sm:mt-12 sm:gap-4">
-
-              <div>
-                <div className="text-2xl font-black sm:text-3xl">
-                  4
+          {/* Desktop: centered league crest and details above the headline news.
+              Mobile and tablet retain the existing stacked hero. */}
+          <div className="min-w-0 lg:self-start">
+            <div className="lg:flex lg:flex-col lg:items-center lg:gap-0">
+              <div className="min-w-0 lg:w-full lg:flex-none lg:text-center">
+                <div className="mb-3 inline-flex items-center gap-3 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-blue-300 sm:mb-6 lg:hidden">
+                  <span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_12px_#60a5fa]" />
+                  eFootball Competition
                 </div>
-
-                <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest">
-                  Дивізіони
+                <div className="-mx-2 max-w-none sm:mx-0 sm:max-w-2xl lg:relative lg:mx-auto lg:flex lg:w-full lg:justify-center">
+                  {/* Desktop-only soft halo, kept behind the existing brand artwork. */}
+                  <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 hidden h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-3xl lg:block" />
+                  <Image
+                    src="/iron-league-logo.jpg"
+                    alt="Iron League"
+                    width={420}
+                    height={420}
+                    fetchPriority="high"
+                    sizes="(min-width: 1280px) 350px, (min-width: 1024px) 320px, (min-width: 640px) 288px, (min-width: 400px) 380px, calc(100vw - 16px)"
+                    quality={75}
+                    className="relative mx-auto h-auto w-full max-w-[380px] object-contain drop-shadow-lg sm:mx-0 sm:w-72 lg:mx-auto lg:w-[320px] lg:max-w-full lg:drop-shadow-[0_0_28px_rgba(245,158,11,0.24)] xl:w-[350px]"
+                  />
                 </div>
               </div>
 
-              <div>
-                <div className="text-2xl font-black sm:text-3xl">
-                  {tournaments.length}+
+              <div className="min-w-0 lg:w-full lg:text-center">
+                <div className="hidden items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-300 lg:mt-1 lg:inline-flex">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_12px_#60a5fa]" />
+                  eFootball Competition
+                </div>
+                <h1 className="mt-3 hidden text-2xl font-black tracking-wider text-white lg:block lg:text-[30px] lg:leading-tight xl:text-[34px]">
+                  IRON LEAGUE
+                </h1>
+                <div className="mt-1 hidden text-[11px] font-bold uppercase tracking-[0.25em] text-blue-200/80 lg:block">
+                  Більше ніж гра
                 </div>
 
-                <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest">
-                  Турнірів
+                <p className="mt-4 max-w-xl text-base leading-7 text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] sm:mt-7 sm:text-lg sm:leading-8 lg:mx-auto lg:mt-3 lg:max-w-[490px] lg:text-[13px] lg:leading-[1.65] xl:text-sm">
+                  Єдина платформа Iron League: матчі, дивізіони,
+                  єврокубки, статистика, результати, турнірні таблиці
+                  та історія ліги.
+                </p>
+
+                {/* HERO BUTTONS */}
+                <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:flex sm:flex-wrap sm:gap-4 lg:mt-4 lg:justify-center lg:gap-3">
+                  <a
+                    href="/matches"
+                    className="flex min-h-12 min-w-0 items-center justify-center rounded-xl bg-blue-700 px-2 py-3 text-center text-sm font-bold leading-snug text-white transition hover:bg-blue-600 sm:px-6 sm:py-3.5 sm:text-base lg:min-h-10 lg:px-3 lg:py-2.5 lg:text-xs xl:text-sm"
+                  >
+                    Переглянути матчі
+                  </a>
+                  <a
+                    href="/divisions"
+                    className="flex min-h-12 min-w-0 items-center justify-center rounded-xl border border-white/15 bg-[#07101d]/80 px-2 py-3 text-center text-sm font-bold leading-snug text-white backdrop-blur-sm transition hover:bg-white/10 sm:px-6 sm:py-3.5 sm:text-base lg:min-h-10 lg:px-3 lg:py-2.5 lg:text-xs xl:text-sm"
+                  >
+                    Турнірні таблиці
+                  </a>
+                </div>
+
+                {/* HERO STATS */}
+                <div className="mt-7 grid max-w-xl grid-cols-3 gap-2 sm:mt-12 sm:gap-4 lg:mx-auto lg:mt-5 lg:max-w-[420px] lg:gap-4 lg:text-center">
+                  <div>
+                    <div className="text-2xl font-black sm:text-3xl lg:text-2xl">4</div>
+                    <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest lg:text-[10px] lg:tracking-normal xl:tracking-wider">Дивізіони</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black sm:text-3xl lg:text-2xl">{tournaments.length}+</div>
+                    <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest lg:text-[10px] lg:tracking-normal xl:tracking-wider">Турнірів</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black sm:text-3xl lg:text-2xl">∞</div>
+                    <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest lg:text-[10px] lg:tracking-normal xl:tracking-wider">Емоцій</div>
+                  </div>
                 </div>
               </div>
-
-              <div>
-                <div className="text-2xl font-black sm:text-3xl">
-                  ∞
-                </div>
-
-                <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest">
-                  Емоцій
-                </div>
-              </div>
-
             </div>
 
+            {/* Desktop headline article: reuses the published news already
+                loaded for the regular news section below. */}
+            <div className="mt-6 hidden overflow-hidden rounded-[24px] border border-blue-400/30 bg-[#07101d]/95 shadow-2xl backdrop-blur-xl lg:mt-5 lg:block">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/[0.03] px-4 py-3">
+                <h2 className="text-xs font-black uppercase tracking-[0.12em] text-blue-300">
+                  📰 Головна новина
+                </h2>
+                <a href="/news" className="text-[11px] font-bold uppercase tracking-wider text-blue-300 transition hover:text-blue-200">
+                  Усі новини →
+                </a>
+              </div>
+
+              {latestNews.length > 0 ? (
+                <a
+                  href={`/news/${latestNews[0].slug}`}
+                  className="group block p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+                >
+                  <div className="relative h-40 overflow-hidden rounded-xl bg-[#0c1a2c] lg:h-[185px] xl:h-[195px]">
+                    {latestNews[0].image_url ? (
+                      <img
+                        src={latestNews[0].image_url}
+                        alt={latestNews[0].title}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-900/50 via-[#10213c] to-[#030711]">
+                        <span className="text-3xl font-black tracking-widest text-blue-200/70">IRON LEAGUE</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#030711]/85 to-transparent" />
+                    <span className="absolute bottom-2 left-3 rounded-full border border-blue-400/25 bg-[#092248]/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-200">
+                      {latestNews[0].category}
+                    </span>
+                  </div>
+                  <h3 className="mt-3 line-clamp-2 text-[17px] font-black leading-snug text-white transition group-hover:text-blue-200 xl:text-lg">
+                    {latestNews[0].title}
+                  </h3>
+                  {latestNews[0].excerpt && (
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/60 xl:text-sm">
+                      {latestNews[0].excerpt}
+                    </p>
+                  )}
+                  <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                    <span className="text-xs text-white/50">{formatNewsDate(latestNews[0].published_at)}</span>
+                    <span className="text-xs font-bold text-blue-300 transition-transform group-hover:translate-x-1">Читати новину →</span>
+                  </div>
+                </a>
+              ) : (
+                <div className="px-5 py-8 text-center">
+                  <div className="text-sm font-bold text-white">Новин поки немає</div>
+                  <p className="mt-2 text-xs text-white/55">Актуальна новина з’явиться тут після публікації.</p>
+                  <a href="/news" className="mt-3 inline-block text-xs font-bold text-blue-300 hover:text-blue-200">Перейти до новин →</a>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* =====================================
@@ -787,12 +874,21 @@ export default async function Home() {
               {featuredMatches.length > 0 ? (
                 <div className="space-y-2 p-3 sm:space-y-2.5 sm:p-4">
                   {featuredMatches.map(match => {
-                    const played = match.status === "finished" && match.home_goals !== null && match.away_goals !== null;
-                    const hasDate = Boolean(match.display_date);
-                    const hasTime = Boolean(match.display_time);
+                    const games = [
+                      {
+                        match,
+                        date: match.display_date,
+                        time: match.display_time,
+                      },
+                      ...(match.second_match ? [{
+                        match: match.second_match,
+                        date: match.display_date_2,
+                        time: match.display_time_2,
+                      }] : []),
+                    ];
                     return (
-                      <a key={match.id} href="/matches"
-                        className={`block min-w-0 rounded-xl border bg-[#0b1729]/95 p-3 transition hover:border-blue-400/50 hover:bg-blue-500/10 sm:px-4 sm:py-3.5 ${match.position === 1 ? "border-amber-400/45" : "border-white/10"}`}>
+                      <div key={match.position}
+                        className={`min-w-0 rounded-xl border bg-[#0b1729]/95 p-3 sm:px-4 sm:py-3.5 ${match.position === 1 ? "border-amber-400/45" : "border-white/10"}`}>
                         <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
                           <span className={`flex h-8 w-7 shrink-0 items-center justify-center text-base font-black tabular-nums ${match.position === 1 ? "text-amber-300" : "text-white/65"}`}>{match.position}</span>
                           <div className="min-w-0 flex-1">
@@ -801,26 +897,34 @@ export default async function Home() {
                                 <span className="min-w-0 truncate text-right text-xs font-black text-white sm:text-sm" title={getFeaturedParticipantName(match,match.home_id)}>{getFeaturedParticipantName(match,match.home_id)}</span>
                                 <PlayerTableEmblem src={getMatchPlayerEmblemUrl(match,match.home_id,emblemUrls)} size="featured" />
                               </div>
-                              <span className="shrink-0 rounded-lg bg-blue-500/10 px-2 py-1.5 text-center text-xs font-black tabular-nums text-blue-300 sm:text-sm">
-                                {played ? `${match.home_goals}:${match.away_goals}` : match.status === "closed_unplayed" ? "—" : "VS"}
-                              </span>
+                              <span className="shrink-0 rounded-lg bg-blue-500/10 px-2 py-1.5 text-center text-xs font-black tabular-nums text-blue-300 sm:text-sm">VS</span>
                               <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                                 <PlayerTableEmblem src={getMatchPlayerEmblemUrl(match,match.away_id,emblemUrls)} size="featured" />
                                 <span className="min-w-0 truncate text-left text-xs font-black text-white sm:text-sm" title={getFeaturedParticipantName(match,match.away_id)}>{getFeaturedParticipantName(match,match.away_id)}</span>
                               </div>
                             </div>
-                            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[10px] sm:text-[11px]">
+                            <div className="mt-2 flex flex-wrap justify-center gap-2 text-[10px] sm:text-[11px]">
                               <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-2 py-0.5 font-bold text-blue-300">{getTournamentName(match.competition,match.division)}</span>
-                              {played ? <span className="font-semibold text-emerald-300">Зіграно</span> : match.status === "closed_unplayed" ? <span className="text-white/50">Не відбувся</span> : null}
-                              <span className="text-white/50">
-                                {hasDate ? formatFeaturedDate(match.display_date!) : played ? "Дата не вказана" : "Дата уточнюється"}
-                                {hasDate && (hasTime ? ` · ${match.display_time!.slice(0,5)}` : " · Час уточнюється")}
-                              </span>
+                              {match.group_name && match.stage === "group" && (
+                                <span className="text-white/50">Група {match.group_name}</span>
+                              )}
+                            </div>
+                            <div className="mt-2 space-y-1.5">
+                              {games.map(({ match: game, date, time }, index) => (
+                                <div key={game.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.025] px-2.5 py-2 text-[10px] sm:text-xs">
+                                  <span className="truncate text-left font-bold text-white/65">{weeklyMatchLabel(game, index + 1)}</span>
+                                  <span className={`whitespace-nowrap rounded-md px-2 py-0.5 text-center font-black tabular-nums ${game.status === "finished" ? "bg-emerald-500/10 text-emerald-300" : "bg-white/5 text-blue-200"}`}>
+                                    {weeklyMatchScore(game, match)}
+                                  </span>
+                                  <span className="min-w-0 text-right text-[9px] leading-tight text-white/55 sm:text-[11px]">
+                                    {weeklyMatchSchedule(date, time, game)}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           </div>
-                          <span aria-hidden="true" className="shrink-0 text-blue-300/65">›</span>
                         </div>
-                      </a>
+                      </div>
                     );
                   })}
                 </div>

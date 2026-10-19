@@ -8,8 +8,11 @@ type WriteBody = {
   season?: number;
   position?: number;
   match_id?: string;
+  match_id_2?: string | null;
   display_date?: string | null;
   display_time?: string | null;
+  display_date_2?: string | null;
+  display_time_2?: string | null;
 };
 
 type DbMatch = {
@@ -44,9 +47,10 @@ function validSeason(value: unknown): value is number {
 function validPosition(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5;
 }
-function parseSchedule(body: WriteBody) {
-  const date = body.display_date?.trim() || null;
-  const time = body.display_time?.trim() || null;
+
+function parseSchedule(dateInput: string | null | undefined, timeInput: string | null | undefined) {
+  const date = dateInput?.trim() || null;
+  const time = timeInput?.trim() || null;
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   if (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
   if (time && !date) return null;
@@ -69,15 +73,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Некоректний сезон" }, { status: 400 });
     }
 
-    // The highlights table is independent from the old date-bound day highlights.
     const { data: featured, error: fe } = await supabaseAdmin
       .from("weekly_featured_matches")
-      .select("id, season, position, match_id, display_date, display_time")
+      .select("id, season, position, match_id, match_id_2, display_date, display_time, display_date_2, display_time_2")
       .eq("season", season)
       .order("position", { ascending: true });
     if (fe) throw fe;
 
-    // Supabase may cap a single result to 1000 rows; page through all season matches.
     const matches: DbMatch[] = [];
     let page = 0;
     const pageSize = 500;
@@ -95,7 +97,6 @@ export async function GET(request: Request) {
       if (page > 40) throw new Error("Забагато матчів сезону для завантаження");
     }
 
-    // Optional team names for team-based cups.
     const { data: coopTeams } = await supabaseAdmin.from("coop_teams")
       .select("id, name").eq("season", season);
     return NextResponse.json({
@@ -117,18 +118,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Невірний пароль адміністратора" }, { status: 401 });
     }
     if (!validSeason(body.season) || !validPosition(body.position) || !body.match_id?.trim()) {
-      return NextResponse.json({ error: "Вкажіть сезон, позицію 1–5 і матч" }, { status: 400 });
+      return NextResponse.json({ error: "Вкажіть сезон, позицію 1–5 і перший матч" }, { status: 400 });
     }
-    const schedule = parseSchedule(body);
-    if (!schedule) {
+    const first = parseSchedule(body.display_date, body.display_time);
+    const second = parseSchedule(body.display_date_2, body.display_time_2);
+    if (!first || !second) {
       return NextResponse.json({ error: "Некоректна дата або час. Час можна встановити лише разом із датою." }, { status: 400 });
     }
-    const { data, error } = await supabaseAdmin.rpc("set_weekly_featured_match", {
+    const secondId = body.match_id_2?.trim() || null;
+    if (secondId === body.match_id.trim()) {
+      return NextResponse.json({ error: "Для другого матчу виберіть інший офіційний матч" }, { status: 400 });
+    }
+    if (!secondId && (second.date || second.time)) {
+      return NextResponse.json({ error: "Другий розклад можна вказати лише після вибору другого матчу" }, { status: 400 });
+    }
+
+    // Validation of the same opponents, tournament, season and group is also
+    // performed by the atomic SQL function, so a bypassed UI cannot save a mismatch.
+    const { data, error } = await supabaseAdmin.rpc("set_weekly_featured_pair", {
       p_season: body.season,
       p_position: body.position,
-      p_match_id: body.match_id,
-      p_display_date: schedule.date,
-      p_display_time: schedule.time,
+      p_match_id: body.match_id.trim(),
+      p_match_id_2: secondId,
+      p_display_date: first.date,
+      p_display_time: first.time,
+      p_display_date_2: secondId ? second.date : null,
+      p_display_time_2: secondId ? second.time : null,
     });
     if (error) {
       console.error("WEEKLY FEATURED POST:", error);
@@ -137,7 +152,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, featured: data });
   } catch (error) {
     console.error("WEEKLY FEATURED POST:", error);
-    return NextResponse.json({ error: "Помилка збереження матчу тижня" }, { status: 500 });
+    return NextResponse.json({ error: "Помилка збереження матчів тижня" }, { status: 500 });
   }
 }
 
