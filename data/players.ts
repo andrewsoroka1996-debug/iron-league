@@ -116,7 +116,7 @@ export const players = [
   },
   {
     id: "d-odessaua",
-    nickname: "D_odessaUA",
+    nickname: "VD_odessaUA",
     account: "vd_odessa",
   },
   {
