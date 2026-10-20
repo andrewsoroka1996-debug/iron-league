@@ -1,5 +1,6 @@
 
 import Image from "next/image";
+import MobileHomeHero from "../components/MobileHomeHero";
 import PlayerTableEmblem from "../components/PlayerTableEmblem";
 import { getPlayerEmblemUrls } from "../lib/player-emblem-urls";
 import SiteHeader from "../components/public/SiteHeader";
@@ -771,9 +772,11 @@ export default async function Home() {
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-5 px-4 py-7 sm:gap-10 sm:px-6 sm:py-16 lg:min-h-[640px] lg:grid-cols-2 lg:items-start lg:gap-12 lg:py-8">
 
+          <MobileHomeHero tournamentCount={tournaments.length} />
+
           {/* Desktop: centered league crest and details above the headline news.
               Mobile and tablet retain the existing stacked hero. */}
-          <div className="min-w-0 lg:self-start">
+          <div className="hidden min-w-0 lg:block lg:self-start">
             <div className="lg:flex lg:flex-col lg:items-center lg:gap-0">
               <div className="min-w-0 text-center lg:w-full lg:flex-none">
                 <div className="mb-3 inline-flex items-center gap-3 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-blue-300 sm:mb-6 lg:hidden">
