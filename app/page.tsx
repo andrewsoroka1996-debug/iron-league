@@ -758,8 +758,13 @@ export default async function Home() {
           />
 
           {/* Keep the content readable without hiding the right-side lights. */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#020611]/75 via-[#030711]/50 to-[#020611]/25 lg:from-[#020611]/45 lg:via-[#030711]/40 lg:to-[#020611]/30" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#020611]/30 via-[#030711]/35 to-[#020611]/25 sm:from-[#020611]/75 sm:via-[#030711]/50 lg:from-[#020611]/45 lg:via-[#030711]/40 lg:to-[#020611]/30" />
 
+          {/* IRON LEAGUE MOBILE LEFT LIGHT ONLY */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#1d4c95]/25 via-[#133368]/10 to-transparent sm:hidden"
+          />
           {/* Fade the image naturally into the site's dark background. */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#030711]/10 via-[#030711]/20 to-[#030711] lg:bg-gradient-to-t lg:from-[#030711] lg:via-transparent lg:to-[#030711]/35" />
         </div>
@@ -770,28 +775,56 @@ export default async function Home() {
               Mobile and tablet retain the existing stacked hero. */}
           <div className="min-w-0 lg:self-start">
             <div className="lg:flex lg:flex-col lg:items-center lg:gap-0">
-              <div className="min-w-0 lg:w-full lg:flex-none lg:text-center">
+              <div className="min-w-0 text-center lg:w-full lg:flex-none">
                 <div className="mb-3 inline-flex items-center gap-3 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-blue-300 sm:mb-6 lg:hidden">
                   <span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_12px_#60a5fa]" />
                   eFootball Competition
                 </div>
-                <div className="-mx-2 max-w-none sm:mx-0 sm:max-w-2xl lg:relative lg:mx-auto lg:flex lg:w-full lg:justify-center">
-                  {/* Desktop-only soft halo, kept behind the existing brand artwork. */}
-                  <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 hidden h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-3xl lg:block" />
+                <div className="relative mx-auto flex w-full max-w-2xl justify-center lg:w-full">
+  {/* Warm halo around the ball */}
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute left-1/2 top-[30%] hidden h-[220px] w-[220px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400/18 blur-[72px] lg:block"
+  />
+
+  {/* Wider cool halo behind IRON / LEAGUE for smoother blending */}
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute left-1/2 top-[43%] hidden h-[340px] w-[370px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/12 blur-[95px] lg:block"
+  />
+
+  {/* Extra soft atmospheric fade to avoid a hard edge around the logo */}
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute left-1/2 top-[40%] hidden h-[440px] w-[440px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/8 blur-[110px] lg:block"
+  />
+
+  <Image
+    src="/iron-league-hero-mobile-clear.webp"
+    alt="Iron League"
+    width={470}
+    height={470}
+    fetchPriority="high"
+    sizes="(min-width: 1280px) 390px, (min-width: 1024px) 355px, (min-width: 640px) 288px, (min-width: 400px) 380px, calc(100vw - 16px)"
+    quality={75}
+    className="lg:hidden relative mx-auto h-auto w-full max-w-[380px] object-contain drop-shadow-lg sm:mx-0 sm:w-72 lg:mx-auto lg:w-[355px] lg:max-w-full lg:drop-shadow-[0_0_34px_rgba(245,158,11,0.28)] xl:w-[390px] translate-x-[14px] translate-y-[18px] sm:translate-x-0 sm:translate-y-0"
+  />
+                  {/* IRON LEAGUE APPROVED DESKTOP HERO BEGIN */}
                   <Image
-                    src="/iron-league-logo.jpg"
+                    src="/iron-league-hero-concept-approved.webp"
                     alt="Iron League"
-                    width={420}
-                    height={420}
+                    width={487}
+                    height={367}
                     fetchPriority="high"
-                    sizes="(min-width: 1280px) 350px, (min-width: 1024px) 320px, (min-width: 640px) 288px, (min-width: 400px) 380px, calc(100vw - 16px)"
-                    quality={75}
-                    className="relative mx-auto h-auto w-full max-w-[380px] object-contain drop-shadow-lg sm:mx-0 sm:w-72 lg:mx-auto lg:w-[320px] lg:max-w-full lg:drop-shadow-[0_0_28px_rgba(245,158,11,0.24)] xl:w-[350px]"
+                    sizes="(min-width: 1280px) 480px, 450px"
+                    quality={90}
+                    className="relative mx-auto hidden h-auto max-w-full object-contain lg:block lg:w-[450px] lg:drop-shadow-[0_0_22px_rgba(245,158,11,0.14)] xl:w-[480px] lg:translate-x-[20px]"
                   />
-                </div>
+                  {/* IRON LEAGUE APPROVED DESKTOP HERO END */}
+</div>
               </div>
 
-              <div className="min-w-0 lg:w-full lg:text-center">
+              <div className="min-w-0 text-center lg:w-full">
                 <div className="hidden items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-300 lg:mt-1 lg:inline-flex">
                   <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_12px_#60a5fa]" />
                   eFootball Competition
@@ -826,7 +859,7 @@ export default async function Home() {
                 </div>
 
                 {/* HERO STATS */}
-                <div className="mt-7 grid max-w-xl grid-cols-3 gap-2 sm:mt-12 sm:gap-4 lg:mx-auto lg:mt-5 lg:max-w-[420px] lg:gap-4 lg:text-center">
+                <div className="mt-7 grid max-w-xl grid-cols-3 gap-2 text-center sm:mt-12 sm:gap-4 lg:mx-auto lg:mt-5 lg:max-w-[420px] lg:gap-4">
                   <div>
                     <div className="text-2xl font-black sm:text-3xl lg:text-2xl">4</div>
                     <div className="mt-0.5 text-[11px] uppercase tracking-wider text-white/70 sm:mt-1 sm:text-xs sm:tracking-widest lg:text-[10px] lg:tracking-normal xl:tracking-wider">Дивізіони</div>
