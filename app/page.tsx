@@ -814,7 +814,7 @@ export default async function Home() {
   />
                   {/* IRON LEAGUE APPROVED DESKTOP HERO BEGIN */}
                   <Image
-                    src="/iron-league-hero-concept-approved.webp"
+                    src="/iron-league-hero-desktop-refined.webp"
                     alt="Iron League"
                     width={487}
                     height={367}
