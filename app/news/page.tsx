@@ -380,6 +380,8 @@ export default async function NewsPage({
                           <img
                             src={item.image_url}
                             alt={item.title}
+                            loading="lazy"
+                            decoding="async"
                             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                           />
                         </div>
