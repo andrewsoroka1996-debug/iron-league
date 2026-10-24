@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 import { buildStandings } from "../../../../lib/standings";
+import {
+  applyPlayerReplacements,
+  getSeasonPlayerReplacements,
+  resolveReplacementPlayerId,
+} from "../../../../lib/player-replacements";
+import type { PlayerReplacement } from "../../../../lib/player-replacements";
 
 import { getCompetitionGroups } from "../../../../data/competitions/get-competition-groups";
 import { getCompetitionPlayers } from "../../../../data/competitions/get-competition-players";
@@ -148,6 +154,7 @@ async function getGroupPositions({
   season,
   competition,
   positions,
+  replacements,
 }: {
   season: SeasonNumber;
 
@@ -155,6 +162,7 @@ async function getGroupPositions({
     EuropeanCompetition;
 
   positions: number[];
+  replacements: readonly PlayerReplacement[];
 }): Promise<CompetitionResult> {
   const groupNames =
     getCompetitionGroups({
@@ -235,7 +243,10 @@ async function getGroupPositions({
   for (
     const groupName of groupNames
   ) {
-    const participantIds =
+    // Normalize both group slots and historical fixtures to the current
+    // owner of each slot. Finished matches stay unchanged in the database.
+    // This is the same season-wide replacement policy as the public tables.
+    const originalParticipantIds =
       getCompetitionPlayers({
         season,
 
@@ -244,12 +255,32 @@ async function getGroupPositions({
         groupName,
       });
 
-    const groupMatches =
-      matches.filter(
-        (match) =>
-          match.group_name ===
-          groupName
+    const participantIds = applyPlayerReplacements(
+      originalParticipantIds,
+      replacements
+    );
+
+    // An accidental collision must not silently reduce a 4-player group
+    // to 3 participants and qualify the wrong players.
+    if (participantIds.length !== originalParticipantIds.length) {
+      throw new Error(
+        `GROUP REPLACEMENT SLOT COLLISION: ${competition}/${groupName}`
       );
+    }
+
+    const groupMatches = matches
+      .filter((match) => match.group_name === groupName)
+      .map((match) => ({
+        ...match,
+        home_id: resolveReplacementPlayerId(
+          match.home_id,
+          replacements
+        ),
+        away_id: resolveReplacementPlayerId(
+          match.away_id,
+          replacements
+        ),
+      }));
 
     const finishedMatches =
       groupMatches.filter(
@@ -525,6 +556,13 @@ export async function GET(
       });
     }
 
+    // Seasons 1–2 are immutable. Current-season replacements are read once
+    // per request and shared by both source competitions (e.g. ЛЄ + ЛЧ).
+    const replacements =
+      seasonNumber >= 3
+        ? await getSeasonPlayerReplacements(seasonNumber)
+        : [];
+
     let qualifiers:
       Qualifier[] = [];
 
@@ -556,6 +594,8 @@ export async function GET(
         await getGroupPositions({
           season:
             seasonNumber,
+
+          replacements,
 
           competition:
             "champions-league",
@@ -605,6 +645,8 @@ export async function GET(
           season:
             seasonNumber,
 
+          replacements,
+
           competition:
             "europa-league",
 
@@ -616,6 +658,8 @@ export async function GET(
         await getGroupPositions({
           season:
             seasonNumber,
+
+          replacements,
 
           competition:
             "champions-league",
@@ -728,6 +772,8 @@ export async function GET(
           season:
             seasonNumber,
 
+          replacements,
+
           competition:
             "conference-league",
 
@@ -739,6 +785,8 @@ export async function GET(
         await getGroupPositions({
           season:
             seasonNumber,
+
+          replacements,
 
           competition:
             "europa-league",
