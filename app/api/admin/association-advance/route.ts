@@ -848,13 +848,22 @@ export async function POST(
     ];
 
     if (body.preview === true) {
+      // Preview is strictly read-only; the user explicitly confirms a later POST.
       const current = await loadStage(season, "semifinal");
+      const semifinalIsComplete = stageComplete(current, 2);
+      const sf1 = current.find((item) => item.slot === 1);
+      const sf2 = current.find((item) => item.slot === 2);
+      const [existingFinals, existingThirdPlace] = await Promise.all([
+        loadStage(season, "final"),
+        loadStage(season, "third-place"),
+      ]);
 
       return NextResponse.json({
         success: true,
         preview: true,
         season,
         quarterfinal_complete: quarterfinalComplete,
+        semifinal_complete: semifinalIsComplete,
         quarterfinals: quarterfinals.map((item) => ({
           slot: item.slot,
           homeAssociationId: item.homeAssociationId,
@@ -867,6 +876,20 @@ export async function POST(
           ready: Boolean(plan.homeAssociationId && plan.awayAssociationId),
           already_created: current.some((item) => item.slot === plan.slot),
         })),
+        final_plan: {
+          slot: 1,
+          homeAssociationId: sf1?.winnerId ?? null,
+          awayAssociationId: sf2?.winnerId ?? null,
+          ready: semifinalIsComplete && Boolean(sf1?.winnerId && sf2?.winnerId),
+          already_created: existingFinals.some((item) => item.slot === 1),
+        },
+        third_place_plan: {
+          slot: 1,
+          homeAssociationId: sf1?.loserId ?? null,
+          awayAssociationId: sf2?.loserId ?? null,
+          ready: semifinalIsComplete && Boolean(sf1?.loserId && sf2?.loserId),
+          already_created: existingThirdPlace.some((item) => item.slot === 1),
+        },
       });
     }
 

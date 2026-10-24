@@ -19,6 +19,7 @@ import { getCompetitionPlayers } from "../../../data/competitions/get-competitio
 import { getCompetitionGroups } from "../../../data/competitions/get-competition-groups";
 import { getCompetitionStages } from "../../../data/competitions/get-competition-stages";
 
+import AssociationAdvancePanel from "./AssociationAdvancePanel";
 import AssociationSeriesForm from "./AssociationSeriesForm";
 import AssociationSeriesSummary from "./AssociationSeriesSummary";
 import TwoLegSeriesForm from "./TwoLegSeriesForm";
@@ -1792,6 +1793,21 @@ useEffect(() => {
                 {division}
               </>
             )}
+          </div>
+        )}
+
+        {/* ASSOCIATIONS CUP: НАСТУПНИЙ ЕТАП */}
+
+        {competitionId === "associations-cup" && season === 3 && (
+          <div className="mt-8">
+            <AssociationAdvancePanel
+              password={password}
+              season={season}
+              onCreated={async () => {
+                await loadMatches();
+                setSummaryRefreshKey((current) => current + 1);
+              }}
+            />
           </div>
         )}
 
