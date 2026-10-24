@@ -190,16 +190,25 @@ export function calculateAssociationSeries(
     away.goalsAgainst;
 
   /*
-    Основна серія завершена
-    тільки після 6 матчів.
+    Усі 6 основних матчів мають бути адміністративно завершені:
+    - finished із рахунком впливає на очки та голи;
+    - closed_unplayed із NULL-рахунком не додає нічого.
+    Запланований або некоректний матч не завершує серію.
   */
-
   const regularComplete =
-    regularMatchesPlayed === 6;
+    regularMatches.length === 6 &&
+    regularMatches.every((match) =>
+      (match.status === "finished" &&
+        match.home_goals !== null &&
+        match.away_goals !== null) ||
+      (match.status === "closed_unplayed" &&
+        match.home_goals === null &&
+        match.away_goals === null)
+    );
 
   /*
-    Якщо ще не всі 6 матчів
-    зіграні — переможця немає.
+    Лише після завершення всіх шести матчів
+    визначаємо переможця за наявними результатами.
   */
 
   if (!regularComplete) {
