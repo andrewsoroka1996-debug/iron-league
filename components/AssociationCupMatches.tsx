@@ -64,6 +64,14 @@ type SeriesGroup = {
   ========================================
 */
 
+
+function getBracketSlot(seriesId: string): number | null {
+  const match = /-slot-(\d+)-/.exec(seriesId);
+  if (!match) return null;
+  const slot = Number(match[1]);
+  return Number.isInteger(slot) && slot > 0 ? slot : null;
+}
+
 const STAGE_ORDER = [
   "quarterfinal",
   "semifinal",
@@ -372,7 +380,11 @@ export default async function AssociationCupMatches({
               (item) =>
                 item.stage ===
                 stage
-            );
+            ).sort((a, b) => {
+              const aSlot = getBracketSlot(a.seriesId) ?? 999;
+              const bSlot = getBracketSlot(b.seriesId) ?? 999;
+              return aSlot - bSlot || a.seriesId.localeCompare(b.seriesId);
+            });
 
           if (
             stageSeries.length ===
@@ -415,8 +427,7 @@ export default async function AssociationCupMatches({
                         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/25">
                           Пара №
                           {
-                            seriesIndex +
-                            1
+                            getBracketSlot(item.seriesId) ?? seriesIndex + 1
                           }
                         </div>
 

@@ -18,6 +18,11 @@ import {
   getSeasonAssociationSquads,
 } from "../../../../lib/association-squads";
 
+import {
+  getSeasonPlayerReplacements,
+  resolveReplacementPlayerId,
+} from "../../../../lib/player-replacements";
+
 type AssociationStage =
   | "quarterfinal"
   | "semifinal"
@@ -414,6 +419,15 @@ async function createSeries({
     );
 
   if (existingSlot) {
+    if (
+      existingSlot.homeAssociationId !== homeAssociationId ||
+      existingSlot.awayAssociationId !== awayAssociationId
+    ) {
+      throw new Error(
+        `Слот ${stage} №${slot} уже зайнятий іншими учасниками. Нічого не змінено.`
+      );
+    }
+
     return {
       created:
         false,
@@ -469,6 +483,41 @@ async function createSeries({
       season
     );
 
+  // Season 3 rank snapshot belongs to the original squad members.
+  // Current squad IDs already contain global player replacements.
+  // Resolve each rank through its ORIGINAL association slot,
+  // without changing the frozen snapshot in Supabase.
+  const replacements =
+    season === 3
+      ? await getSeasonPlayerReplacements(season)
+      : [];
+
+  const resolveAssociationPlayerRank = (
+    associationId: string,
+    playerId: string
+  ) => {
+    if (season !== 3) {
+      return rankMap.get(playerId);
+    }
+
+    const matchingRanks = Array.from(rankMap.values()).filter(
+      (seedRank) =>
+        seedRank.associationId === associationId &&
+        resolveReplacementPlayerId(
+          seedRank.playerId,
+          replacements
+        ) === playerId
+    );
+
+    if (matchingRanks.length > 1) {
+      throw new Error(
+        "More than one inherited association rank: " + associationId + ", " + playerId
+      );
+    }
+
+    return matchingRanks[0];
+  };
+
   const homeByRank =
     new Map<
       number,
@@ -486,7 +535,8 @@ async function createSeries({
     homeAssociation.players
   ) {
     const rank =
-      rankMap.get(
+      resolveAssociationPlayerRank(
+        homeAssociationId,
         playerId
       );
 
@@ -507,7 +557,8 @@ async function createSeries({
     awayAssociation.players
   ) {
     const rank =
-      rankMap.get(
+      resolveAssociationPlayerRank(
+        awayAssociationId,
         playerId
       );
 
@@ -704,6 +755,8 @@ export async function POST(
         password?: string;
 
         season?: number;
+
+        preview?: boolean;
       };
 
     /*
@@ -769,91 +822,69 @@ export async function POST(
         4
       );
 
-    if (
-      quarterfinalComplete
-    ) {
-      const qf1 =
-        quarterfinals.find(
-          (item) =>
-            item.slot === 1
-        );
+    /*
+      Кожна пара 1/2 формується незалежно, щойно
+      визначені переможці відповідних двох пар 1/4.
+      Не чекаємо завершення всіх чотирьох 1/4.
+      Нумерація відповідає сітці: (1,2) та (3,4).
+    */
+    const bySlot = new Map(
+      quarterfinals.map((item) => [item.slot, item])
+    );
 
-      const qf2 =
-        quarterfinals.find(
-          (item) =>
-            item.slot === 2
-        );
+    const semifinalPlans = [
+      {
+        slot: 1,
+        sourceSlots: [1, 2],
+        homeAssociationId: bySlot.get(1)?.winnerId ?? null,
+        awayAssociationId: bySlot.get(2)?.winnerId ?? null,
+      },
+      {
+        slot: 2,
+        sourceSlots: [3, 4],
+        homeAssociationId: bySlot.get(3)?.winnerId ?? null,
+        awayAssociationId: bySlot.get(4)?.winnerId ?? null,
+      },
+    ];
 
-      const qf3 =
-        quarterfinals.find(
-          (item) =>
-            item.slot === 3
-        );
+    if (body.preview === true) {
+      const current = await loadStage(season, "semifinal");
 
-      const qf4 =
-        quarterfinals.find(
-          (item) =>
-            item.slot === 4
-        );
+      return NextResponse.json({
+        success: true,
+        preview: true,
+        season,
+        quarterfinal_complete: quarterfinalComplete,
+        quarterfinals: quarterfinals.map((item) => ({
+          slot: item.slot,
+          homeAssociationId: item.homeAssociationId,
+          awayAssociationId: item.awayAssociationId,
+          winnerId: item.winnerId,
+          complete: item.complete,
+        })),
+        semifinal_plans: semifinalPlans.map((plan) => ({
+          ...plan,
+          ready: Boolean(plan.homeAssociationId && plan.awayAssociationId),
+          already_created: current.some((item) => item.slot === plan.slot),
+        })),
+      });
+    }
 
-      if (
-        qf1?.winnerId &&
-        qf2?.winnerId
-      ) {
-        const result =
-          await createSeries({
-            season,
-
-            stage:
-              "semifinal",
-
-            slot:
-              1,
-
-            homeAssociationId:
-              qf1.winnerId,
-
-            awayAssociationId:
-              qf2.winnerId,
-          });
-
-        if (
-          result.created
-        ) {
-          created.push(
-            "1/2 фіналу — пара №1"
-          );
-        }
+    for (const plan of semifinalPlans) {
+      if (!plan.homeAssociationId || !plan.awayAssociationId) {
+        continue;
       }
 
-      if (
-        qf3?.winnerId &&
-        qf4?.winnerId
-      ) {
-        const result =
-          await createSeries({
-            season,
+      const result = await createSeries({
+        season,
+        stage: "semifinal",
+        slot: plan.slot,
+        homeAssociationId: plan.homeAssociationId,
+        awayAssociationId: plan.awayAssociationId,
+      });
 
-            stage:
-              "semifinal",
-
-            slot:
-              2,
-
-            homeAssociationId:
-              qf3.winnerId,
-
-            awayAssociationId:
-              qf4.winnerId,
-          });
-
-        if (
-          result.created
-        ) {
-          created.push(
-            "1/2 фіналу — пара №2"
-          );
-        }
+      if (result.created) {
+        created.push(`1/2 фіналу — пара №${plan.slot}`);
       }
     }
 
