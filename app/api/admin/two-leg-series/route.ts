@@ -7,6 +7,7 @@ import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { calculateTwoLegSeries } from "../../../../lib/two-leg-series";
 
 import { getCompetitionPlayers } from "../../../../data/competitions/get-competition-players";
+import { getSeasonPlayerReplacements, resolveReplacementPlayerId } from "../../../../lib/player-replacements";
 
 import type { SeasonNumber } from "../../../../data/competitions/season-competitions";
 
@@ -462,6 +463,16 @@ export async function POST(
       ========================================
     */
 
+    // Use the active player who inherited each original tournament slot.
+    // Historical seasons 1–2 remain unchanged.
+    const seasonReplacements =
+      seasonNumber >= 3
+        ? await getSeasonPlayerReplacements(seasonNumber)
+        : [];
+
+    const toActivePlayerId = (playerId: string): string =>
+      resolveReplacementPlayerId(playerId, seasonReplacements);
+
     const allowedPlayerIds =
       new Set<string>();
 
@@ -481,7 +492,7 @@ export async function POST(
       const playerId of basePlayers
     ) {
       allowedPlayerIds.add(
-        playerId
+        toActivePlayerId(playerId)
       );
     }
 
@@ -509,7 +520,7 @@ export async function POST(
         const playerId of championsPlayers
       ) {
         allowedPlayerIds.add(
-          playerId
+          toActivePlayerId(playerId)
         );
       }
     }
@@ -538,7 +549,7 @@ export async function POST(
         const playerId of europaPlayers
       ) {
         allowedPlayerIds.add(
-          playerId
+          toActivePlayerId(playerId)
         );
       }
     }
