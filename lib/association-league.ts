@@ -1,4 +1,6 @@
 import "server-only";
+import { loadSeason3CoefficientAdjustments } from "./coefficient-adjustments-server";
+import { applyCoefficientAdjustments } from "./coefficient-adjustments";
 
 import { players } from "../data/players";
 import { season2Coefficients } from "../data/coefficients/season-2";
@@ -528,15 +530,20 @@ async function getLiveCoefficientMap(
     >[0]
   );
 
+  const adjustedRows = season === 3
+    ? applyCoefficientAdjustments(
+        rows,
+        await loadSeason3CoefficientAdjustments()
+      )
+    : rows;
+
   const map =
     new Map<
       string,
       number
     >();
 
-  for (
-    const row of rows
-  ) {
+  for (const row of adjustedRows) {
     map.set(
       row.playerId,
       row.total
