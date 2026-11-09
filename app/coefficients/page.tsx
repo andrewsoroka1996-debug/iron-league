@@ -17,6 +17,12 @@ import {
 } from "../../data/coefficients/season-2";
 
 import { supabase } from "../../lib/supabase";
+import {
+  applyCoefficientAdjustments,
+  adjustedEuropePoints,
+  type AdjustedCoefficientRow,
+} from "../../lib/coefficient-adjustments";
+import { loadSeason3CoefficientAdjustments } from "../../lib/coefficient-adjustments-server";
 
 import {
   calculateCoefficients,
@@ -59,6 +65,7 @@ type SummaryRow = {
   cupPoints: number;
   europePoints: number;
   superCupPoints: number;
+  adminAdjustmentPoints: number;
 
   total: number;
 };
@@ -313,17 +320,8 @@ function getEuropaLeaguePoints(
   );
 }
 
-function getEuropePoints(
-  row: CoefficientRow
-) {
-  return (
-    getChampionsLeaguePoints(
-      row
-    ) +
-    getEuropaLeaguePoints(
-      row
-    )
-  );
+function getEuropePoints(row: AdjustedCoefficientRow) {
+  return adjustedEuropePoints(row);
 }
 
 /*
@@ -391,6 +389,7 @@ function archivedRowToSummary(
     */
 
     superCupPoints: 0,
+    adminAdjustmentPoints: 0,
 
     total:
       row.total,
@@ -404,7 +403,7 @@ function archivedRowToSummary(
 */
 
 function liveRowToSummary(
-  row: CoefficientRow
+  row: AdjustedCoefficientRow
 ): SummaryRow {
   return {
     key:
@@ -439,6 +438,10 @@ function liveRowToSummary(
     superCupPoints:
       row.breakdown
         .europeanSuperCup,
+    adminAdjustmentPoints:
+      row.administrativeAdjustment?.scope === "all"
+        ? row.administrativeAdjustment.delta
+        : 0,
 
     total:
       row.total,
@@ -494,6 +497,8 @@ function aggregateSummaryRows(
 
       existing.superCupPoints +=
         row.superCupPoints;
+      existing.adminAdjustmentPoints +=
+        row.adminAdjustmentPoints;
 
       existing.total +=
         row.total;
@@ -1115,7 +1120,7 @@ function LiveCoefficientTable({
   rows,
   emblemUrls,
 }: {
-  rows: CoefficientRow[];
+  rows: AdjustedCoefficientRow[];
   emblemUrls: Record<string, string | null | undefined>;
 }) {
   return (
@@ -1327,6 +1332,16 @@ function LiveCoefficientTable({
                     {row.breakdown.europeanSuperCup}
                   </span>
                 </div>
+
+                {row.administrativeAdjustment && (
+                  <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.06] px-3 py-3 text-xs text-amber-100/80">
+                    <div className="flex items-center justify-between gap-3 font-bold">
+                      <span>Адміністративне коригування ({row.administrativeAdjustment.scope === "europe" ? "єврокубки" : "весь коефіцієнт"})</span>
+                      <span>{row.administrativeAdjustment.delta}</span>
+                    </div>
+                    <p className="mt-1 text-amber-100/50">Деталі турнірів вище показують автоматичні нарахування до коригування.</p>
+                  </div>
+                )}
 
                 {/* FINAL COEFFICIENT */}
                 <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-blue-400/20 bg-blue-500/[0.08] px-3 py-3">
@@ -1677,6 +1692,16 @@ function LiveCoefficientTable({
                               </div>
                             </div>
 
+                            {row.administrativeAdjustment && (
+                              <div className="rounded-2xl border border-amber-400/20 bg-amber-500/[0.06] p-4 md:col-span-2 xl:col-span-4">
+                                <div className="flex items-center justify-between gap-4 text-sm font-bold text-amber-200">
+                                  <span>Адміністративне коригування ({row.administrativeAdjustment.scope === "europe" ? "єврокубки" : "весь коефіцієнт"})</span>
+                                  <span>{row.administrativeAdjustment.delta}</span>
+                                </div>
+                                <p className="mt-1 text-xs text-amber-100/55">Деталі турнірів показують автоматичні нарахування до коригування.</p>
+                              </div>
+                            )}
+
                             <div className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.07] p-5 md:col-span-2 xl:col-span-4">
                               <div className="flex items-center justify-between gap-4">
                                 <div className="text-xs font-black uppercase tracking-[0.14em] text-blue-400">
@@ -1744,6 +1769,7 @@ function AllTimeTable({
               label: "Суперкубок",
               value: row.superCupPoints,
             },
+            ...(row.adminAdjustmentPoints !== 0 ? [{ label: "Адміністративне коригування", value: row.adminAdjustmentPoints }] : []),
           ];
 
           return (
@@ -1848,7 +1874,7 @@ function AllTimeTable({
         })}
       </div>
             <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[850px] border-collapse">
+        <table className="w-full min-w-[950px] border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.14em] text-white/30">
               <th className="pl-2 pr-1 py-4 text-center">
@@ -1873,6 +1899,10 @@ function AllTimeTable({
 
               <th className="px-5 py-4 text-center">
                 Суперкубок
+              </th>
+
+              <th className="px-5 py-4 text-center">
+                Коригування
               </th>
 
               <th className="px-6 py-4 text-right">
@@ -1946,6 +1976,10 @@ function AllTimeTable({
                       {
                         row.superCupPoints
                       }
+                    </td>
+
+                    <td className="px-5 py-5 text-center font-bold text-amber-300/80">
+                      {row.adminAdjustmentPoints || "—"}
                     </td>
 
                     <td className="px-6 py-5 text-right">
@@ -2074,14 +2108,21 @@ const resolveSeason3PlayerId = (
   ========================================
 */
 
+const season3Adjustments =
+  needsLiveData && !liveResult.error
+    ? await loadSeason3CoefficientAdjustments()
+    : [];
+
 const season3Rows =
-  needsLiveData
-    ? calculateCoefficients({
-        season: 3,
-        matches: liveResult.matches,
-        resolvePlayerId:
-          resolveSeason3PlayerId,
-      })
+  needsLiveData && !liveResult.error
+    ? applyCoefficientAdjustments(
+        calculateCoefficients({
+          season: 3,
+          matches: liveResult.matches,
+          resolvePlayerId: resolveSeason3PlayerId,
+        }),
+        season3Adjustments
+      )
     : [];
 
   const season3Summary =

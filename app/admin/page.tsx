@@ -1835,6 +1835,13 @@ setMatchId(
             </a>
 
             <a
+              href="/admin/coefficient-adjustments"
+              className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
+            >
+              Коефіцієнти
+            </a>
+
+            <a
               href="/admin/news"
               className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
             >
@@ -1876,6 +1883,13 @@ setMatchId(
                 className="rounded-xl px-4 py-3 font-bold text-blue-300 transition hover:bg-blue-500/10"
               >
                 Заміни гравців
+              </a>
+
+              <a
+                href="/admin/coefficient-adjustments"
+                className="rounded-xl px-4 py-3 font-bold text-blue-300 transition hover:bg-blue-500/10"
+              >
+                Коефіцієнти
               </a>
 
               <a
