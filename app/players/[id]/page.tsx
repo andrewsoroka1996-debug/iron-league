@@ -1100,29 +1100,27 @@ async function PlayerProfileData({
 
   /*
     ========================================
-    ОСТАННІ 10 ДОДАНИХ МАТЧІВ
+    ОСТАННІ 10 ЗАВЕРШЕНИХ МАТЧІВ
+
+    created_at — дата створення календарного запису.
+    played_at — дата результату. Для старих записів
+    без played_at використовуємо created_at.
     ========================================
   */
 
   const recentMatches = [...careerMatches]
     .sort((a, b) => {
-      const aTime = a.created_at
-        ? Date.parse(a.created_at)
-        : NaN;
-
-      const bTime = b.created_at
-        ? Date.parse(b.created_at)
-        : NaN;
-
+      const aTime = Date.parse(a.played_at ?? a.created_at ?? "");
+      const bTime = Date.parse(b.played_at ?? b.created_at ?? "");
       const aHasDate = Number.isFinite(aTime);
       const bHasDate = Number.isFinite(bTime);
 
-      // Новіші записи першими.
+      // Найновіші завершені матчі першими.
       if (aHasDate && bHasDate && aTime !== bTime) {
         return bTime - aTime;
       }
 
-      // Записи з відомою датою додавання першими.
+      // Матчі з відомою датою — вище за матчі без дати.
       if (aHasDate !== bHasDate) {
         return aHasDate ? -1 : 1;
       }
@@ -1752,7 +1750,7 @@ async function PlayerProfileData({
             <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] sm:mt-8 sm:rounded-3xl">
               {/* DESKTOP TABLE HEADER */}
               <div className="hidden grid-cols-[110px_70px_minmax(0,1.2fr)_105px_minmax(0,1fr)_100px] items-center gap-4 border-b border-white/10 bg-white/[0.025] px-6 py-4 text-[11px] font-bold uppercase tracking-[0.1em] text-white/35 lg:grid">
-                <div>Додано</div>
+                <div>Дата</div>
                 <div>Сезон</div>
                 <div>Суперник</div>
                 <div className="text-center">Рахунок</div>
@@ -1773,7 +1771,7 @@ async function PlayerProfileData({
                       {/* DATE */}
                       <div className="col-start-1 row-start-1 min-w-0 text-[11px] font-medium text-white/45 sm:text-xs lg:col-start-1 lg:row-start-1">
                         <span>
-                          {formatMatchDate(match.created_at)}
+                          {formatMatchDate(match.played_at ?? match.created_at)}
                         </span>
 
                         <span className="ml-2 text-white/25 lg:hidden">
