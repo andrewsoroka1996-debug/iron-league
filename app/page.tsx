@@ -256,12 +256,18 @@ function getTournamentName(
 
 function getFeaturedParticipantName(
   match: FeaturedDatabaseMatch,
-  participantId: string
+  participantId: string,
+  coopTeamNames: Record<string, string> = {}
 ) {
   if (match.participant_type === "player") {
     return getPlayerName(participantId);
   }
-
+  if (
+    match.competition === "iron-coop-cup" ||
+    match.competition === "coop-cup"
+  ) {
+    return coopTeamNames[participantId] ?? "Команда";
+  }
   return participantId;
 }
 
@@ -474,6 +480,45 @@ export default async function Home() {
     .sort(
       (a, b) => a.position - b.position
     );
+
+  // IL_WEEKLY_COOP_NAMES_V1: names for the highlighted co-op fixture only.
+  // Read-only, targeted query. Never modify match results or co-op participants.
+  const featuredCoopTeamIds = Array.from(
+    new Set(
+      featuredMatches
+        .filter(
+          (match) =>
+            match.participant_type !== "player" &&
+            (match.competition === "iron-coop-cup" ||
+              match.competition === "coop-cup")
+        )
+        .flatMap((match) => [match.home_id, match.away_id])
+    )
+  );
+
+  const featuredCoopTeamNames: Record<string, string> = {};
+  if (featuredCoopTeamIds.length > 0) {
+    const { data: coopTeamRows, error: coopTeamError } = await supabaseAdmin
+      .from("coop_teams")
+      .select("*")
+      .in("id", featuredCoopTeamIds);
+
+    if (coopTeamError) {
+      console.error("HOME FEATURED CO-OP TEAM NAMES ERROR:", coopTeamError);
+    } else {
+      for (const team of coopTeamRows ?? []) {
+        const row = team as Record<string, unknown>;
+        const teamId = row.id;
+        const name = [row.name, row.team_name, row.display_name, row.title].find(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0
+        );
+        if (typeof teamId === "string" && name) {
+          featuredCoopTeamNames[teamId] = name.trim();
+        }
+      }
+    }
+  }
 
   /* ========================================
      RECENT RESULTS
@@ -979,13 +1024,13 @@ export default async function Home() {
                           <div className="min-w-0 flex-1">
                             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
                               <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
-                                <span className="min-w-0 truncate text-right text-xs font-black text-white sm:text-sm" title={getFeaturedParticipantName(match,match.home_id)}>{getFeaturedParticipantName(match,match.home_id)}</span>
+                                <span className="min-w-0 truncate text-right text-xs font-black text-white sm:text-sm" title={getFeaturedParticipantName(match,match.home_id,featuredCoopTeamNames)}>{getFeaturedParticipantName(match,match.home_id,featuredCoopTeamNames)}</span>
                                 <PlayerTableEmblem src={getMatchPlayerEmblemUrl(match,match.home_id,emblemUrls)} size="featured" />
                               </div>
                               <span className="shrink-0 rounded-lg bg-blue-500/10 px-2 py-1.5 text-center text-xs font-black tabular-nums text-blue-300 sm:text-sm">VS</span>
                               <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                                 <PlayerTableEmblem src={getMatchPlayerEmblemUrl(match,match.away_id,emblemUrls)} size="featured" />
-                                <span className="min-w-0 truncate text-left text-xs font-black text-white sm:text-sm" title={getFeaturedParticipantName(match,match.away_id)}>{getFeaturedParticipantName(match,match.away_id)}</span>
+                                <span className="min-w-0 truncate text-left text-xs font-black text-white sm:text-sm" title={getFeaturedParticipantName(match,match.away_id,featuredCoopTeamNames)}>{getFeaturedParticipantName(match,match.away_id,featuredCoopTeamNames)}</span>
                               </div>
                             </div>
                             <div className="mt-2 flex flex-wrap justify-center gap-2 text-[10px] sm:text-[11px]">
