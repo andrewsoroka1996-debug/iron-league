@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getMatchResultRevertSafety } from "../../../../lib/match-result-revert-safety";
+import { loadEuropeanSuperCupState } from "../../../../lib/european-super-cup-server";
 
 /*
   ==========================================
@@ -1024,6 +1025,39 @@ export async function PUT(
           status: 400,
         }
       );
+    }
+
+    // The European Super Cup must be the current Champions League winner
+    // against the current Europa League winner. Enforce this on the server,
+    // not only in the admin UI, and reject any pre-existing cup match.
+    if (competition === "european-super-cup") {
+      if (
+        season !== 3 || stage !== "final" || division !== null ||
+        group_name !== null || round !== null || leg !== 1 ||
+        participant_type !== "player" || series_id !== null ||
+        series_home_id !== null || series_away_id !== null || is_tiebreak
+      ) {
+        return NextResponse.json(
+          { error: "Недопустимий формат фіналу Суперкубка Європи" },
+          { status: 400 }
+        );
+      }
+      const superCup = await loadEuropeanSuperCupState(season);
+      if (!superCup.ready) {
+        return NextResponse.json(
+          { error: superCup.reason ?? "Фіналістів Суперкубка не визначено" },
+          { status: 409 }
+        );
+      }
+      if (
+        home_id !== superCup.championsLeagueWinner ||
+        away_id !== superCup.europaLeagueWinner
+      ) {
+        return NextResponse.json(
+          { error: "Учасниками Суперкубка можуть бути лише актуальні переможці ЛЧ і ЛЄ" },
+          { status: 409 }
+        );
+      }
     }
 
     /*

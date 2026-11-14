@@ -25,6 +25,7 @@ import AssociationSeriesSummary from "./AssociationSeriesSummary";
 import TwoLegSeriesForm from "./TwoLegSeriesForm";
 import TwoLegSeriesSummary from "./TwoLegSeriesSummary";
 import EuropeanFinalForm from "./EuropeanFinalForm";
+import EuropeanSuperCupForm from "./EuropeanSuperCupForm";
 import CoopTeamsForm from "./CoopTeamsForm";
 import DivisionCupBracketForm from "./DivisionCupBracketForm";
 import CoopSeriesForm from "./CoopSeriesForm";
@@ -2224,9 +2225,19 @@ useEffect(() => {
           </div>
         )}
 
+        {/* EUROPEAN SUPER CUP — winners are selected on the server */}
+        {competitionId === "european-super-cup" && (
+          <EuropeanSuperCupForm
+            password={password}
+            season={season}
+            onCreated={() => { void loadMatches(); }}
+          />
+        )}
+
         {/* REGULAR MATCH */}
 
         {competitionId &&
+          competitionId !== "european-super-cup" &&
           competitionId !==
             "associations-cup" &&
           competitionId !==
