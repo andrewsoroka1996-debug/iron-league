@@ -479,8 +479,16 @@ function addEuropeanGroupBonuses({ rows, matches, season, competition, resolvePl
         }
         const archiveSeason = season === 1 ||
             season === 2;
+        // A group is administratively complete when every fixture was
+        // either played or explicitly closed without a result. Closed
+        // matches must NEVER count as played or award match points.
         if (!archiveSeason &&
-            !groupMatches.every(isFinished)) {
+            !groupMatches.every((match) =>
+                isFinished(match) ||
+                (match.status === "closed_unplayed" &&
+                    match.home_goals === null &&
+                    match.away_goals === null)
+            )) {
             continue;
         }
         const standings = buildStandings({
