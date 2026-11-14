@@ -2371,7 +2371,7 @@ const season3Rows =
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/[0.04] via-transparent to-transparent" />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:py-14">
+        <div className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-12 lg:py-14">
           {/* BACK LINK */}
           <Link
             href="/"
@@ -2382,16 +2382,19 @@ const season3Rows =
           </Link>
 
           {/* TITLE */}
-          <div className="mt-5">
+          <div className="mt-3 sm:mt-5">
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 sm:text-xs">
               IRON LEAGUE · RANKINGS
             </div>
 
-            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+            <h1 className="mt-1 text-3xl font-black tracking-tight sm:mt-2 sm:text-5xl">
               Коефіцієнти
             </h1>
 
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+            <p className="mt-2 text-xs leading-5 text-white/55 sm:hidden">
+              Сезон 3 — LIVE. Сезони 1–2 — історичні рейтинги.
+            </p>
+            <p className="mt-3 hidden max-w-2xl text-sm leading-6 text-white/55 sm:block sm:text-base sm:leading-7">
               Офіційний рейтинг учасників Iron League.
               Результати сезонів 1 і 2 збережені в історії,
               а коефіцієнти сезону 3 оновлюються
@@ -2400,14 +2403,14 @@ const season3Rows =
           </div>
 
           {/* RANKING SWITCHER */}
-          <div className="mt-7 sm:mt-9">
+          <div className="mt-4 sm:mt-9">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-white/50">
               Обрати рейтинг
             </div>
 
             <nav
               aria-label="Вибір рейтингу"
-              className="grid w-full max-w-3xl grid-cols-2 gap-2 sm:flex sm:flex-wrap"
+              className="grid w-full max-w-3xl grid-cols-6 gap-1.5 sm:flex sm:flex-wrap sm:gap-2"
             >
               {tabs.map((tab) => {
                 const active =
@@ -2424,7 +2427,7 @@ const season3Rows =
                     aria-current={
                       active ? "page" : undefined
                     }
-                    className={`flex min-h-11 items-center justify-center rounded-xl border px-3 py-2.5 text-center text-xs font-bold transition-colors sm:px-5 sm:text-sm ${tab.value === "all" ? "col-span-2 sm:col-span-1" : ""} ${
+                    className={`col-span-2 flex min-h-11 items-center justify-center rounded-lg border px-2 py-2 text-center text-[11px] font-bold leading-4 transition-colors sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-sm ${(tab.value === "all" || tab.value === "average") ? "col-span-3 sm:col-span-1" : "sm:col-span-1"} ${
                       active
                         ? "border-blue-400/40 bg-blue-500/15 text-blue-200 shadow-lg shadow-blue-500/[0.08]"
                         : "border-white/10 bg-[#07101d] text-white/55 hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
@@ -2440,22 +2443,22 @@ const season3Rows =
       </section>
 
 
-      {/* TOP 3 */}
+      {/* TOP 3: only desktop/tablet. Mobile users see the ranking table immediately. */}
       {displayedRows.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 sm:pt-12">
+        <section className="mx-auto hidden max-w-7xl px-4 pt-5 sm:block sm:px-6 sm:pt-12">
           {/* SECTION HEADER */}
-          <div className="mb-5 sm:mb-6">
+          <div className="mb-3 sm:mb-6">
             <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-400 sm:text-xs">
               IRON LEAGUE · TOP 3
             </div>
 
-            <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+            <h2 className="mt-1 text-xl font-black tracking-tight sm:mt-2 sm:text-3xl">
               Лідери рейтингу
             </h2>
           </div>
 
           {/* LEADER CARDS */}
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {[
               {
                 row: leader,
@@ -2488,25 +2491,25 @@ const season3Rows =
               item.row ? (
                 <div
                   key={item.rank}
-                  className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-4 transition-colors duration-300 hover:border-white/30 sm:p-5 ${item.style}`}
+                  className={`group relative grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border p-3 transition-colors duration-300 hover:border-white/30 sm:flex sm:flex-col sm:items-stretch sm:gap-0 sm:rounded-2xl sm:p-5 ${item.style}`}
                 >
                   {/* BACKGROUND NUMBER */}
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute -right-2 -top-6 text-[100px] font-black leading-none text-white/[0.035]"
+                    className="pointer-events-none absolute -right-2 -top-6 hidden text-[100px] font-black leading-none text-white/[0.035] sm:block"
                   >
                     {item.rank}
                   </div>
 
                   {/* POSITION */}
-                  <div className="relative flex items-center gap-3">
+                  <div className="relative flex shrink-0 items-center gap-3">
                     <div
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg font-black ${item.numberBg} ${item.text}`}
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-black sm:h-11 sm:w-11 sm:rounded-xl sm:text-lg ${item.numberBg} ${item.text}`}
                     >
                       {item.rank}
                     </div>
 
-                    <div>
+                    <div className="hidden sm:block">
                       <div
                         className={`text-xs font-black uppercase tracking-[0.13em] ${item.text}`}
                       >
@@ -2520,7 +2523,7 @@ const season3Rows =
                   </div>
 
                   {/* PLAYER */}
-                  <div className="relative mt-5 min-w-0 break-words text-lg font-black text-white sm:text-xl">
+                  <div className="relative min-w-0 break-words text-sm font-black text-white sm:mt-5 sm:text-xl">
                     <PlayerLink
                       playerId={item.row.playerId}
                       playerName={item.row.playerName}
@@ -2528,16 +2531,17 @@ const season3Rows =
                   </div>
 
                   {/* COEFFICIENT */}
-                  <div className="relative mt-auto pt-5">
-                    <div className="border-t border-white/10 pt-4">
+                  <div className="relative min-w-0 text-right sm:mt-auto sm:pt-5 sm:text-left">
+                    <div className="sm:border-t sm:border-white/10 sm:pt-4">
                       <div
-                        className={`break-words text-3xl font-black leading-none tabular-nums sm:text-4xl ${item.text}`}
+                        className={`break-words text-xl font-black leading-none tabular-nums sm:text-4xl ${item.text}`}
                       >
                         {selected === "average" ? formatAverageCoefficient(item.row.total) : item.row.total}
                       </div>
 
-                      <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">
-                        {selected === "average" ? "Середній коефіцієнт" : "Коефіцієнт"}
+                      <div className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-white/40 sm:mt-2 sm:text-[11px] sm:tracking-[0.12em]">
+                        <span className="sm:hidden">{selected === "average" ? "У середньому" : "Очки"}</span>
+                        <span className="hidden sm:inline">{selected === "average" ? "Середній коефіцієнт" : "Коефіцієнт"}</span>
                       </div>
                     </div>
                   </div>
@@ -2550,19 +2554,19 @@ const season3Rows =
 
       {/* TABLE */}
 
-      <section className="mx-auto max-w-7xl px-6 py-14">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <section className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-14">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-8 sm:gap-4">
           <div>
             <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-400">
               Рейтинг
             </div>
 
-            <h2 className="mt-3 text-3xl font-black">
+            <h2 className="mt-1 text-2xl font-black sm:mt-3 sm:text-3xl">
               {title}
             </h2>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.025] px-4 py-2 text-sm text-white/35">
+          <div className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-1.5 text-xs text-white/35 sm:px-4 sm:py-2 sm:text-sm">
             Учасників:{" "}
             <strong className="text-white/70">
               {
@@ -2629,13 +2633,13 @@ const season3Rows =
 
         {/* INFO */}
 
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
+        <div className="mt-5 grid gap-2 sm:mt-8 sm:gap-4 lg:grid-cols-3">
+          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-6">
             <div className="text-sm font-black text-white/80">
               Сезон 1
             </div>
 
-            <p className="mt-3 text-sm leading-7 text-white/40">
+            <p className="mt-2 text-sm leading-6 text-white/40 sm:mt-3 sm:leading-7">
               Історична
               зафіксована таблиця.
               Автоматично більше
@@ -2643,12 +2647,12 @@ const season3Rows =
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
+          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-6">
             <div className="text-sm font-black text-white/80">
               Сезон 2
             </div>
 
-            <p className="mt-3 text-sm leading-7 text-white/40">
+            <p className="mt-2 text-sm leading-6 text-white/40 sm:mt-3 sm:leading-7">
               Історична
               зафіксована таблиця.
               Автоматично більше
@@ -2656,12 +2660,12 @@ const season3Rows =
             </p>
           </div>
 
-          <div className="rounded-2xl border border-blue-400/10 bg-blue-500/[0.035] p-6">
+          <div className="rounded-2xl border border-blue-400/10 bg-blue-500/[0.035] p-4 sm:p-6">
             <div className="text-sm font-black text-blue-200">
               Сезон 3 · LIVE
             </div>
 
-            <p className="mt-3 text-sm leading-7 text-white/40">
+            <p className="mt-2 text-sm leading-6 text-white/40 sm:mt-3 sm:leading-7">
               Коефіцієнт
               оновлюється
               автоматично після
