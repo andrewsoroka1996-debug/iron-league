@@ -26,6 +26,7 @@ import TwoLegSeriesForm from "./TwoLegSeriesForm";
 import TwoLegSeriesSummary from "./TwoLegSeriesSummary";
 import EuropeanFinalForm from "./EuropeanFinalForm";
 import EuropeanSuperCupForm from "./EuropeanSuperCupForm";
+import AssociationLeagueFinalizationForm from "./AssociationLeagueFinalizationForm";
 import CoopTeamsForm from "./CoopTeamsForm";
 import DivisionCupBracketForm from "./DivisionCupBracketForm";
 import CoopSeriesForm from "./CoopSeriesForm";
@@ -2223,6 +2224,11 @@ useEffect(() => {
               }}
             />
           </div>
+        )}
+
+        {/* ASSOCIATION LEAGUE: separate from Association Cup results */}
+        {competitionId === "associations-cup" && (season === 3 || season === 4) && (
+          <AssociationLeagueFinalizationForm password={password} season={season} />
         )}
 
         {/* EUROPEAN SUPER CUP — winners are selected on the server */}

@@ -17,6 +17,9 @@ import {
   getAssociationLeague,
   type AssociationLeagueRow,
 } from "../../../lib/association-league";
+import {
+  getAssociationLeagueFinalization,
+} from "../../../lib/association-league-finalization-server";
 
 import AssociationCupMatches from "../../../components/AssociationCupMatches";
 import AssociationCupPlayoffBracket from "../../../components/AssociationCupPlayoffBracket";
@@ -678,10 +681,9 @@ function Season3LeagueTable({
       {/* LEAGUE STATUS */}
       {!cupComplete && (
         <div className="border-t border-white/10 bg-blue-500/[0.035] px-4 py-4 text-sm leading-6 text-white/45 sm:px-6 sm:py-5">
-          Остаточна таблиця Ліги Асоціацій
-          буде сформована після завершення
-          Кубка асоціацій і визначення
-          множника для кожної Асоціації.
+          Місця в поточній таблиці будуть визначені після завершення
+          Кубка асоціацій і встановлення множників. Офіційні підсумки
+          затверджує адміністратор після завершення сезону.
         </div>
       )}
     </div>
@@ -727,11 +729,30 @@ export default async function AssociationsPage({
     ========================================
   */
 
+  // An official snapshot freezes the standings; before that they remain live.
+  // A missing migration must not take down the public page (no trophy is granted).
+  const finalization = (season === 3 || season === 4)
+    ? await getAssociationLeagueFinalization(season).catch((error) => {
+        console.error("ASSOCIATION FINALIZATION READ ERROR", error);
+        return null;
+      })
+    : null;
+
   const liveLeague =
-    season >= 3
-      ? await getAssociationLeague(
-          season
-        )
+    season === 3 || season === 4
+      ? finalization
+        ? {
+            season,
+            cupComplete: true,
+            rows: finalization.rows.map((row) => ({
+              ...row,
+              members: row.members.map((member) => ({
+                ...member,
+                playerName: getPlayerName(member.playerId),
+              })),
+            })),
+          }
+        : await getAssociationLeague(season)
       : null;
 
   return (
@@ -958,11 +979,15 @@ export default async function AssociationsPage({
           </h2>
 
           <p className="mt-3 max-w-3xl leading-7 text-white/40">
-            Підсумкові очки =
-            рейтинг Асоціації ×
-            коефіцієнт за результат
-            у Кубку асоціацій.
+            Очки Ліги = рейтинг Асоціації × множник за результат Кубка асоціацій.
           </p>
+          {season >= 3 && (
+            <p className={`mt-3 max-w-3xl text-sm font-semibold leading-6 ${finalization ? "text-emerald-300" : "text-amber-200"}`}>
+              {finalization
+                ? "Офіційний підсумок сезону. Таблицю та чемпіона зафіксовано."
+                : "Поточна таблиця — коефіцієнти ще можуть змінюватися. Лідер не є офіційним чемпіоном, трофей поки не присуджується."}
+            </p>
+          )}
         </div>
 
         {season === 2 ? (

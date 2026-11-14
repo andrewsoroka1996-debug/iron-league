@@ -15,6 +15,9 @@ import { buildStandings } from "./standings";
 import {
   getAssociationLeague,
 } from "./association-league";
+import {
+  getAssociationLeagueFinalization,
+} from "./association-league-finalization-server";
 
 type DivisionNumber =
   | 1
@@ -674,7 +677,7 @@ const associationLeagueRequests = new Map<
   >
 >();
 
-for (const season of [2, 3, 4] as const) {
+for (const season of [2] as const) {
   if (
     onlySeason !== undefined &&
     onlySeason !== season
@@ -1121,6 +1124,22 @@ for (const season of [2, 3, 4] as const) {
   continue;
 }
         try {
+          // Active seasons: only an immutable official snapshot grants a trophy.
+          // Season 2 retains its existing historical honour logic below.
+          if (associationSeason === 3 || associationSeason === 4) {
+            const finalization = await getAssociationLeagueFinalization(associationSeason);
+            if (!finalization || !finalization.memberIds.includes(playerId)) {
+              continue;
+            }
+            addHonour(honours, {
+              key: `season-${associationSeason}-association-league`,
+              season: associationSeason,
+              category: "association",
+              title: "Ліга Асоціацій",
+            });
+            continue;
+          }
+
           const league = await associationLeagueRequests.get(
   associationSeason
 );
