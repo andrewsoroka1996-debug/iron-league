@@ -28,6 +28,13 @@ export type AppliedCoefficientAdjustment = {
 
 export type AdjustedCoefficientRow = CoefficientRow & {
   administrativeAdjustment?: AppliedCoefficientAdjustment;
+  // Inheritance is applied after predecessor sanctions and before this owner's decision.
+  inheritedFrom?: { playerId: string; adjustedPoints: number }[];
+  inheritedAdjustmentDelta?: number;
+  inheritedEuropeAdjustmentDelta?: number;
+  preAdjustmentTotal?: number;
+  preAdjustmentEurope?: number;
+  effectiveEuropePoints?: number;
 };
 
 export function europeCoefficientPoints(row: CoefficientRow): number {
@@ -45,7 +52,7 @@ export function europeCoefficientPoints(row: CoefficientRow): number {
 }
 
 export function adjustedEuropePoints(row: AdjustedCoefficientRow): number {
-  const raw = europeCoefficientPoints(row);
+  const raw = europeCoefficientPoints(row) + (row.inheritedEuropeAdjustmentDelta ?? 0);
   const adjustment = row.administrativeAdjustment;
   return adjustment?.scope === "europe" ? raw + adjustment.delta : raw;
 }

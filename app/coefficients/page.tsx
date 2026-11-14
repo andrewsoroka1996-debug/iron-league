@@ -17,8 +17,8 @@ import {
 } from "../../data/coefficients/season-2";
 
 import { supabase } from "../../lib/supabase";
+import { applyInheritedCoefficientAdjustments } from "../../lib/coefficient-inheritance";
 import {
-  applyCoefficientAdjustments,
   adjustedEuropePoints,
   type AdjustedCoefficientRow,
 } from "../../lib/coefficient-adjustments";
@@ -439,9 +439,11 @@ function liveRowToSummary(
       row.breakdown
         .europeanSuperCup,
     adminAdjustmentPoints:
-      row.administrativeAdjustment?.scope === "all"
+      (row.inheritedAdjustmentDelta ?? 0) -
+      (row.inheritedEuropeAdjustmentDelta ?? 0) +
+      (row.administrativeAdjustment?.scope === "all"
         ? row.administrativeAdjustment.delta
-        : 0,
+        : 0),
 
     total:
       row.total,
@@ -1333,6 +1335,17 @@ function LiveCoefficientTable({
                   </span>
                 </div>
 
+                {row.inheritedFrom && row.inheritedFrom.length > 0 && (
+                  <div className="mt-3 rounded-xl border border-blue-400/20 bg-blue-500/[0.05] px-3 py-3 text-xs text-blue-100/80">
+                    <div className="font-bold">Успадковано коефіцієнт: {row.inheritedFrom.map((entry) =>
+                      `${getPlayerName(entry.playerId)} (+${entry.adjustedPoints})`
+                    ).join(", ")}</div>
+                    {(row.inheritedAdjustmentDelta ?? 0) !== 0 && (
+                      <p className="mt-1 text-blue-100/60">Попередні адміністративні коригування: {row.inheritedAdjustmentDelta}. Деталі турнірів містять нарахування до цих коригувань.</p>
+                    )}
+                  </div>
+                )}
+
                 {row.administrativeAdjustment && (
                   <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.06] px-3 py-3 text-xs text-amber-100/80">
                     <div className="flex items-center justify-between gap-3 font-bold">
@@ -1692,7 +1705,18 @@ function LiveCoefficientTable({
                               </div>
                             </div>
 
-                            {row.administrativeAdjustment && (
+                            {row.inheritedFrom && row.inheritedFrom.length > 0 && (
+                  <div className="mt-3 rounded-xl border border-blue-400/20 bg-blue-500/[0.05] px-3 py-3 text-xs text-blue-100/80">
+                    <div className="font-bold">Успадковано коефіцієнт: {row.inheritedFrom.map((entry) =>
+                      `${getPlayerName(entry.playerId)} (+${entry.adjustedPoints})`
+                    ).join(", ")}</div>
+                    {(row.inheritedAdjustmentDelta ?? 0) !== 0 && (
+                      <p className="mt-1 text-blue-100/60">Попередні адміністративні коригування: {row.inheritedAdjustmentDelta}. Деталі турнірів містять нарахування до цих коригувань.</p>
+                    )}
+                  </div>
+                )}
+
+                {row.administrativeAdjustment && (
                               <div className="rounded-2xl border border-amber-400/20 bg-amber-500/[0.06] p-4 md:col-span-2 xl:col-span-4">
                                 <div className="flex items-center justify-between gap-4 text-sm font-bold text-amber-200">
                                   <span>Адміністративне коригування ({row.administrativeAdjustment.scope === "europe" ? "єврокубки" : "весь коефіцієнт"})</span>
@@ -2115,13 +2139,14 @@ const season3Adjustments =
 
 const season3Rows =
   needsLiveData && !liveResult.error
-    ? applyCoefficientAdjustments(
+    ? applyInheritedCoefficientAdjustments(
         calculateCoefficients({
           season: 3,
           matches: liveResult.matches,
           resolvePlayerId: resolveSeason3PlayerId,
         }),
-        season3Adjustments
+        season3Adjustments,
+        season3Replacements
       )
     : [];
 

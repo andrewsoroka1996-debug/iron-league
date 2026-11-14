@@ -1,6 +1,6 @@
 import "server-only";
 import { loadSeason3CoefficientAdjustments } from "./coefficient-adjustments-server";
-import { applyCoefficientAdjustments } from "./coefficient-adjustments";
+import { applyInheritedCoefficientAdjustments } from "./coefficient-inheritance";
 
 import { players } from "../data/players";
 import { season2Coefficients } from "../data/coefficients/season-2";
@@ -499,7 +499,8 @@ async function loadLiveCoefficientMatches(
 
 async function getLiveCoefficientMap(
   season: LiveAssociationLeagueSeason,
-  resolvePlayerId: (playerId: string) => string
+  resolvePlayerId: (playerId: string) => string,
+  replacements: readonly { outgoing_player_id: string; incoming_player_id: string; inherit_standings: boolean }[]
 ) {
   const matches =
     await loadLiveCoefficientMatches(
@@ -531,9 +532,10 @@ async function getLiveCoefficientMap(
   );
 
   const adjustedRows = season === 3
-    ? applyCoefficientAdjustments(
+    ? applyInheritedCoefficientAdjustments(
         rows,
-        await loadSeason3CoefficientAdjustments()
+        await loadSeason3CoefficientAdjustments(),
+        replacements
       )
     : rows;
 
@@ -1193,7 +1195,8 @@ const coefficientMap =
     ? getSeason2CoefficientMap()
     : await getLiveCoefficientMap(
         season,
-        resolvePlayerId
+        resolvePlayerId,
+        replacements
       );
 
   /*
@@ -1223,21 +1226,22 @@ const coefficientMap =
   ========================================
 */
 
-const effectiveCoefficientMap =
-  new Map<string, number>();
+// Season 3 already inherits coefficients in getLiveCoefficientMap.
+// For other seasons, keep the existing slot inheritance until the
+// shared coefficient inheritance engine supports them as well.
+const effectiveCoefficientMap = season === 3
+  ? new Map(coefficientMap)
+  : new Map<string, number>();
 
-for (const [playerId, points] of coefficientMap) {
-  const currentPlayerId =
-    applyPlayerReplacements(
-      [playerId],
-      replacements
-    )[0] ?? playerId;
-
-  effectiveCoefficientMap.set(
-    currentPlayerId,
-    (effectiveCoefficientMap.get(currentPlayerId) ?? 0) +
-      points
-  );
+if (season !== 3) {
+  for (const [playerId, points] of coefficientMap) {
+    const currentPlayerId =
+      applyPlayerReplacements([playerId], replacements)[0] ?? playerId;
+    effectiveCoefficientMap.set(
+      currentPlayerId,
+      (effectiveCoefficientMap.get(currentPlayerId) ?? 0) + points
+    );
+  }
 }
 
 const effectiveRankMap = new Map(rankMap);

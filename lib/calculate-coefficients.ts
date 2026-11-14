@@ -344,7 +344,12 @@ function addDivisionPlacePoints({ rows, matches, season, resolvePlayerId, }: {
         const archiveSeason = season === 1 ||
             season === 2;
         if (!archiveSeason &&
-            !divisionMatches.every(isFinished)) {
+            !divisionMatches.every((match) =>
+                isFinished(match) ||
+                (match.status === "closed_unplayed" &&
+                    match.home_goals === null &&
+                    match.away_goals === null)
+            )) {
             continue;
         }
         const standings = buildStandings({
@@ -539,38 +544,41 @@ function addEuropeanGroupBonuses({ rows, matches, season, competition, resolvePl
     }
 }
 function getSeriesWinner(seriesMatches: CoefficientMatch[]) {
-    if (seriesMatches.length === 0) {
+    // European knockout rounds are two-legged. A single stored leg cannot
+    // establish a series winner or grant an advancement bonus.
+    const regularMatches = seriesMatches.filter((match) => !match.is_tiebreak);
+    if (regularMatches.length !== 2 ||
+        !regularMatches.some((match) => match.leg === 1) ||
+        !regularMatches.some((match) => match.leg === 2) ||
+        !seriesMatches.every(isFinished)) {
         return null;
     }
-    if (!seriesMatches.every(isFinished)) {
+    const first = regularMatches.find((match) => match.leg === 1)!;
+    const participantA = first.series_home_id ?? first.home_id;
+    const participantB = first.series_away_id ?? first.away_id;
+    if (participantA === participantB ||
+        seriesMatches.some((match) =>
+            !((match.home_id === participantA && match.away_id === participantB) ||
+                (match.home_id === participantB && match.away_id === participantA)) ||
+            (match.series_home_id !== null &&
+                match.series_home_id !== participantA) ||
+            (match.series_away_id !== null &&
+                match.series_away_id !== participantB))) {
         return null;
     }
-    const first = seriesMatches[0];
-    const participantA = first.series_home_id ??
-        first.home_id;
-    const participantB = first.series_away_id ??
-        first.away_id;
+    const tiebreakMatches = seriesMatches.filter((match) => match.is_tiebreak);
+    if (tiebreakMatches.length > 1) {
+        return null;
+    }
     let goalsA = 0;
     let goalsB = 0;
-    for (const match of seriesMatches) {
-        if (match.home_id ===
-            participantA &&
-            match.away_id ===
-                participantB) {
-            goalsA +=
-                match.home_goals!;
-            goalsB +=
-                match.away_goals!;
-            continue;
-        }
-        if (match.home_id ===
-            participantB &&
-            match.away_id ===
-                participantA) {
-            goalsA +=
-                match.away_goals!;
-            goalsB +=
-                match.home_goals!;
+    for (const match of regularMatches) {
+        if (match.home_id === participantA) {
+            goalsA += match.home_goals!;
+            goalsB += match.away_goals!;
+        } else {
+            goalsA += match.away_goals!;
+            goalsB += match.home_goals!;
         }
     }
     if (goalsA > goalsB) {
@@ -579,7 +587,23 @@ function getSeriesWinner(seriesMatches: CoefficientMatch[]) {
     if (goalsB > goalsA) {
         return participantB;
     }
-    return null;
+    // A drawn aggregate requires a decisive, completed tiebreak match;
+    // do not invent a winner from an unfinished or drawn decider.
+    if (tiebreakMatches.length !== 1) {
+        return null;
+    }
+    const tiebreak = tiebreakMatches[0];
+    const tiebreakA = tiebreak.home_id === participantA
+        ? tiebreak.home_goals!
+        : tiebreak.away_goals!;
+    const tiebreakB = tiebreak.home_id === participantA
+        ? tiebreak.away_goals!
+        : tiebreak.home_goals!;
+    return tiebreakA > tiebreakB
+        ? participantA
+        : tiebreakB > tiebreakA
+            ? participantB
+            : null;
 }
 function addEuropeanRoundBonuses(rows: Map<string, CoefficientRow>, matches: CoefficientMatch[], competition: "champions-league" | "europa-league") {
     const stages = [
@@ -602,15 +626,14 @@ function addEuropeanRoundBonuses(rows: Map<string, CoefficientRow>, matches: Coe
                 stage);
         const seriesMap = new Map<string, CoefficientMatch[]>();
         for (const match of stageMatches) {
+            // For legacy matches without series_id, the fallback must be
+            // independent of which team plays at home in each leg.
             const key = match.series_id ??
                 [
                     competition,
                     stage,
                     match.round ?? 0,
-                    match.series_home_id ??
-                        match.home_id,
-                    match.series_away_id ??
-                        match.away_id,
+                    ...[match.home_id, match.away_id].sort(),
                 ].join(":");
             const current = seriesMap.get(key);
             if (current) {

@@ -10,6 +10,7 @@ import {
   type CoefficientAdjustmentScope,
 } from "../../../../lib/coefficient-adjustments";
 import { loadSeason3CoefficientAdjustments } from "../../../../lib/coefficient-adjustments-server";
+import { applyInheritedCoefficientAdjustments } from "../../../../lib/coefficient-inheritance";
 import { getSeasonPlayerReplacements, applyPlayerReplacements } from "../../../../lib/player-replacements";
 import { players } from "../../../../data/players";
 
@@ -55,7 +56,7 @@ async function loadCalculatedRows() {
 }
 
 async function responseWithCurrentState() {
-  const [rawRows, adjustments, historyResult] = await Promise.all([
+  const [rawRows, adjustments, historyResult, replacements] = await Promise.all([
     loadCalculatedRows(),
     loadSeason3CoefficientAdjustments(),
     supabaseAdmin.from("coefficient_adjustment_events")
@@ -63,20 +64,31 @@ async function responseWithCurrentState() {
       .eq("season", 3)
       .order("id", { ascending: false })
       .limit(100),
+    getSeasonPlayerReplacements(3),
   ]);
   if (historyResult.error) throw new Error(historyResult.error.message);
-  const currentRows = applyCoefficientAdjustments(rawRows, adjustments);
+  const currentRows = applyInheritedCoefficientAdjustments(rawRows, adjustments, replacements);
+  const currentIds = new Set(currentRows.map(row => row.playerId));
+  // Former players remain available in the admin panel so an old decision
+  // can still be cleared. They are omitted only from the public ranking.
+  const inactiveRows = applyCoefficientAdjustments(rawRows, adjustments)
+    .filter(row => !currentIds.has(row.playerId));
   const rawByPlayer = new Map(rawRows.map(row => [row.playerId, row]));
 
-  const rows = currentRows.map(row => {
-    const raw = rawByPlayer.get(row.playerId)!;
+  const rows = [...currentRows, ...inactiveRows].map(row => {
+    const active = currentIds.has(row.playerId);
+    const original = rawByPlayer.get(row.playerId)!;
+    // "Original" is before THIS owner's decision, but after any
+    // predecessor's decision, to make the admin preview accurate.
+    const baseTotal = active ? (row.preAdjustmentTotal ?? row.total) : original.total;
+    const baseEurope = active ? (row.preAdjustmentEurope ?? europeCoefficientPoints(row)) : europeCoefficientPoints(original);
     return {
       player_id: row.playerId,
       nickname: players.find(p => p.id === row.playerId)?.nickname ?? row.playerId,
-      original_total: raw.total,
-      original_europe: europeCoefficientPoints(raw),
+      original_total: baseTotal,
+      original_europe: baseEurope,
       adjusted_total: row.total,
-      adjusted_europe: adjustedEuropePoints(row),
+      adjusted_europe: active ? (row.effectiveEuropePoints ?? adjustedEuropePoints(row)) : adjustedEuropePoints(row),
     };
   });
   return NextResponse.json({
