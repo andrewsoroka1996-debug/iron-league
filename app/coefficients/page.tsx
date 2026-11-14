@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { buildAverageCoefficientRows, type AverageCoefficientRow } from "../../lib/coefficient-season-average";
 import PlayerTableEmblem from "../../components/PlayerTableEmblem";
 import { getPlayerEmblemUrls } from "../../lib/player-emblem-urls";
 import Link from "next/link";
@@ -46,7 +47,12 @@ type PageProps = {
 
 type SeasonFilter =
   | SeasonNumber
+  | "average"
   | "all";
+
+// Currently season 3 is the only season with live coefficient calculation.
+// When season 4 is launched, its data source must be connected before changing this value.
+const CURRENT_COEFFICIENT_SEASON = 3;
 
 type SummaryRow = {
   key: string;
@@ -2026,6 +2032,146 @@ function AllTimeTable({
 
 /*
   ========================================
+  СЕРЕДНІЙ КОЕФІЦІЄНТ ПО СЕЗОНАХ
+  ========================================
+*/
+
+function formatAverageCoefficient(value: number): string {
+  return value.toFixed(2).replace(".", ",");
+}
+
+function AverageCoefficientTable({
+  rows,
+  emblemUrls,
+}: {
+  rows: AverageCoefficientRow[];
+  emblemUrls: Record<string, string | null | undefined>;
+}) {
+  return (
+    <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#07101d] shadow-2xl shadow-black/20">
+      <div className="divide-y divide-white/[0.06] lg:hidden">
+        {rows.map((row, index) => {
+          const place = index + 1;
+          const styles = getPlaceStyles(place);
+
+          return (
+            <details
+              key={row.key}
+              className={`group transition-colors open:bg-white/[0.025] ${styles.row}`}
+            >
+              <summary className="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 py-3 focus-visible:outline-2 focus-visible:outline-blue-400 [&::-webkit-details-marker]:hidden sm:px-5">
+                <span className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-xl border px-2 text-sm font-black ${styles.number}`}>
+                  {place}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <PlayerTableEmblem src={row.playerId ? emblemUrls[row.playerId] : undefined} />
+                    <span className="min-w-0 break-words text-sm font-black text-white sm:text-base">
+                      {row.playerName}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-white/40">
+                    Сезонів: {row.seasonCount}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-xl font-black tabular-nums text-blue-300 sm:text-2xl">
+                    {formatAverageCoefficient(row.total)}
+                  </div>
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-white/35">
+                    У середньому
+                  </div>
+                  <div className="mt-1 text-[10px] font-semibold text-blue-300/75">
+                    Деталі <span aria-hidden="true" className="inline-block transition-transform group-open:rotate-180">↓</span>
+                  </div>
+                </div>
+              </summary>
+              <div className="border-t border-white/[0.07] bg-[#091423] px-4 py-4 sm:px-5">
+                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.15em] text-blue-400">
+                  Коефіцієнти за сезонами
+                </div>
+                {row.seasonPoints.map((item) => (
+                  <div key={item.season} className="flex items-center justify-between gap-3 border-b border-white/[0.05] py-2.5">
+                    <span className="text-xs text-white/60 sm:text-sm">Сезон {item.season}{item.season === CURRENT_COEFFICIENT_SEASON ? " · LIVE" : ""}</span>
+                    <span className="text-sm font-black tabular-nums text-white">{item.points}</span>
+                  </div>
+                ))}
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-blue-400/20 bg-blue-500/[0.07] px-3 py-3">
+                  <span className="text-xs font-black text-blue-300">
+                    {row.sum} / {row.seasonCount} сезонів
+                  </span>
+                  <span className="text-lg font-black tabular-nums text-blue-300">
+                    {formatAverageCoefficient(row.total)}
+                  </span>
+                </div>
+                {row.playerId && (
+                  <div className="mt-3">
+                    <Link href={`/players/${row.playerId}`} className="text-xs font-bold text-blue-300 transition hover:text-blue-200 sm:text-sm">
+                      Відкрити профіль гравця →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="w-full min-w-[940px] border-collapse">
+          <thead>
+            <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-[0.12em] text-white/30">
+              <th className="pl-2 pr-1 py-4 text-center">М</th>
+              <th className="pl-2 pr-5 py-4 text-left">Гравець</th>
+              {[1, 2, 3].map((season) => (
+                <th key={season} className="px-4 py-4 text-center">Сезон {season}</th>
+              ))}
+              <th className="px-4 py-4 text-center">Сезонів</th>
+              <th className="px-6 py-4 text-right">Середній коефіцієнт</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const place = index + 1;
+              const styles = getPlaceStyles(place);
+              return (
+                <tr key={row.key} className={`border-b border-white/[0.05] transition hover:bg-white/[0.025] ${styles.row}`}>
+                  <td className="pl-2 pr-1 py-5 text-center">
+                    <span className={`inline-flex min-w-9 items-center justify-center rounded-lg border px-2 py-1.5 font-black ${styles.number}`}>
+                      {place}
+                    </span>
+                  </td>
+                  <td className="pl-2 pr-5 py-5">
+                    <PlayerLink
+                      playerId={row.playerId}
+                      playerName={row.playerName}
+                      emblemUrl={row.playerId ? emblemUrls[row.playerId] : undefined}
+                    />
+                  </td>
+                  {[1, 2, 3].map((season) => {
+                    const item = row.seasonPoints.find((entry) => entry.season === season);
+                    return (
+                      <td key={season} className="px-4 py-5 text-center font-bold tabular-nums text-white/60">
+                        {item ? item.points : "—"}
+                      </td>
+                    );
+                  })}
+                  <td className="px-4 py-5 text-center font-bold text-white/60">{row.seasonCount}</td>
+                  <td className="px-6 py-5 text-right text-2xl font-black tabular-nums text-blue-300">
+                    {formatAverageCoefficient(row.total)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/*
+  ========================================
   PAGE
   ========================================
 */
@@ -2039,21 +2185,14 @@ export default async function CoefficientsPage({
 
   const rawSeason =
     params.season ??
-    "all";
+    String(CURRENT_COEFFICIENT_SEASON);
 
-  let selected:
-    SeasonFilter =
-    "all";
+  let selected: SeasonFilter = CURRENT_COEFFICIENT_SEASON;
 
-  if (
-    rawSeason === "1" ||
-    rawSeason === "2" ||
-    rawSeason === "3"
-  ) {
-    selected =
-      Number(
-        rawSeason
-      ) as SeasonNumber;
+  if (rawSeason === "1" || rawSeason === "2" || rawSeason === "3") {
+    selected = Number(rawSeason) as SeasonNumber;
+  } else if (rawSeason === "average" || rawSeason === "all") {
+    selected = rawSeason;
   }
 
   /*
@@ -2064,6 +2203,7 @@ export default async function CoefficientsPage({
 
   const needsLiveData =
     selected === 3 ||
+    selected === "average" ||
     selected === "all";
 
   const liveResult =
@@ -2161,8 +2301,19 @@ const season3Rows =
     ========================================
   */
 
-  let summaryRows:
-    SummaryRow[];
+  const averageRows =
+    selected === "average" && !liveResult.error
+      ? buildAverageCoefficientRows([
+          { season: 3, rows: season3Summary },
+          { season: 2, rows: season2Summary },
+          { season: 1, rows: season1Summary },
+        ]).map((row) => ({
+          ...row,
+          playerName: row.playerId ? getPlayerName(row.playerId) : row.playerName,
+        }))
+      : [];
+
+  let summaryRows: SummaryRow[];
 
   if (selected === 1) {
     summaryRows =
@@ -2177,6 +2328,8 @@ const season3Rows =
   ) {
     summaryRows =
       season3Summary;
+  } else if (selected === "average") {
+    summaryRows = [];
   } else {
     summaryRows =
       aggregateSummaryRows([
@@ -2187,44 +2340,24 @@ const season3Rows =
   }
 
   const tabs = [
-    {
-      label:
-        "Загальний рейтинг",
-      value: "all",
-    },
-
-    {
-      label:
-        "Сезон 1",
-      value: "1",
-    },
-
-    {
-      label:
-        "Сезон 2",
-      value: "2",
-    },
-
-    {
-      label:
-        "Сезон 3",
-      value: "3",
-    },
+    { label: "Сезон 3", value: "3" },
+    { label: "Сезон 2", value: "2" },
+    { label: "Сезон 1", value: "1" },
+    { label: "Середній коефіцієнт", value: "average" },
+    { label: "Загальний рейтинг", value: "all" },
   ];
 
   const title =
     selected === "all"
       ? "Загальний рейтинг"
-      : `Сезон ${selected}`;
+      : selected === "average"
+        ? "Середній коефіцієнт"
+        : `Сезон ${selected}`;
 
-  const leader =
-    summaryRows[0];
-
-  const second =
-    summaryRows[1];
-
-  const third =
-    summaryRows[2];
+  const displayedRows = selected === "average" ? averageRows : summaryRows;
+  const leader = displayedRows[0];
+  const second = displayedRows[1];
+  const third = displayedRows[2];
 
   return (
     <main className="min-h-screen bg-[#030711] text-white">
@@ -2274,7 +2407,7 @@ const season3Rows =
 
             <nav
               aria-label="Вибір рейтингу"
-              className="grid w-full max-w-2xl grid-cols-2 gap-2 sm:flex sm:flex-wrap"
+              className="grid w-full max-w-3xl grid-cols-2 gap-2 sm:flex sm:flex-wrap"
             >
               {tabs.map((tab) => {
                 const active =
@@ -2284,14 +2417,14 @@ const season3Rows =
                   <Link
                     key={tab.value}
                     href={
-                      tab.value === "all"
+                      tab.value === String(CURRENT_COEFFICIENT_SEASON)
                         ? "/coefficients"
                         : `/coefficients?season=${tab.value}`
                     }
                     aria-current={
                       active ? "page" : undefined
                     }
-                    className={`flex min-h-11 items-center justify-center rounded-xl border px-3 py-2.5 text-center text-xs font-bold transition-colors sm:px-5 sm:text-sm ${
+                    className={`flex min-h-11 items-center justify-center rounded-xl border px-3 py-2.5 text-center text-xs font-bold transition-colors sm:px-5 sm:text-sm ${tab.value === "all" ? "col-span-2 sm:col-span-1" : ""} ${
                       active
                         ? "border-blue-400/40 bg-blue-500/15 text-blue-200 shadow-lg shadow-blue-500/[0.08]"
                         : "border-white/10 bg-[#07101d] text-white/55 hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
@@ -2308,7 +2441,7 @@ const season3Rows =
 
 
       {/* TOP 3 */}
-      {summaryRows.length > 0 && (
+      {displayedRows.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 sm:pt-12">
           {/* SECTION HEADER */}
           <div className="mb-5 sm:mb-6">
@@ -2400,11 +2533,11 @@ const season3Rows =
                       <div
                         className={`break-words text-3xl font-black leading-none tabular-nums sm:text-4xl ${item.text}`}
                       >
-                        {item.row.total}
+                        {selected === "average" ? formatAverageCoefficient(item.row.total) : item.row.total}
                       </div>
 
                       <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">
-                        Коефіцієнт
+                        {selected === "average" ? "Середній коефіцієнт" : "Коефіцієнт"}
                       </div>
                     </div>
                   </div>
@@ -2433,7 +2566,7 @@ const season3Rows =
             Учасників:{" "}
             <strong className="text-white/70">
               {
-                summaryRows.length
+                displayedRows.length
               }
             </strong>
           </div>
@@ -2469,6 +2602,11 @@ const season3Rows =
               season3Rows
             }
           />
+        ) : selected === "average" ? (
+          <AverageCoefficientTable
+            emblemUrls={emblemUrls}
+            rows={averageRows}
+          />
         ) : (
           <AllTimeTable
             emblemUrls={emblemUrls}
@@ -2476,6 +2614,17 @@ const season3Rows =
               summaryRows
             }
           />
+        )}
+
+        {/* AVERAGE METHODOLOGY */}
+        {selected === "average" && !liveResult.error && (
+          <p className="mt-5 rounded-xl border border-blue-400/15 bg-blue-500/[0.05] px-4 py-3 text-sm leading-6 text-white/55">
+            Сортування: спочатку більше сезонів участі, потім вищий середній коефіцієнт.
+            Середній коефіцієнт = сума очок / кількість сезонів участі.
+            Враховуються сезони 1, 2 та поточний сезон 3 (LIVE).
+            Сезони без участі не враховуються, а сезон з нульовими очками враховується,
+            якщо гравець був учасником. Поточні очки змінюються після нових матчів.
+          </p>
         )}
 
         {/* INFO */}
