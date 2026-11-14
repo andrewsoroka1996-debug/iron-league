@@ -33,12 +33,12 @@ function mergeBreakdowns(
 /**
  * Coefficient succession for season 3 only.
  *
- * For each chain A -> B -> C, a decision against A applies before transfer to B;
- * a decision against B applies to (A after its decision + B's points) before
- * transfer to C; C's own decision applies to the entire inherited slot.
- * This prevents old zeroed points from reappearing and makes a new owner's
- * zeroing/penalty cover their inherited total. The final owner is the sole
- * public row, while original match IDs remain untouched.
+ * For a chain A -> B -> C, all earned coefficient points pass along the
+ * chain. An administrative zero on a replaced/outgoing player is table cleanup
+ * only: it never cancels the points transferred to their successor, regardless
+ * of when the zero was recorded. Explicit penalties remain effective.
+ * The current owner's own adjustment applies to the inherited total.
+ * The final owner is the sole public row; original match IDs remain untouched.
  */
 export function applyInheritedCoefficientAdjustments(
   rows: CoefficientRow[],
@@ -121,7 +121,13 @@ export function applyInheritedCoefficientAdjustments(
     let total = beforeTotal;
     let effectiveEurope = beforeEurope;
     let administrativeAdjustment: AdjustedCoefficientRow["administrativeAdjustment"];
-    const decision = decisionsByPlayer.get(playerId);
+    // A zero decision for a REPLACED player only cleans up their admin row.
+    // It must never reduce the earned points inherited by their successor,
+    // regardless of when the zero event was recorded. Other penalties remain real.
+    const recordedDecision = decisionsByPlayer.get(playerId);
+    const decision = successor.has(playerId) && recordedDecision?.mode === "zero"
+      ? undefined
+      : recordedDecision;
     if (decision && decision.mode !== "clear") {
       const base = decision.scope === "europe" ? beforeEurope : beforeTotal;
       if (!Number.isFinite(decision.points) || decision.points < 0 ||
