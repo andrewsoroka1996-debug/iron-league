@@ -74,8 +74,9 @@ export default function HistoryPage() {
                 <span className="h-px w-8 bg-yellow-300/80" aria-hidden="true" />
                 LEGACY OF IRON LEAGUE
               </div>
-              <h1 className="mt-4 max-w-3xl text-[clamp(2.5rem,7.6vw,5.1rem)] font-black leading-[0.99] tracking-tight">
-                Історія <span className="block bg-gradient-to-r from-white via-blue-100 to-blue-400 bg-clip-text text-transparent">Iron League</span>
+              <h1 className="mt-4 w-full min-w-0 max-w-full box-border pb-2 pr-2 font-black leading-[1.12] tracking-tight text-[clamp(1.875rem,8.4vw,2.6rem)] sm:text-[clamp(2.5rem,5.4vw,4.1rem)] lg:text-[clamp(2.75rem,3.8vw,3.8rem)] xl:text-[clamp(3.25rem,4vw,4.35rem)]">
+                <span className="block">Історія</span>
+                <span className="block max-w-full bg-gradient-to-r from-white via-blue-100 to-blue-400 bg-clip-text text-transparent">Iron League</span>
               </h1>
               <p className="mt-5 max-w-xl text-sm leading-7 text-slate-300/80 sm:text-base sm:leading-8">
                 Кожен сезон залишає свій слід: суперництво, нові імена та трофеї, які стають частиною історії ліги.
@@ -98,40 +99,36 @@ export default function HistoryPage() {
 
             <Link
               href="/history/season-3"
-              className="group relative flex min-h-[205px] flex-col justify-between overflow-hidden rounded-[22px] border border-blue-400/25 bg-gradient-to-br from-[#142b47] via-[#0a192d] to-[#07101d] p-5 shadow-[0_22px_54px_rgba(0,0,0,0.28)] transition hover:border-blue-400/60 sm:min-h-[270px] sm:p-7"
+              aria-label="Переглянути актуальний сезон 3"
+              className="group history-v7-featured-season relative flex min-w-0 flex-col gap-5 overflow-hidden rounded-[22px] border border-blue-400/30 bg-gradient-to-br from-[#142b47] via-[#0b1d32] to-[#07111f] p-5 shadow-[0_16px_40px_rgba(0,0,0,0.20)] transition hover:border-blue-300/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 sm:p-6 lg:min-h-[260px] lg:justify-between lg:p-7"
             >
-              <div aria-hidden="true" className="pointer-events-none absolute -right-4 -bottom-14 select-none text-[210px] font-black leading-none tracking-tighter text-blue-200/[0.055] sm:text-[250px]">03</div>
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-blue-500 via-sky-300/80 to-transparent" />
-              <div className="relative flex items-center justify-between gap-3">
-                <span className="text-[11px] font-black uppercase tracking-[0.19em] text-blue-200">ЗАРАЗ У ЛІЗІ</span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1 text-[11px] font-black text-blue-200">
-                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-blue-300" />
-                  СЕЗОН ТРИВАЄ
+              <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-sky-400 via-blue-400/70 to-transparent" />
+              <div className="relative flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-200 sm:text-[11px]">АКТУАЛЬНИЙ СЕЗОН</span>
+                <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.07] px-2.5 py-1 text-[10px] font-bold text-emerald-200 sm:text-[11px]">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                  Триває
                 </span>
               </div>
-              <div className="relative mt-7">
-                <div className="text-[11px] font-black uppercase tracking-[0.22em] text-white/45">ПОТОЧНИЙ РОЗДІЛ</div>
-                <div className="mt-2 text-4xl font-black tracking-tight text-white sm:text-5xl">Сезон 03</div>
-                <p className="mt-3 max-w-xs text-sm leading-6 text-blue-100/65">Матчі та коефіцієнти оновлюються. Досягнення — лише після підтвердження переможців.</p>
+              <div className="relative min-w-0">
+                <h2 className="text-[clamp(1.9rem,7vw,2.5rem)] font-black leading-tight tracking-tight text-white sm:text-4xl">Сезон 3</h2>
+                <p className="mt-3 max-w-sm text-sm leading-6 text-blue-100/70">
+                  Поточний розіграш Iron League. Результати, таблиці та боротьба за нові трофеї.
+                </p>
               </div>
-              <div className="relative mt-6 flex items-center justify-between border-t border-white/10 pt-3 text-xs font-bold text-blue-200 transition group-hover:text-white">
-                Переглянути сезон
-                <span aria-hidden="true" className="text-lg transition group-hover:translate-x-1">→</span>
+              <div className="relative flex items-center justify-between gap-3 border-t border-blue-200/15 pt-4 text-sm font-bold text-blue-200 transition group-hover:text-white">
+                <span>Переглянути сезон</span>
+                <span aria-hidden="true" className="text-lg transition-transform group-hover:translate-x-1">↗</span>
               </div>
             </Link>
           </div>
 
-          <div className="mt-7 grid grid-cols-2 gap-2 sm:mt-9 sm:grid-cols-4 sm:gap-3">
-            {summary.map((item) => (
-              <div key={item.label} className="min-w-0 rounded-xl border border-white/10 bg-[#081421]/85 px-3 py-3 backdrop-blur-sm sm:rounded-2xl sm:px-5 sm:py-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl font-black leading-none tabular-nums text-white sm:text-3xl">{item.value}</span>
-                  <span aria-hidden="true" className="h-8 w-px bg-blue-400/20" />
-                  <span className="text-[11px] font-bold leading-4 text-blue-100/80 sm:text-xs">{item.label}</span>
-                </div>
-                <div className="mt-2 hidden text-[11px] text-white/35 sm:block">{item.note}</div>
-              </div>
-            ))}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-white/10 pt-4 text-[11px] font-semibold text-slate-400 sm:mt-7 sm:justify-start sm:gap-x-4 sm:text-xs">
+            <span className="whitespace-nowrap"><span className="font-black text-white">{Number(summary[0]?.value ?? 0)}</span> сезони</span>
+            <span aria-hidden="true" className="text-blue-300/40">·</span>
+            <span className="whitespace-nowrap"><span className="font-black text-white">{Number(summary[1]?.value ?? 0)}</span> завершені</span>
+            <span aria-hidden="true" className="text-blue-300/40">·</span>
+            <span className="whitespace-nowrap"><span className="font-black text-white">{Number(summary[3]?.value ?? 0)}</span> у підготовці</span>
           </div>
         </div>
       </section>
