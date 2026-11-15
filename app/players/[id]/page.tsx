@@ -5,6 +5,7 @@ import SiteHeader from "../../../components/public/SiteHeader";
 import SiteFooter from "../../../components/public/SiteFooter";
 import ProfileViewSwitch from "./ProfileViewSwitch";
 import HonourTrophyIcon from "./HonourTrophyIcon";
+import PlayerCoefficientPanel from "../../../components/PlayerCoefficientPanel";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
@@ -1757,6 +1758,14 @@ selectedHonours.length === 0 ? (
           )}
         </div>
       </section>
+      {/* PLAYER COEFFICIENTS · after season statistics, before tournaments */}
+      <Suspense fallback={
+        <section className="mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-5" aria-label="Завантаження коефіцієнтів">
+          <div className="rounded-2xl border border-blue-400/20 bg-[#091729] px-4 py-6 text-sm text-blue-200/70">Завантаження коефіцієнтів…</div>
+        </section>
+      }>
+        <PlayerCoefficientPanel playerId={playerId} season={season} />
+      </Suspense>
       {/* SEASON CAREER */}
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8">
