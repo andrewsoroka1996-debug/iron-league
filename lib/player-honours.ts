@@ -1359,3 +1359,8 @@ console.log(
       return honours;
     }
   );
+
+// Read-only helpers shared with the non-trophy placements module.
+// The existing honours and champion calculations are untouched.
+export { getAllMatches, getDivisionPlayers, getFinalWinner, isFinished };
+export type { MatchRow };

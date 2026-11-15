@@ -5,6 +5,8 @@ import SiteHeader from "../../../components/public/SiteHeader";
 import SiteFooter from "../../../components/public/SiteFooter";
 import ProfileViewSwitch from "./ProfileViewSwitch";
 import HonourTrophyIcon from "./HonourTrophyIcon";
+import PlayerPlacements from "../../../components/PlayerPlacements";
+import { getPlayerPlacements, type PlayerPlacement } from "../../../lib/player-placements";
 import PlayerCoefficientPanel from "../../../components/PlayerCoefficientPanel";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
@@ -924,12 +926,14 @@ async function PlayerProfileData({
 
   const [
     honours,
+    placements,
     coopTeamsResult,
     directMatchesResult,
     coopMatchesResult,
     associationSquads,
   ] = await Promise.all([
     getPlayerHonours(playerId),
+    getPlayerPlacements(playerId),
 
     supabase
       .from("coop_teams")
@@ -962,6 +966,7 @@ async function PlayerProfileData({
     (honour) => honour.season === season
   );
   const seasonTrophyCount = seasonHonours.length;
+  const seasonPlacements = placements.filter((item) => item.season === season);
 
   /*
     ========================================
@@ -1624,6 +1629,17 @@ selectedMatches.length ===
     );
   }
 
+  // Trophy cards remain the official source for Hall of Fame / career trophy totals.
+  // Placements are additional, non-trophy achievements.
+  function renderAchievementView(selectedHonours: PlayerHonour[], selectedPlacements: PlayerPlacement[]) {
+    return (
+      <>
+        {(selectedHonours.length > 0 || selectedPlacements.length === 0) && renderHonours(selectedHonours)}
+        <PlayerPlacements placements={selectedPlacements} />
+      </>
+    );
+  }
+
   // V4: сезонні й кар'єрні трофеї з уже отриманих honours.
   function renderHonours(selectedHonours: PlayerHonour[]) {
     return (
@@ -1850,13 +1866,13 @@ selectedHonours.length === 0 ? (
 
 
           <ProfileViewSwitch
-            label="Перегляд трофеїв"
+            label="Перегляд досягнень"
             seasonLabel={`Сезон ${season}`}
-            allLabel="Усі трофеї"
-            seasonSummary={`Трофеїв за сезон ${season}: ${seasonTrophyCount}`}
-            allSummary={`Усього трофеїв за кар'єру: ${trophyCount}`}
-            seasonContent={renderHonours(seasonHonours)}
-            allContent={renderHonours([...honours].sort((a, b) => b.season - a.season))}
+            allLabel="Уся кар’єра"
+            seasonSummary={`Сезон ${season}: ${seasonTrophyCount} трофеїв · ${seasonPlacements.length} інших відзнак`}
+            allSummary={`Кар’єра: ${trophyCount} трофеїв · ${placements.length} інших відзнак`}
+            seasonContent={renderAchievementView(seasonHonours, seasonPlacements)}
+            allContent={renderAchievementView([...honours].sort((a, b) => b.season - a.season), placements)}
           />
         </div>
       </section>
