@@ -141,6 +141,8 @@ function normalizePlayerName(
 
 const ARCHIVE_PLAYER_ALIASES:
   Record<string, string> = {
+  alexliv530: "alexliv",
+
   taraasykunl:
     "taraaasyk-unl",
 
