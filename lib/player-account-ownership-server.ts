@@ -12,6 +12,7 @@ import {
 const knownPlayerIds: ReadonlySet<string> = new Set(players.map((p) => p.id));
 
 type CheckedAccess = {
+  authUserId?: string;
   decision: PlayerOwnershipDecision;
   /** Replay auth-cookie changes on the actual response, never on a shared cache. */
   applyAuthCookies: (response: NextResponse) => void;
@@ -105,6 +106,7 @@ export async function checkPlayerOwnershipForRequest(
     }
 
     return {
+      authUserId: authData.user.id,
       decision: decidePlayerOwnership({
         requestedPlayerId,
         knownPlayerIds,

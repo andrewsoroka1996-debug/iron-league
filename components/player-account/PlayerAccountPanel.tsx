@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { PlayerMatchGroup } from "../../lib/player-account-match-groups";
 import PlayerAccountMatches from "./PlayerAccountMatches";
+import PlayerResultSubmissionForm from "./PlayerResultSubmissionForm";
 
 type Tab = "matches" | "result" | "emblem" | "settings";
 
@@ -122,12 +123,12 @@ export default function PlayerAccountPanel({ playerId }: { playerId: string }) {
             </>
           ) : active === "result" ? (
             <>
-              <h3 className="font-bold text-blue-200">Подати результат</h3>
-              <p className="mt-1 text-sm text-white/60">
-                Подання результатів поки не активоване. Спочатку реалізуємо захищені
-                заявки з окремими скриншотами або поясненнями для кожного матчу та
-                обов'язковим затвердженням адміністратором.
-              </p>
+              <h3 className="mb-3 font-bold text-blue-200">Подати результат</h3>
+              <PlayerResultSubmissionForm
+                playerId={playerId}
+                groups={state.data.groups}
+                playerNames={state.data.playerNames}
+              />
             </>
           ) : active === "emblem" ? (
             <>
