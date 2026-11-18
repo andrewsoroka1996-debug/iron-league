@@ -3,6 +3,8 @@ import PlayerEmblem from "../../../components/PlayerEmblem";
 import { getPlayerEmblemUrls } from "../../../lib/player-emblem-urls";
 import SiteHeader from "../../../components/public/SiteHeader";
 import SiteFooter from "../../../components/public/SiteFooter";
+import PlayerAccountPanel from "../../../components/player-account/PlayerAccountPanel";
+import { playerAccountsEnabled } from "../../../lib/player-account-access-policy";
 import ProfileViewSwitch from "./ProfileViewSwitch";
 import HonourTrophyIcon from "./HonourTrophyIcon";
 import PlayerPlacements from "../../../components/PlayerPlacements";
@@ -2164,6 +2166,11 @@ export default async function PlayerPage({
           </div>
         </div>
       </section>
+
+      {/* PLAYER ACCOUNT / guarded until explicitly enabled */}
+      {playerAccountsEnabled(process.env.PLAYER_ACCOUNTS_ENABLED) && (
+        <PlayerAccountPanel key={playerId} playerId={playerId} />
+      )}
 
       {/* HEAVY PROFILE DATA */}
 
