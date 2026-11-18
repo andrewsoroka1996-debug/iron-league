@@ -5,6 +5,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { players } from "../data/players";
+import { getDiscordProviderId } from "./discord-identity-provider-id";
 import { playerAccountsEnabled } from "./player-account-access-policy";
 import {
   decideLinkRequest,
@@ -186,7 +187,7 @@ export async function handleAdminLinkRequest(request: NextRequest) {
             playerId: row.player_id,
             authUserId: row.auth_user_id,
             createdAt: row.created_at,
-            discordId: discord?.id ?? null,
+            discordId: getDiscordProviderId(discord),
             discordName: typeof discord?.identity_data?.name === "string"
               ? discord.identity_data.name : null,
           };
