@@ -4,6 +4,7 @@ import SiteFooter from "../../components/public/SiteFooter";
 import { players } from "../../data/players";
 import PlayerEmblem from "../../components/PlayerEmblem";
 import { getPlayerEmblemUrls } from "../../lib/player-emblem-urls";
+import { getSeasonPlayerReplacements, applyPlayerReplacements } from "../../lib/player-replacements";
 
 import { season1 } from "../../data/seasons/season-1";
 import { season2 } from "../../data/seasons/season-2";
@@ -139,13 +140,19 @@ function getAvailableDivisions(
   ========================================
 */
 
-function getSeasonPlayers(
+async function getSeasonPlayers(
   season: SeasonNumber
-): SeasonPlayer[] {
+): Promise<SeasonPlayer[]> {
   const divisions =
     getAvailableDivisions(
       season
     );
+
+  // Apply registered replacements only to seasons that support them.
+  const seasonReplacements =
+    season >= 3
+      ? await getSeasonPlayerReplacements(season)
+      : [];
 
   const result =
     new Map<
@@ -156,11 +163,22 @@ function getSeasonPlayers(
   for (
     const division of divisions
   ) {
-    const ids =
+    const baseIds =
       getDivisionPlayerIds(
         season,
         division
       );
+
+    const ids =
+      season >= 3
+        ? applyPlayerReplacements(
+            baseIds,
+            seasonReplacements.filter(
+              (replacement) =>
+                replacement.division === division
+            )
+          )
+        : baseIds;
 
     for (const id of ids) {
       const player =
@@ -360,7 +378,7 @@ export default async function PlayersPage({
   */
 
   const seasonPlayers =
-    getSeasonPlayers(
+    await getSeasonPlayers(
       season
     );
 
