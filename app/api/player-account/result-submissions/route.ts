@@ -64,11 +64,39 @@ export async function GET(request: NextRequest) {
     console.error("PLAYER RESULT SUBMISSIONS: list error", error);
     return reply({ error: "Не вдалося завантажити заявки" }, 503);
   }
-  return reply({ requests: (data ?? []).map((row) => ({
+  // Load ONLY decisions for requests already proven to belong to this Discord
+  // owner. Do not expose decisions from any other user's submissions.
+  const ownRequests = data ?? [];
+  const ownRequestIds = ownRequests.map((row) => row.id);
+  const latestRejection = new Map<string, { revision: number; reason: string }>();
+  if (ownRequestIds.length > 0) {
+    const { data: decisions, error: decisionError } = await supabaseAdmin
+      .from("player_result_submission_decisions")
+      .select("submission_id, revision, action, reason")
+      .in("submission_id", ownRequestIds)
+      .eq("action", "reject")
+      .order("revision", { ascending: false })
+      .limit(1000);
+    if (decisionError) {
+      console.error("PLAYER RESULT SUBMISSIONS: rejection history unavailable", decisionError.code);
+      return reply({ error: "Не вдалося завантажити причини відхилення" }, 503);
+    }
+    for (const decision of decisions ?? []) {
+      if (typeof decision.reason !== "string" || !decision.reason.trim()) continue;
+      const key = String(decision.submission_id);
+      const previous = latestRejection.get(key);
+      if (!previous || decision.revision > previous.revision) {
+        latestRejection.set(key, { revision: decision.revision, reason: decision.reason });
+      }
+    }
+  }
+  return reply({ requests: ownRequests.map((row) => ({
     id: row.id, match_id: row.match_id, home_goals: row.home_goals,
     away_goals: row.away_goals, status: row.status, revision: row.revision,
     has_screenshot: Boolean(row.screenshot_path),
     no_screenshot_reason: row.no_screenshot_reason,
+    last_rejection_reason: latestRejection.get(row.id)?.reason ?? null,
+    last_rejection_revision: latestRejection.get(row.id)?.revision ?? null,
     created_at: row.created_at, updated_at: row.updated_at,
   })) }, 200);
 }

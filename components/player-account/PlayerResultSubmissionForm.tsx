@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { PlayerAccountMatch, PlayerMatchGroup } from "../../lib/player-account-match-groups";
-import { RESULT_SCREENSHOT_MAX_BYTES, RESULT_REASON_MIN, RESULT_REASON_MAX,
-  validateResultSubmissionItems } from "../../lib/player-result-submission-policy";
+import { RESULT_SCREENSHOT_MAX_BYTES, RESULT_REASON_MAX,
+  validateResultSubmissionItems, validateScreenshotAbsenceReason } from "../../lib/player-result-submission-policy";
 
 type Props = { playerId: string; groups: PlayerMatchGroup[]; playerNames: Record<string, string> };
 type Draft = { home: string; away: string; file: File | null; reason: string };
 type Submitted = { match_id: string; status: string; revision: number; home_goals: number;
-  away_goals: number; has_screenshot: boolean; no_screenshot_reason: string | null };
+  away_goals: number; has_screenshot: boolean; no_screenshot_reason: string | null;
+  last_rejection_reason?: string | null; last_rejection_revision?: number | null };
 const freshDraft = (): Draft => ({ home: "", away: "", file: null, reason: "" });
 const canSend = (m: PlayerAccountMatch) => m.season === 4 && m.participant_type === "player" &&
   (m.status === "scheduled" || m.status === "closed_unplayed");
@@ -81,8 +82,9 @@ export default function PlayerResultSubmissionForm({ playerId, groups, playerNam
       if (d.file && d.file.size > RESULT_SCREENSHOT_MAX_BYTES) {
         setError("Максимальний розмір скриншота — 8 МБ."); return;
       }
-      if (!d.file && (d.reason.trim().length < RESULT_REASON_MIN || d.reason.trim().length > RESULT_REASON_MAX)) {
-        setError("Для матчу без скриншота необхідне пояснення причини (12–1000 символів)."); return;
+      if (!d.file) {
+        const reasonError = validateScreenshotAbsenceReason(d.reason);
+        if (reasonError) { setError(reasonError); return; }
       }
     }
     const checked = validateResultSubmissionItems(payload);
@@ -139,6 +141,12 @@ export default function PlayerResultSubmissionForm({ playerId, groups, playerNam
               <span className="block break-words text-sm font-bold text-white">{name(m.home_id,playerNames)} — {name(m.away_id,playerNames)}</span>
               <span className="block text-xs text-white/50">{m.status === "closed_unplayed" ? "Закрито без гри — остаточне рішення залежить від перевірки адміністратора" : "Матч очікує результату"}</span>
               {prev && <span className="mt-1 block text-xs text-blue-200">Попередня заявка: {prev.status === "pending" ? "Очікує підтвердження" : prev.status === "rejected" ? "Відхилена — можна подати знову" : "Затверджена"} · версія {prev.revision}</span>}
+              {prev?.last_rejection_reason && (
+                <span role="note" className="mt-2 block rounded-lg border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                  <strong className="block">Причина відхилення{prev.last_rejection_revision ? ` (версія ${prev.last_rejection_revision})` : ""}:</strong>
+                  <span className="mt-1 block whitespace-pre-wrap break-words">{prev.last_rejection_reason}</span>
+                </span>
+              )}
             </span>
           </label>
           {checked && <div className="mt-3 space-y-3 border-t border-white/10 pt-3">
@@ -157,7 +165,7 @@ export default function PlayerResultSubmissionForm({ playerId, groups, playerNam
                 className="block w-full text-xs text-white/70 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-500/25 file:px-3 file:py-2 file:font-semibold file:text-blue-200" />
             </label>
             {!d.file && <label className="block space-y-1 text-xs text-white/70">
-              <span className="block">Не вдалося зробити скриншот? Обов'язково поясніть чому.</span>
+              <span className="block">Не вдалося зробити скриншот? Поясніть причину звичайними словами (мінімум три різні слова).</span>
               <textarea rows={3} value={d.reason} maxLength={RESULT_REASON_MAX}
                 onChange={(e)=>changeDraft(m.id,{reason:e.target.value})}
                 placeholder="Опишіть причину відсутності скриншота"

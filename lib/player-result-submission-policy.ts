@@ -6,6 +6,27 @@ export const RESULT_REASON_MIN = 12;
 export const RESULT_REASON_MAX = 1000;
 export const RESULT_ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 
+/**
+ * Basic structure check for missing-screenshot explanations.
+ * This rejects accidental text and one-word gibberish; the administrator still
+ * decides whether the explanation is credible. Never an automated approval.
+ */
+export function validateScreenshotAbsenceReason(value: string): string | null {
+  const reason = value.trim();
+  if (reason.length < RESULT_REASON_MIN || reason.length > RESULT_REASON_MAX) {
+    return "Пояснення має містити від 12 до 1000 символів.";
+  }
+  const words = reason.match(/[\p{L}]{2,}/gu) ?? [];
+  const distinct = new Set(words.map((word) => word.toLocaleLowerCase()));
+  if (words.length < 3 || distinct.size < 3) {
+    return "Опишіть причину відсутності скриншота щонайменше трьома різними словами.";
+  }
+  if (/([\p{L}])\1{7,}/iu.test(reason)) {
+    return "Поясніть причину звичайними словами, без повторення символів.";
+  }
+  return null;
+}
+
 export type ResultSubmissionItem = {
   match_id: string;
   home_goals: number;
@@ -40,8 +61,9 @@ export function validateResultSubmissionItems(input: unknown): {
       return { ok: false, error: "Неправильний формат пояснення." };
     }
     const reason = typeof rawReason === "string" ? rawReason.trim() : "";
-    if (reason.length > RESULT_REASON_MAX || (reason.length > 0 && reason.length < RESULT_REASON_MIN)) {
-      return { ok: false, error: "Пояснення має містити від 12 до 1000 символів." };
+    if (reason.length > 0) {
+      const issue = validateScreenshotAbsenceReason(reason);
+      if (issue) return { ok: false, error: issue };
     }
     items.push({ match_id: matchId, home_goals: goals[0] as number, away_goals: goals[1] as number,
       no_screenshot_reason: reason || null });
