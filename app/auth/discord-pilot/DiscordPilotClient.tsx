@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
 const ORIGIN = "https://ironleague.com.ua";
@@ -15,28 +15,16 @@ function client() {
   return createBrowserClient(url, key);
 }
 
-export default function DiscordPilotClient() {
+/**
+ * The server-rendered page verifies both the Supabase Auth user and the
+ * canonical Discord identity against the private allowlist. A browser-only
+ * session lookup must never display a successful pilot login.
+ */
+export default function DiscordPilotClient({ verifiedName }: { verifiedName: string | null }) {
   const [busy, setBusy] = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [name, setName] = useState<string | null>(null);
+  const [signedOut, setSignedOut] = useState(false);
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const { data, error } = await client().auth.getUser();
-        if (active && data.user && !error) {
-          setName(String(data.user.user_metadata?.full_name || data.user.user_metadata?.name || "Discord"));
-        }
-      } catch {
-        if (active) setMessage("Не вдалося перевірити сесію.");
-      } finally {
-        if (active) setChecking(false);
-      }
-    })();
-    return () => { active = false; };
-  }, []);
+  const name = signedOut ? null : verifiedName;
 
   async function login() {
     setBusy(true);
@@ -58,7 +46,7 @@ export default function DiscordPilotClient() {
     try {
       const { error } = await client().auth.signOut();
       if (error) throw error;
-      setName(null);
+      setSignedOut(true);
       setMessage("Вихід виконано.");
     } catch {
       setMessage("Не вдалося завершити сесію.");
@@ -73,9 +61,7 @@ export default function DiscordPilotClient() {
         <p className="text-xs font-bold uppercase tracking-widest text-blue-300">IRON LEAGUE · PRIVATE PILOT</p>
         <h1 className="mt-3 text-2xl font-black">Перевірка Discord-входу</h1>
         <p className="mt-4 text-sm text-white/70">Лише для попередньо дозволених Discord-акаунтів. Це не публічний особистий кабінет.</p>
-        {checking ? (
-          <p className="mt-6">Перевіряємо сесію…</p>
-        ) : name ? (
+        {name ? (
           <>
             <p className="mt-6 text-green-300">Discord-вхід підтверджено</p>
             <p className="mt-2 text-lg font-bold break-words">{name}</p>

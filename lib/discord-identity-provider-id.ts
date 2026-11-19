@@ -1,18 +1,31 @@
 /**
- * Supabase Auth identity.id is an INTERNAL UUID, not the Discord user ID.
- * auth.identities.provider_id is the Discord ID; in the Admin User API it is
- * represented in identity_data.provider_id (or identity_data.sub).
- * Display a validated snowflake only. SQL still derives the canonical ID.
+ * For Supabase Auth's JSON UserIdentity, `id` is the OAuth provider's user ID,
+ * while `identity_id` is Supabase's internal identity UUID. For Discord, `id`
+ * must be a numeric snowflake. Optional provider metadata must not contradict
+ * this canonical ID. Never authorize using user.user_metadata.
+ *
+ * Source: Supabase Auth internal/models/identity.go (json tags for ProviderID
+ * and ID). This helper consumes identities returned by Supabase Auth, not
+ * arbitrary client-supplied identity objects.
  */
+const DISCORD_SNOWFLAKE = /^\d{17,20}$/;
+
 export function getDiscordProviderId(
-  identity: { provider?: string; identity_data?: unknown } | null | undefined,
+  identity: { provider?: string; id?: string; identity_data?: unknown } | null | undefined,
 ): string | null {
   if (identity?.provider !== "discord") return null;
-  const data = identity.identity_data;
-  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-  const fields = data as Record<string, unknown>;
-  for (const id of [fields.provider_id, fields.sub]) {
-    if (typeof id === "string" && /^\d{15,22}$/.test(id)) return id;
+  const id = identity.id;
+  if (typeof id !== "string" || !DISCORD_SNOWFLAKE.test(id)) return null;
+
+  const metadata = identity.identity_data;
+  if (metadata === undefined || metadata === null) return id;
+  if (typeof metadata !== "object" || Array.isArray(metadata)) return null;
+
+  const fields = metadata as Record<string, unknown>;
+  for (const key of ["provider_id", "sub"] as const) {
+    if (Object.prototype.hasOwnProperty.call(fields, key) && fields[key] !== id) {
+      return null;
+    }
   }
-  return null;
+  return id;
 }
