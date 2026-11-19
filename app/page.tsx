@@ -941,20 +941,20 @@ export default async function Home() {
                   href={`/news/${latestNews[0].slug}`}
                   className="group block p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
                 >
-                  <div className="relative h-40 overflow-hidden rounded-xl bg-[#0c1a2c] lg:h-[185px] xl:h-[195px]">
+                  <div className="relative overflow-hidden rounded-xl bg-[#0c1a2c]">
                     {latestNews[0].image_url ? (
                       <img
                         src={latestNews[0].image_url}
                         alt={latestNews[0].title}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="block h-auto max-h-[520px] w-full object-contain"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-900/50 via-[#10213c] to-[#030711]">
+                      <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-blue-900/50 via-[#10213c] to-[#030711] lg:h-[185px] xl:h-[195px]">
                         <span className="text-3xl font-black tracking-widest text-blue-200/70">IRON LEAGUE</span>
                       </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#030711]/85 to-transparent" />
-                    <span className="absolute bottom-2 left-3 rounded-full border border-blue-400/25 bg-[#092248]/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-200">
+
+                    <span className="mb-2 ml-3 mt-2 inline-flex rounded-full border border-blue-400/25 bg-[#092248]/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-200">
                       {latestNews[0].category}
                     </span>
                   </div>
