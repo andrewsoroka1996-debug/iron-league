@@ -1,4 +1,5 @@
 import "server-only";
+import { isDivisionCalendarMatchComplete } from "./division-calendar-completion";
 
 import { cache } from "react";
 import type { SeasonNumber } from "../data/competitions/season-competitions";
@@ -70,7 +71,7 @@ export const getPlayerPlacements = cache(async (playerId: string): Promise<Playe
       if (divisionMatches.length < expected) continue;
       // Historical seasons 1–2 can contain administratively unplayed fixtures.
       // Active seasons are never awarded positions before all fixtures finish.
-      if (season >= 3 && !divisionMatches.every(isFinished)) continue;
+      if (season >= 3 && !divisionMatches.every(isDivisionCalendarMatchComplete)) continue;
 
       const table = buildStandings({
         participantIds,

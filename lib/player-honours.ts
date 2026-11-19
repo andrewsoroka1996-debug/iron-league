@@ -1,4 +1,5 @@
 import "server-only";
+import { isDivisionCalendarMatchComplete } from "./division-calendar-completion";
 
 import { cache } from "react";
 
@@ -807,9 +808,7 @@ for (const season of [2] as const) {
             season === 2;
 
           const allFinished =
-            divisionMatches.every(
-              isFinished
-            );
+            divisionMatches.every(isDivisionCalendarMatchComplete);
 
           if (
             !isArchiveSeason &&
