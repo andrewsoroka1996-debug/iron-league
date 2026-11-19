@@ -65,6 +65,7 @@ export default function DiscordPilotClient({ verifiedName }: { verifiedName: str
           <>
             <p className="mt-6 text-green-300">Discord-вхід підтверджено</p>
             <p className="mt-2 text-lg font-bold break-words">{name}</p>
+            <a href="/auth/discord-pilot/cabinet" className="mt-4 block w-full rounded-xl bg-blue-500/25 px-4 py-3 font-bold text-white hover:bg-blue-500/35">Відкрити тестовий кабінет (лише перегляд)</a>
             <button type="button" onClick={logout} disabled={busy} className="mt-6 w-full rounded-xl border border-white/30 p-4 font-bold disabled:opacity-50">Вийти</button>
           </>
         ) : (
