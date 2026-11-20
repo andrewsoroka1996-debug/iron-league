@@ -1,7 +1,10 @@
--- IRON LEAGUE | REVIEW ONLY | COMBINED NEW-PLAYER FOUNDATION v1
+-- IRON LEAGUE | REVIEW ONLY | COMBINED NEW-PLAYER FOUNDATION v2 | LEGACY REGISTRY GUARDED
 -- DO NOT EXECUTE IN PRODUCTION UNTIL SEPARATELY AUTHORIZED AND REVIEWED.
 -- Requires review of auth Before User Created hook, Discord provider, RLS grants and backup.
--- PRECONDITION: all 4 tables and both new functions absent, confirmed on 2026-11-20.
+-- PRECONDITION: original 4 tables and both new functions absent, confirmed on 2026-11-20.
+-- This template is deliberately NON-EXECUTABLE: generate a reviewed SQL snapshot
+-- with scripts/generate-player-accounts-sql.mjs. It will not run automatically.
+-- The generated snapshot must be reviewed against data/players.ts before execution.
 -- DO NOT RUN OLD REVIEW-ONLY-player-profile-requests.sql or
 -- REVIEW-ONLY-dynamic-player-profiles.sql in addition to this file.
 -- This migration never touches historical matches, divisions, seasons or legacy data/players.ts.
@@ -14,7 +17,8 @@ DECLARE
 BEGIN
   FOREACH v_name IN ARRAY ARRAY[
     'player_profiles','player_profile_creation_requests',
-    'player_discord_links','player_discord_link_requests'
+    'player_discord_links','player_discord_link_requests',
+    'il_legacy_players'
   ] LOOP
     IF to_regclass('public.' || v_name) IS NOT NULL THEN
       RAISE EXCEPTION 'STOP: table public.% already exists', v_name;
@@ -30,16 +34,58 @@ BEGIN
   END IF;
 END $$;
 
+-- Historical player IDs and nicknames come from data/players.ts. They are
+-- mirrored ONLY for independent database validation; the website continues
+-- to use its existing static registry and immutable tournament history.
+-- No browser role may SELECT or modify this snapshot.
+CREATE TABLE public.il_legacy_players (
+  id text PRIMARY KEY,
+  nickname text NOT NULL,
+  nickname_key text GENERATED ALWAYS AS (lower(normalize(btrim(nickname), NFC))) STORED
+);
+CREATE INDEX il_legacy_players_nickname_key_idx
+  ON public.il_legacy_players(nickname_key);
+ALTER TABLE public.il_legacy_players ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.il_legacy_players FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.il_legacy_players TO service_role;
+
+-- BUILD STOP. A generator replaces the entire next statement with a seeded
+-- INSERT and row-count assertion. Never run this unprepared SQL template.
+DO $$ BEGIN RAISE EXCEPTION 'STOP: legacy registry not seeded; generate a reviewed SQL snapshot first'; END $$; -- IL_LEGACY_SNAPSHOT_PLACEHOLDER
+
 CREATE TABLE public.player_profiles (
   id text PRIMARY KEY
     CHECK (char_length(id) BETWEEN 3 AND 63 AND id ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   nickname text NOT NULL CHECK (
     char_length(nickname) BETWEEN 3 AND 32 AND nickname = btrim(nickname)
+    AND nickname = normalize(nickname, NFC)
+    AND nickname ~ '^[[:alnum:]_. -]+$'
   ),
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX player_profiles_nickname_ci_unique
-  ON public.player_profiles ((lower(nickname)));
+  ON public.player_profiles ((lower(normalize(nickname, NFC))));
+-- Legacy ID/nickname collisions are checked inside PostgreSQL, not only
+-- by a client-supplied list. This also protects direct service_role writes.
+CREATE FUNCTION public.il_reject_legacy_profile_collision()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.il_legacy_players l
+    WHERE lower(l.id) = lower(NEW.id)
+      OR l.nickname_key = lower(normalize(btrim(NEW.nickname), NFC))
+  ) THEN
+    RAISE EXCEPTION 'Legacy player ID or nickname collision';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.il_reject_legacy_profile_collision()
+  FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER il_no_legacy_profile_collision
+  BEFORE INSERT OR UPDATE OF id, nickname ON public.player_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.il_reject_legacy_profile_collision();
+
 ALTER TABLE public.player_profiles ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.player_profiles FROM PUBLIC, anon, authenticated;
 GRANT SELECT (id, nickname) ON public.player_profiles TO anon, authenticated;
@@ -53,6 +99,25 @@ CREATE TABLE public.player_discord_links (
   discord_user_id text NOT NULL UNIQUE CHECK (discord_user_id ~ '^[0-9]{15,22}$'),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+-- A link must reference an existing *trusted* identity in PostgreSQL.
+-- Legacy request approvals are checked against the legacy snapshot below.
+-- This trigger also blocks direct privileged writes with unknown player IDs.
+CREATE FUNCTION public.il_validate_discord_link_target()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.il_legacy_players l WHERE l.id = NEW.player_id)
+     AND NOT EXISTS (SELECT 1 FROM public.player_profiles p WHERE p.id = NEW.player_id) THEN
+    RAISE EXCEPTION 'Unknown player profile';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.il_validate_discord_link_target()
+  FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER il_discord_link_target_exists
+  BEFORE INSERT OR UPDATE OF player_id ON public.player_discord_links
+  FOR EACH ROW EXECUTE FUNCTION public.il_validate_discord_link_target();
+
 ALTER TABLE public.player_discord_links ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.player_discord_links FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.player_discord_links TO authenticated;
@@ -102,6 +167,8 @@ CREATE TABLE public.player_profile_creation_requests (
   desired_nickname text NOT NULL CHECK (
     char_length(desired_nickname) BETWEEN 3 AND 32
     AND desired_nickname = btrim(desired_nickname)
+    AND desired_nickname = normalize(desired_nickname, NFC)
+    AND desired_nickname ~ '^[[:alnum:]_. -]+$'
   ),
   note text NOT NULL DEFAULT '' CHECK (char_length(note) <= 500),
   status text NOT NULL DEFAULT 'pending'
@@ -160,6 +227,21 @@ BEGIN
      p_expected_discord_id IS NULL OR p_expected_discord_id !~ '^[0-9]{15,22}$' THEN
     RAISE EXCEPTION 'Invalid approval input';
   END IF;
+  -- Fail closed if the server's static player list differs from the
+  -- protected database snapshot. Neither an empty nor partial array may
+  -- bypass the database's legacy identity checks.
+  IF cardinality(p_legacy_ids) = 0
+     OR cardinality(p_legacy_ids) <> cardinality(p_legacy_nicknames)
+     OR cardinality(p_legacy_ids) <> (SELECT count(*) FROM public.il_legacy_players)
+     OR EXISTS (
+        SELECT 1
+        FROM unnest(p_legacy_ids, p_legacy_nicknames) AS src(id, nickname_key)
+        LEFT JOIN public.il_legacy_players l ON l.id = src.id
+          AND l.nickname_key = lower(normalize(btrim(src.nickname_key), NFC))
+        WHERE l.id IS NULL
+     ) THEN
+    RAISE EXCEPTION 'Legacy registry mismatch: review data/players.ts snapshot';
+  END IF;
   SELECT * INTO v_request
     FROM public.player_profile_creation_requests
     WHERE id = p_request_id FOR UPDATE;
@@ -180,8 +262,11 @@ BEGIN
     RAISE EXCEPTION 'Discord identity is missing or changed';
   END IF;
   v_player_id := 'il-' || replace(v_request.id::text, '-', '');
-  IF v_player_id = ANY(p_legacy_ids) OR
-     lower(v_request.desired_nickname) = ANY(p_legacy_nicknames) THEN
+  IF EXISTS (
+    SELECT 1 FROM public.il_legacy_players l
+    WHERE lower(l.id) = lower(v_player_id)
+      OR l.nickname_key = lower(normalize(v_request.desired_nickname, NFC))
+  ) THEN
     RAISE EXCEPTION 'Legacy player ID or nickname collision';
   END IF;
   IF EXISTS (
@@ -251,6 +336,13 @@ BEGIN
   IF v_discord_id IS NULL THEN
     RAISE EXCEPTION 'Verified Discord identity required';
   END IF;
+  -- Explicit DB-layer trust requirement for existing players. A forged
+  -- pending request with arbitrary player_id must never grant ownership.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.il_legacy_players l WHERE l.id = v_request.player_id
+  ) THEN
+    RAISE EXCEPTION 'Target is not an existing legacy player';
+  END IF;
   IF EXISTS (
     SELECT 1 FROM public.player_profile_creation_requests r
     WHERE r.auth_user_id = v_request.auth_user_id AND r.status = 'pending'
@@ -273,7 +365,7 @@ COMMIT;
 
 -- DO NOT RUN YET. Post-install read-only reviews before activation:
 -- SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public'
---   AND tablename IN ('player_profiles','player_profile_creation_requests',
+--   AND tablename IN ('il_legacy_players','player_profiles','player_profile_creation_requests',
 --     'player_discord_links','player_discord_link_requests');
 -- SELECT proname, prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
 --   WHERE n.nspname='public' AND proname IN
