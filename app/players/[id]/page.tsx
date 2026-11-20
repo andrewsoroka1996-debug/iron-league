@@ -14,6 +14,8 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
 import { players } from "../../../data/players";
+import { resolvePublicPlayer } from "../../../lib/dynamic-player-profiles-server";
+import NewPlayerPublicProfile from "../../../components/player-account/NewPlayerPublicProfile";
 
 import { season1 } from "../../../data/seasons/season-1";
 import { season2 } from "../../../data/seasons/season-2";
@@ -2041,12 +2043,7 @@ export default async function PlayerPage({
     ========================================
   */
 
-  const player =
-    players.find(
-      (item) =>
-        item.id ===
-        playerId
-    );
+  const player = await resolvePublicPlayer(playerId);
 
   if (!player) {
     notFound();
@@ -2168,23 +2165,22 @@ export default async function PlayerPage({
       </section>
 
       {/* PLAYER ACCOUNT / guarded until explicitly enabled */}
-      {playerAccountsEnabled(process.env.PLAYER_ACCOUNTS_ENABLED) && (
+      {player.source === "legacy" && playerAccountsEnabled(process.env.PLAYER_ACCOUNTS_ENABLED) && (
         <PlayerAccountPanel key={playerId} playerId={playerId} />
       )}
 
       {/* HEAVY PROFILE DATA */}
 
-      <Suspense
-        key={`${playerId}-${season}`}
-        fallback={
-          <PlayerProfileDataFallback />
-        }
-      >
-        <PlayerProfileData
-          playerId={playerId}
-          season={season}
-        />
-      </Suspense>
+      {player.source === "dynamic" ? (
+        <NewPlayerPublicProfile nickname={player.nickname} />
+      ) : (
+        <Suspense
+          key={`${playerId}-${season}`}
+          fallback={<PlayerProfileDataFallback />}
+        >
+          <PlayerProfileData playerId={playerId} season={season} />
+        </Suspense>
+      )}
 
       {/* FOOTER */}
 

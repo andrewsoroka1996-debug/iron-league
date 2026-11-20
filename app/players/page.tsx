@@ -2,6 +2,7 @@ import StadiumBackground from "../../components/StadiumBackground";
 import SiteHeader from "../../components/public/SiteHeader";
 import SiteFooter from "../../components/public/SiteFooter";
 import { players } from "../../data/players";
+import { dynamicProfilesEnabled, listDynamicPlayers } from "../../lib/dynamic-player-profiles-server";
 import PlayerEmblem from "../../components/PlayerEmblem";
 import { getPlayerEmblemUrls } from "../../lib/player-emblem-urls";
 import { getSeasonPlayerReplacements, applyPlayerReplacements } from "../../lib/player-replacements";
@@ -407,6 +408,20 @@ export default async function PlayersPage({
       season
     );
 
+  // New, approved database profiles are separate from historical season squads.
+  // A missing table or DB failure must never break the established player list.
+  const showDynamicProfiles = dynamicProfilesEnabled() && season >= 3;
+  let newRegisteredPlayers: Awaited<ReturnType<typeof listDynamicPlayers>> = [];
+  let newProfilesUnavailable = false;
+  if (showDynamicProfiles) {
+    try {
+      newRegisteredPlayers = await listDynamicPlayers();
+    } catch (error) {
+      console.error("DYNAMIC PLAYER LIST ERROR:", error);
+      newProfilesUnavailable = true;
+    }
+  }
+
   const emblemUrls = await getPlayerEmblemUrls();
 
   return (
@@ -707,6 +722,44 @@ export default async function PlayersPage({
 
         )}
       </section>
+
+      {/* APPROVED NEW PROFILES: OUTSIDE ALL SEASON STANDINGS */}
+      {showDynamicProfiles && (
+        <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 sm:pb-16" aria-label="Зареєстровані гравці поза сезонними складами">
+          <div className="mb-5">
+            <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">Нові профілі</div>
+            <h2 className="mt-2 text-2xl font-black sm:text-3xl">Зареєстровані гравці</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">
+              Ці профілі створені після схвалення заявки й не входять до складів дивізіонів обраного сезону.
+              Вони не впливають на історичні списки, результати або кількість учасників сезону.
+            </p>
+          </div>
+          {newProfilesUnavailable ? (
+            <p role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4 text-sm text-amber-200">
+              Реєстр нових профілів тимчасово недоступний. Історичні гравці відображаються як раніше.
+            </p>
+          ) : newRegisteredPlayers.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#07101d] p-4 text-sm text-white/50">
+              Схвалених нових профілів поки немає.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {newRegisteredPlayers.map((player) => (
+                <a key={player.id} href={`/players/${player.id}`}
+                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#07101d] p-4 transition hover:border-blue-400/35 hover:bg-[#0a1628]">
+                  <PlayerEmblem nickname={player.nickname} initials={getInitials(player.nickname)}
+                    src={emblemUrls[player.id]} variant="card" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-base font-black text-white">{player.nickname}</div>
+                    <div className="mt-1 text-xs font-semibold text-blue-300">Новий профіль · Без дивізіону</div>
+                  </div>
+                  <span aria-hidden="true" className="text-blue-300">→</span>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
             {/* FOOTER */}
       <SiteFooter />
