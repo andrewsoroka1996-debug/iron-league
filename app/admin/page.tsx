@@ -1847,6 +1847,14 @@ setMatchId(
             >
               Новини
             </a>
+            {process.env.NEXT_PUBLIC_PLAYER_ACCOUNT_LINKS_ADMIN_MENU === "true" && (
+              <a
+                href="/admin/player-accounts"
+                className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
+              >
+                Акаунти гравців
+              </a>
+            )}
             <a
   href="/admin/player-emblems"
   className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20"
@@ -1898,6 +1906,14 @@ setMatchId(
               >
                 Новини
               </a>
+              {process.env.NEXT_PUBLIC_PLAYER_ACCOUNT_LINKS_ADMIN_MENU === "true" && (
+                <a
+                  href="/admin/player-accounts"
+                  className="rounded-xl px-4 py-3 font-bold text-blue-300 transition hover:bg-blue-500/10"
+                >
+                  Акаунти гравців
+                </a>
+              )}
               <a
   href="/admin/player-emblems"
   className="rounded-xl px-4 py-3 font-bold text-blue-300 transition hover:bg-blue-500/10"
