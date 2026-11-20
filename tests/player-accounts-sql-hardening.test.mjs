@@ -13,6 +13,7 @@ test("SQL is fail-closed until locally-generated legacy seed is reviewed", () =>
   assert.match(sql,/RAISE EXCEPTION 'STOP: legacy registry not seeded/);
   assert.match(sql,/IL_LEGACY_SNAPSHOT_PLACEHOLDER/);
   assert.match(sql,/CREATE TABLE public\.il_legacy_players/);
+  assert.match(sql,/CREATE UNIQUE INDEX il_legacy_players_nickname_key_idx/);
   assert.match(sql,/ALTER TABLE public\.il_legacy_players ENABLE ROW LEVEL SECURITY/);
   assert.match(sql,/REVOKE ALL ON public\.il_legacy_players FROM PUBLIC, anon, authenticated/);
 });
@@ -24,6 +25,9 @@ test("database independently refuses unknown link targets and legacy collisions"
   assert.match(sql,/CREATE TRIGGER il_no_legacy_profile_collision/);
   assert.match(sql,/Target is not an existing legacy player/);
   assert.match(sql,/Legacy registry mismatch/);
+  // One missing row replaced by a duplicate matching row MUST fail the RPC's
+  // server-array synchronization check; count and LEFT JOIN do not suffice.
+  assert.match(sql,/count\(DISTINCT x\.id\) FROM unnest\(p_legacy_ids\) AS x\(id\)/);
   assert.match(sql,/normalize\(nickname, NFC\)/);
   assert.match(sql,/SECURITY DEFINER SET search_path = ''/);
   assert.match(sql,/REVOKE ALL ON FUNCTION public\.admin_decide_player_discord_link/);
@@ -60,8 +64,24 @@ test("offline generator extracts AST literals and escapes SQL quotes safely", ()
     assert.match(contents,/Snapshot rows: 2/);
     assert.doesNotMatch(contents,/IL_LEGACY_SNAPSHOT_PLACEHOLDER/);
     assert.match(contents,/CREATE FUNCTION public\.admin_decide_player_discord_link/);
+    assert.match(contents,/count\(DISTINCT x\.id\) FROM unnest\(p_legacy_ids\) AS x\(id\)/);
     const repeat=spawnSync(process.execPath,["scripts/generate-player-accounts-sql.mjs","--source",source,
       "--output",target],{cwd:root,encoding:"utf8"});
     assert.notEqual(repeat.status,0,"Must never overwrite existing reviewed SQL");
   } finally {rmSync(tmp,{recursive:true,force:true});}
+});
+
+
+test("offline generator rejects duplicate normalized historical nicknames", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "il-sql-dupe-test-"));
+  try {
+    const source = path.join(tmp, "players.ts");
+    const target = path.join(tmp, "output.sql");
+    writeFileSync(source,
+      "export const players = [{id: 'first-id', nickname: 'PAVUK'}, {id: 'second-id', nickname: 'pavuk'}];\n");
+    const r = spawnSync(process.execPath, ["scripts/generate-player-accounts-sql.mjs",
+      "--source", source, "--output", target], {cwd: root, encoding: "utf8"});
+    assert.notEqual(r.status, 0, "Duplicate case-insensitive nickname must fail generation");
+    assert.match(r.stderr, /Duplicate normalized legacy nickname/);
+  } finally { rmSync(tmp, {recursive: true, force: true}); }
 });

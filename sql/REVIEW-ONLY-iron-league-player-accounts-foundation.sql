@@ -43,7 +43,8 @@ CREATE TABLE public.il_legacy_players (
   nickname text NOT NULL,
   nickname_key text GENERATED ALWAYS AS (lower(normalize(btrim(nickname), NFC))) STORED
 );
-CREATE INDEX il_legacy_players_nickname_key_idx
+-- An immutable snapshot must not contain two legacy identities with the same normalized nickname.
+CREATE UNIQUE INDEX il_legacy_players_nickname_key_idx
   ON public.il_legacy_players(nickname_key);
 ALTER TABLE public.il_legacy_players ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.il_legacy_players FROM PUBLIC, anon, authenticated;
@@ -227,12 +228,14 @@ BEGIN
      p_expected_discord_id IS NULL OR p_expected_discord_id !~ '^[0-9]{15,22}$' THEN
     RAISE EXCEPTION 'Invalid approval input';
   END IF;
-  -- Fail closed if the server's static player list differs from the
-  -- protected database snapshot. Neither an empty nor partial array may
-  -- bypass the database's legacy identity checks.
+  -- Fail closed unless the server sends a one-to-one, exhaustive list
+  -- of the database legacy snapshot. A repeated valid ID must not conceal
+  -- another omitted ID (count and per-row joins alone are insufficient).
   IF cardinality(p_legacy_ids) = 0
      OR cardinality(p_legacy_ids) <> cardinality(p_legacy_nicknames)
      OR cardinality(p_legacy_ids) <> (SELECT count(*) FROM public.il_legacy_players)
+     OR (SELECT count(DISTINCT x.id) FROM unnest(p_legacy_ids) AS x(id))
+         <> (SELECT count(*) FROM public.il_legacy_players)
      OR EXISTS (
         SELECT 1
         FROM unnest(p_legacy_ids, p_legacy_nicknames) AS src(id, nickname_key)

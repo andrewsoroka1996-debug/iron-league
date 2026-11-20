@@ -44,6 +44,7 @@ if (declarations.length !== 1 || !ts.isArrayLiteralExpression(declarations[0].in
 }
 const rows = [];
 const seenIds = new Set();
+const seenNicknameKeys = new Set();
 for (const [index, element] of declarations[0].initializer.elements.entries()) {
   if (!ts.isObjectLiteralExpression(element)) throw new Error(`Unexpected player expression at index ${index}`);
   const data = {};
@@ -61,7 +62,12 @@ for (const [index, element] of declarations[0].initializer.elements.entries()) {
     throw new Error(`Invalid ID or nickname at player index ${index}`);
   }
   if (seenIds.has(data.id.toLowerCase())) throw new Error(`Duplicate legacy player ID: ${data.id}`);
+  const nicknameKey = data.nickname.trim().normalize("NFC").toLowerCase();
+  if (seenNicknameKeys.has(nicknameKey)) {
+    throw new Error(`Duplicate normalized legacy nickname: ${data.nickname}`);
+  }
   seenIds.add(data.id.toLowerCase());
+  seenNicknameKeys.add(nicknameKey);
   rows.push(data);
 }
 if (!rows.length) throw new Error("Refusing to generate an empty legacy registry");
