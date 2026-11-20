@@ -23,20 +23,23 @@ test('only Supabase-verified Discord identity may submit, no arbitrary auth_user
   assert.match(server, /canSubmitProfileRequest/);
 });
 
-test('new profile request cannot create profile or grant player ownership', () => {
+test('applicant endpoint cannot create profile; admin approval is a separately gated RPC', () => {
   const server = read('lib/player-profile-request-server.ts');
   assert.doesNotMatch(server, /admin_decide_player_discord_link/);
   assert.doesNotMatch(server, /\.from\("players"\)\.insert/);
   assert.doesNotMatch(server, /\.from\("player_discord_links"\)\.insert/);
-  assert.match(server, /input\.action !== "list" && input\.action !== "reject"/);
+  assert.match(server, /IRON_LEAGUE_NEW_PLAYER_APPROVAL_ENABLED === "true"/);
+  assert.match(server, /input\.action !== "list" && input\.action !== "reject" && input\.action !== "approve"/);
+  assert.match(server, /client\.rpc\(APPROVAL_RPC/);
 });
 
-test('admin action remains password-gated and limited to list or reject', () => {
+test('admin action remains password-gated; approval independently disabled by default', () => {
   const server = read('lib/player-profile-request-server.ts');
   assert.match(server, /timingSafeEqual/);
   assert.match(server, /adminPasswordValid\(input\.password\)/);
   assert.match(server, /\.eq\("status", "pending"\)\.select\("id"\)/);
   assert.match(server, /\.auth\.admin\.getUserById/);
+  assert.match(server, /if \(input\.action === "approve" && !playerApprovalEnabled\(\)\)/);
   const route = read('app/api/admin/player-profile-requests/route.ts');
   assert.match(route, /export async function POST/);
   assert.doesNotMatch(route, /export async function GET/);
@@ -61,5 +64,6 @@ test('newcomer form and existing admin page remain separate from old link API', 
   assert.match(admin, /\/api\/admin\/player-profile-requests/);
   assert.match(admin, /Завантажити заявки новачків/);
   assert.doesNotMatch(form, /\/auth-test|TEST ONLY/);
-  assert.doesNotMatch(admin, /Підтвердити створення/);
+  assert.match(admin, /Схвалити та створити профіль/);
+  assert.match(admin, /window\.prompt/);
 });

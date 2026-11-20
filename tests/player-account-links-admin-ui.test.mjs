@@ -41,6 +41,8 @@ test("existing server API retains admin authentication and atomic RPC", () => {
 
 test("new profile request panel is embedded without automatic account creation", () => {
   const panel = read("components/admin/PlayerAccountLinksAdminPanel.tsx");
-  assert.match(panel, /<NewProfileRequestsAdminPanel password=\{password\} \/>/);
+  assert.match(panel, /<NewProfileRequestsAdminPanel password=\{password\} allowApprovals=\{allowApprovals\} \/>/);
+  const page = read("app/admin/player-accounts/page.tsx");
+  assert.match(page, /allowApprovals=\{playerApprovalEnabled\(\)\}/);
   assert.doesNotMatch(panel, /\.from\("players"\)|createPlayer|insertPlayer/);
 });

@@ -10,10 +10,10 @@ type RequestRow = {
   discordId: string | null;
   discordName: string | null;
 };
-type AdminResponse = { requests?: RequestRow[]; error?: string };
+type AdminResponse = { requests?: RequestRow[]; error?: string; status?: string; playerId?: string };
 const endpoint = "/api/admin/player-profile-requests";
 
-export default function NewProfileRequestsAdminPanel({ password }: { password: string }) {
+export default function NewProfileRequestsAdminPanel({ password, allowApprovals }: { password: string; allowApprovals: boolean }) {
   const [requests, setRequests] = useState<RequestRow[] | null>(null);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -47,6 +47,33 @@ export default function NewProfileRequestsAdminPanel({ password }: { password: s
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Заявки не завантажено");
       setRequests(null);
+    } finally { setBusy(false); }
+  }
+
+  async function approve(request: RequestRow) {
+    if (busy) return;
+    if (!/^\d{15,22}$/.test(request.discordId ?? "")) {
+      setError("Неможливо схвалити без перевіреного числового Discord ID.");
+      return;
+    }
+    const confirmedNickname = window.prompt(
+      `Для створення профілю введіть точно нікнейм ${request.nickname}. Переконайтеся, що гравець не має іншого профілю.`,
+      "",
+    );
+    if (confirmedNickname !== request.nickname) return;
+    if (!window.confirm(`Створити новий профіль ${request.nickname} та прив'язати Discord ID ${request.discordId}? Це не зараховує до турнірів.`)) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const result = await post({ action: "approve", requestId: request.id, expectedDiscordId: request.discordId });
+      if (result.status !== "approved" || typeof result.playerId !== "string") {
+        throw new Error("Сервер не підтвердив схвалення. Оновіть список.");
+      }
+      setMessage(`Створено профіль ${result.playerId}. Для публічного відображення потрібен окремий дозвіл функції.`);
+      const refreshed = await post({ action: "list" });
+      setRequests(Array.isArray(refreshed.requests) ? refreshed.requests : null);
+    } catch (cause) {
+      setRequests(null);
+      setError(cause instanceof Error ? cause.message : "Невідомий результат схвалення. Оновіть список без повторної спроби.");
     } finally { setBusy(false); }
   }
 
@@ -95,7 +122,12 @@ export default function NewProfileRequestsAdminPanel({ password }: { password: s
             <p className="break-all text-xs text-white/45">Заявка: {request.id}</p>
           </div>
           {request.note && <p className="rounded-lg border border-white/10 p-3 text-sm text-white/75">Примітка: {request.note}</p>}
-          <p className="text-xs text-amber-200">Перевірте, чи профіль уже існує під іншим ніком. Створення нового профілю та його прив'язка тут навмисно недоступні.</p>
+          <p className="text-xs text-amber-200">Перед схваленням перевірте особу та чи немає іншого профілю. Схвалення створює окремий профіль і прив'язку, але не зараховує до турніру. Серверна функція схвалення за замовчуванням вимкнена.</p>
+          {allowApprovals && <button type="button" disabled={busy || !/^\d{15,22}$/.test(request.discordId ?? "")}
+            onClick={() => void approve(request)}
+            className="rounded-xl border border-emerald-400/40 bg-emerald-600/20 px-4 py-3 text-sm font-bold text-emerald-100 disabled:opacity-40">
+            Схвалити та створити профіль
+          </button>}
           <label className="block text-sm font-semibold">
             Причина відхилення
             <textarea value={reasons[request.id] || ""} onChange={(event) => setReasons((current) => ({ ...current, [request.id]: event.target.value }))}

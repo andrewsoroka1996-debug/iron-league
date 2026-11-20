@@ -5,6 +5,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { getDiscordProviderId } from "./discord-identity-provider-id";
+import { players } from "../data/players";
 import { playerAccountsEnabled } from "./player-account-access-policy";
 import {
   canSubmitProfileRequest,
@@ -14,6 +15,17 @@ import {
 } from "./player-profile-request-policy";
 
 const TABLE = "player_profile_creation_requests";
+const APPROVAL_RPC = "admin_approve_new_player_profile";
+const legacyIds = players.map((player) => player.id);
+const legacyNames = players.map((player) => player.nickname.normalize("NFC").trim().toLowerCase());
+const legacyIdSet = new Set(legacyIds.map((id) => id.toLowerCase()));
+const legacyNameSet = new Set(legacyNames);
+
+/** Separate server-only switch; no approval possible without explicit rollout. */
+export function playerApprovalEnabled() {
+  return profileApplicationsEnabled() &&
+    process.env.IRON_LEAGUE_NEW_PLAYER_APPROVAL_ENABLED === "true";
+}
 const unavailable = "Не вдалося виконати операцію. Перевірте налаштування або зверніться до організатора.";
 
 /**
@@ -82,7 +94,7 @@ export async function handleApplicantRequest(request: NextRequest, method: "GET"
 
     if (method === "GET") {
       const { data, error } = await client.from(TABLE)
-        .select("id, desired_nickname, note, status, created_at, decided_at, decision_reason")
+        .select("id, desired_nickname, note, status, created_at, decided_at, decision_reason, approved_player_id")
         .eq("auth_user_id", auth.user.id)
         .order("created_at", { ascending: false }).limit(15);
       if (error) return reply({ error: unavailable }, 503);
@@ -156,7 +168,7 @@ function adminClient() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-/** Admin may list or reject only. Profile creation and approval are NOT implemented here. */
+/** Admin actions are password-authenticated. Approval requires an additional server-only gate. */
 export async function handleAdminProfileRequest(request: NextRequest) {
   if (!profileApplicationsEnabled()) return respond({ error: "Недоступно" }, 404);
   let body: unknown;
@@ -166,8 +178,11 @@ export async function handleAdminProfileRequest(request: NextRequest) {
   }
   const input = body as Record<string, unknown>;
   if (!adminPasswordValid(input.password)) return respond({ error: "Невірний пароль адміністратора" }, 401);
-  if (input.action !== "list" && input.action !== "reject") {
+  if (input.action !== "list" && input.action !== "reject" && input.action !== "approve") {
     return respond({ error: "Недоступна дія" }, 400);
+  }
+  if (input.action === "approve" && !playerApprovalEnabled()) {
+    return respond({ error: "Недоступно" }, 404);
   }
   const client = adminClient();
   if (!client) return respond({ error: unavailable }, 503);
@@ -199,6 +214,58 @@ export async function handleAdminProfileRequest(request: NextRequest) {
         enriched.push(...batch);
       }
       return respond({ requests: enriched }, 200);
+    }
+
+    if (input.action === "approve") {
+      const requestId = input.requestId;
+      const expectedDiscordId = input.expectedDiscordId;
+      if (typeof requestId !== "string" ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId) ||
+          typeof expectedDiscordId !== "string" || !/^\d{15,22}$/.test(expectedDiscordId)) {
+        return respond({ error: "Некоректна заявка або Discord ID" }, 400);
+      }
+
+      const { data: pending, error: pendingError } = await client.from(TABLE)
+        .select("id, auth_user_id, desired_nickname, status")
+        .eq("id", requestId).maybeSingle();
+      if (pendingError) return respond({ error: unavailable }, 503);
+      if (!pending || pending.status !== "pending") {
+        return respond({ error: "Заявка вже розглянута або відсутня" }, 409);
+      }
+
+      const desired = normalizeRequestedNickname(pending.desired_nickname);
+      if (!desired || desired !== pending.desired_nickname || legacyNameSet.has(desired.toLowerCase())) {
+        return respond({ error: "Нікнейм некоректний або вже зайнятий історичним гравцем" }, 409);
+      }
+      const newPlayerId = `il-${requestId.replace(/-/g, "").toLowerCase()}`;
+      if (legacyIdSet.has(newPlayerId)) {
+        return respond({ error: "ID профілю вже зайнятий" }, 409);
+      }
+
+      // Never trust client supplied names, user IDs or a Discord ID without
+      // separately checking Supabase Auth admin identity for this exact user.
+      const { data: authRecord, error: userError } = await client.auth.admin.getUserById(pending.auth_user_id);
+      const verifiedDiscordId = userError ? null : getDiscordProviderId(
+        authRecord.user?.identities?.find((identity) => identity.provider === "discord"),
+      );
+      if (!verifiedDiscordId || verifiedDiscordId !== expectedDiscordId) {
+        return respond({ error: "Discord ID відсутній або змінився. Оновіть заявки." }, 409);
+      }
+
+      // PostgreSQL SECURITY DEFINER RPC: row lock, verified Discord identity
+      // from auth.identities, unique profile/link and request decision in ONE transaction.
+      const { data: createdPlayerId, error: approvalError } = await client.rpc(APPROVAL_RPC, {
+        p_request_id: requestId,
+        p_expected_discord_id: verifiedDiscordId,
+        p_legacy_ids: legacyIds,
+        p_legacy_nicknames: legacyNames,
+      });
+      if (approvalError || typeof createdPlayerId !== "string" || createdPlayerId !== newPlayerId) {
+        // This could include an unexpected post-commit response failure;
+        // never auto-retry before the admin refreshes request status.
+        return respond({ error: "Не вдалося підтвердити створення профілю. Оновіть список і перевірте стан заявки." }, 409);
+      }
+      return respond({ status: "approved", playerId: createdPlayerId }, 200);
     }
 
     const id = input.requestId;

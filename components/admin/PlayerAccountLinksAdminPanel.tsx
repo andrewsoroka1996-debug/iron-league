@@ -25,7 +25,7 @@ function friendlyDate(raw: string) {
 }
 
 /** Do not persist, log or send ADMIN_PASSWORD except in the intended POST body. */
-export default function PlayerAccountLinksAdminPanel() {
+export default function PlayerAccountLinksAdminPanel({ allowApprovals }: { allowApprovals: boolean }) {
   const [password, setPassword] = useState("");
   const [requests, setRequests] = useState<PendingLink[] | null>(null);
   const [reasons, setReasons] = useState<Record<string, string>>({});
@@ -193,7 +193,7 @@ export default function PlayerAccountLinksAdminPanel() {
         })}
       </section>
 
-      <NewProfileRequestsAdminPanel password={password} />
+      <NewProfileRequestsAdminPanel password={password} allowApprovals={allowApprovals} />
     </div>
   );
 }
