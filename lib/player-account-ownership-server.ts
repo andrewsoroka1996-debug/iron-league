@@ -3,6 +3,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
 import { players } from "../data/players";
+import { getDiscordProviderId } from "./discord-identity-provider-id";
 import { dynamicProfilesEnabled, resolvePublicPlayer } from "./dynamic-player-profiles-server";
 import {
   decidePlayerOwnership,
@@ -101,11 +102,21 @@ export async function checkPlayerOwnershipForRequest(
       };
     }
 
+    // The current verified OAuth provider ID must still be present. Do not
+    // authorize a Supabase user who has lost/changed their Discord identity.
+    const discordIdentity = authData.user.identities?.find(
+      (identity) => identity.provider === "discord",
+    );
+    const verifiedDiscordId = getDiscordProviderId(discordIdentity);
+    if (!verifiedDiscordId) {
+      return { decision: "forbidden", applyAuthCookies };
+    }
+
     // Must be an admin-approved binding in a protected, RLS-governed table.
     // An absent table or insufficient RLS privileges FAILS CLOSED.
     const { data: link, error: linkError } = await supabase
       .from("player_discord_links")
-      .select("auth_user_id, player_id")
+      .select("auth_user_id, player_id, discord_user_id")
       .eq("auth_user_id", authData.user.id)
       .maybeSingle();
 
@@ -119,6 +130,7 @@ export async function checkPlayerOwnershipForRequest(
         requestedPlayerId,
         knownPlayerIds: validatedPlayerIds,
         verifiedAuthUserId: authData.user.id,
+        verifiedDiscordId,
         approvedLink: link ?? null,
       }),
       applyAuthCookies,

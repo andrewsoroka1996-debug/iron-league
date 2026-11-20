@@ -58,7 +58,8 @@ async function loadHubState(): Promise<HubState> {
     }
 
     const discordIdentity = auth.user.identities?.find((identity) => identity.provider === "discord");
-    if (!getDiscordProviderId(discordIdentity)) {
+    const verifiedDiscordId = getDiscordProviderId(discordIdentity);
+    if (!verifiedDiscordId) {
       return { kind: "discord-required" };
     }
 
@@ -66,11 +67,13 @@ async function loadHubState(): Promise<HubState> {
     // If the migration, grants or policy are missing, fail closed.
     const { data: link, error: linkError } = await client
       .from("player_discord_links")
-      .select("player_id")
+      .select("player_id, discord_user_id")
       .eq("auth_user_id", auth.user.id)
       .maybeSingle();
     if (linkError) return { kind: "unavailable" };
     if (!link) return { kind: "unlinked" };
+    // An old/stale approved link cannot authorize a different Discord identity.
+    if (link.discord_user_id !== verifiedDiscordId) return { kind: "discord-required" };
 
     if (typeof link.player_id !== "string") return { kind: "profile-unavailable" };
     const profile = await resolvePublicPlayer(link.player_id);

@@ -7,12 +7,14 @@ import {
 
 const knownPlayerIds = new Set(["andrew-sm", "another-player"]);
 const authUserId = "verified-supabase-user-id";
-const approvedLink = { auth_user_id: authUserId, player_id: "andrew-sm" };
+const discordId = "123456789012345678";
+const approvedLink = { auth_user_id: authUserId, player_id: "andrew-sm", discord_user_id: discordId };
 const decide = (overrides = {}) =>
   decidePlayerOwnership({
     requestedPlayerId: "andrew-sm",
     knownPlayerIds,
     verifiedAuthUserId: authUserId,
+    verifiedDiscordId: discordId,
     approvedLink,
     ...overrides,
   });
@@ -50,4 +52,14 @@ test("link tied to different Supabase user is forbidden", () => {
 
 test("link tied to unknown profile is forbidden", () => {
   assert.equal(decide({ approvedLink: { ...approvedLink, player_id: "missing-player" } }), "forbidden");
+});
+
+test("missing or invalid current Discord identity cannot own an approved profile", () => {
+  assert.equal(decide({ verifiedDiscordId: null }), "forbidden");
+  assert.equal(decide({ verifiedDiscordId: "" }), "forbidden");
+});
+
+test("changed Discord identity cannot reuse approved Supabase user link", () => {
+  assert.equal(decide({ verifiedDiscordId: "999999999999999999" }), "forbidden");
+  assert.equal(decide({ approvedLink: { ...approvedLink, discord_user_id: "999999999999999999" } }), "forbidden");
 });

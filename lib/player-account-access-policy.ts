@@ -14,6 +14,7 @@ export type PlayerOwnershipDecision =
 export type ApprovedPlayerLink = {
   auth_user_id: string;
   player_id: string;
+  discord_user_id: string;
 };
 
 /** Only literal `true` enables accounts; unset/other values fail closed. */
@@ -30,6 +31,7 @@ export function decidePlayerOwnership(input: {
   requestedPlayerId: string;
   knownPlayerIds: ReadonlySet<string>;
   verifiedAuthUserId: string | null;
+  verifiedDiscordId: string | null;
   approvedLink: ApprovedPlayerLink | null;
 }): PlayerOwnershipDecision {
   if (!input.knownPlayerIds.has(input.requestedPlayerId)) {
@@ -38,12 +40,18 @@ export function decidePlayerOwnership(input: {
   if (!input.verifiedAuthUserId) {
     return "unauthenticated";
   }
+  // Supabase user identity alone is insufficient: a previously approved
+  // Discord link must still match the current, provider-verified Discord ID.
+  if (!input.verifiedDiscordId) {
+    return "forbidden";
+  }
   const link = input.approvedLink;
   if (!link) {
     return "unlinked";
   }
   if (
     link.auth_user_id !== input.verifiedAuthUserId ||
+    link.discord_user_id !== input.verifiedDiscordId ||
     !input.knownPlayerIds.has(link.player_id) ||
     link.player_id !== input.requestedPlayerId
   ) {

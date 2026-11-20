@@ -64,13 +64,6 @@ function userClient(request: NextRequest) {
   return { client, reply };
 }
 
-function containsDiscordIdentity(identities: Array<{ provider?: string; id?: string }> | undefined) {
-  return Array.isArray(identities) && identities.some(
-    (identity) => identity.provider === "discord" &&
-      typeof identity.id === "string" && identity.id.length > 0,
-  );
-}
-
 /** User actions only use the logged-in user's RLS-scoped client. */
 export async function handlePlayerLinkRequest(request: NextRequest, method: "GET" | "POST") {
   if (!dynamicLinkFeatureEnabled()) return featureDisabledResponse();
@@ -81,7 +74,8 @@ export async function handlePlayerLinkRequest(request: NextRequest, method: "GET
   try {
     const { data: auth, error: authError } = await client.auth.getUser();
     if (authError || !auth.user) return reply({ error: "Необхідно увійти через Discord" }, 401);
-    if (!containsDiscordIdentity(auth.user.identities ?? undefined)) {
+    const discordIdentity = auth.user.identities?.find((identity) => identity.provider === "discord");
+    if (!getDiscordProviderId(discordIdentity)) {
       return reply({ error: "Потрібен підтверджений вхід через Discord" }, 403);
     }
 
@@ -102,13 +96,19 @@ export async function handlePlayerLinkRequest(request: NextRequest, method: "GET
       return reply({ error: "Профіль гравця не знайдено" }, 404);
     }
 
-    const [approved, pending] = await Promise.all([
+    // Both application types are mutually exclusive while pending. The
+    // newcomer endpoint already checks for pending legacy link requests.
+    const [approved, pending, pendingNewPlayer] = await Promise.all([
       client.from("player_discord_links")
         .select("player_id").eq("auth_user_id", auth.user.id).maybeSingle(),
       client.from("player_discord_link_requests")
         .select("id").eq("auth_user_id", auth.user.id).eq("status", "pending").limit(1),
+      client.from("player_profile_creation_requests")
+        .select("id").eq("auth_user_id", auth.user.id).eq("status", "pending").limit(1),
     ]);
-    if (approved.error || pending.error) return reply({ error: errorText }, 503);
+    if (approved.error || pending.error || pendingNewPlayer.error) {
+      return reply({ error: errorText }, 503);
+    }
 
     const decision = decideLinkRequest({
       enabled: true,
@@ -117,10 +117,10 @@ export async function handlePlayerLinkRequest(request: NextRequest, method: "GET
       requestedPlayerId: playerId,
       knownPlayerIds,
       existingApprovedLink: Boolean(approved.data),
-      hasPendingRequest: Boolean(pending.data?.length),
+      hasPendingRequest: Boolean(pending.data?.length || pendingNewPlayer.data?.length),
     });
     if (decision !== "allowed") {
-      return reply({ error: "У вас уже є прив'язка або заявка на розгляді" }, 409);
+      return reply({ error: "У вас уже є прив'язка або активна заявка. Перевірте статус поданих заявок." }, 409);
     }
 
     // RLS enforces auth.uid() = auth_user_id and status = pending.
