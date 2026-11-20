@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getDiscordProviderId } from "../../lib/discord-identity-provider-id";
 import { playerAccountsEnabled } from "../../lib/player-account-access-policy";
 import { profileApplicationsEnabled } from "../../lib/player-profile-request-server";
+import { publicDiscordAuthEnabled } from "../../lib/player-public-oauth-policy";
 import { resolvePublicPlayer } from "../../lib/dynamic-player-profiles-server";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +91,16 @@ export default async function PlayerAccountHomePage() {
   if (!playerAccountsEnabled(process.env.PLAYER_ACCOUNTS_ENABLED)) notFound();
   const state = await loadHubState();
   const newApplicationsAvailable = profileApplicationsEnabled();
+  const publicLoginAvailable = publicDiscordAuthEnabled({
+    nodeEnv: process.env.NODE_ENV,
+    accountsEnabled: process.env.PLAYER_ACCOUNTS_ENABLED,
+    publicEnabled: process.env.IRON_LEAGUE_PUBLIC_DISCORD_AUTH_ENABLED,
+    pilotEnabled: process.env.IRON_LEAGUE_PROD_DISCORD_PILOT_ENABLED,
+    localTestEnabled: process.env.IRON_LEAGUE_E2E_TEST_ONLY,
+    requestOrigin: "https://ironleague.com.ua",
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    supabasePublishableKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  });
 
   return (
     <main className="min-h-screen bg-[#030711] px-4 py-10 text-white">
@@ -111,9 +122,20 @@ export default async function PlayerAccountHomePage() {
           {state.kind === "signed-out" && (
             <>
               <h2 className="text-lg font-bold">Потрібен вхід через Discord</h2>
-              <p className="text-sm text-white/70">
-                Публічний Discord-вхід ще не відкрито. Сторінка не надає доступу без підтвердженої сесії.
-              </p>
+              {publicLoginAvailable ? (
+                <>
+                  <p className="text-sm text-white/70">
+                    Увійдіть через Discord, щоб переглянути прив'язаний профіль або подати заявку.
+                  </p>
+                  <Link href="/auth/discord" className="inline-flex rounded-xl border border-blue-300/40 bg-blue-500/25 px-4 py-3 text-sm font-bold text-blue-100 hover:bg-blue-500/35">
+                    Увійти через Discord
+                  </Link>
+                </>
+              ) : (
+                <p className="text-sm text-white/70">
+                  Публічний Discord-вхід ще не відкрито. Сторінка не надає доступу без підтвердженої сесії.
+                </p>
+              )}
             </>
           )}
           {state.kind === "discord-required" && (
