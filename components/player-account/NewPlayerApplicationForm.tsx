@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { approvedPlayerProfileHref, profileRequestStatusLabel } from "../../lib/player-profile-request-display";
 
 type Application = {
   id: string;
@@ -9,6 +10,7 @@ type Application = {
   status: string;
   created_at: string;
   decision_reason?: string | null;
+  approved_player_id?: string | null;
 };
 type ApiResult = { requests?: Application[]; request?: Application; error?: string };
 const endpoint = "/api/player-account/profile-requests";
@@ -82,13 +84,21 @@ export default function NewPlayerApplicationForm() {
         <h2 className="text-lg font-bold">Мої заявки</h2>
         {requests === null && <p className="mt-3 text-sm text-white/60">Завантаження або очікування Discord-входу…</p>}
         {requests?.length === 0 && <p className="mt-3 text-sm text-white/60">Заявок поки немає.</p>}
-        {requests?.map((request) => (
-          <article key={request.id} className="mt-3 rounded-xl border border-white/10 p-3 text-sm">
-            <p className="font-bold">{request.desired_nickname} — {request.status === "pending" ? "На розгляді" : "Відхилено"}</p>
-            <p className="mt-1 text-xs text-white/55">Подано: {dateLabel(request.created_at)}</p>
-            {request.decision_reason && <p className="mt-2 text-amber-200">Причина: {request.decision_reason}</p>}
-          </article>
-        ))}
+        {requests?.map((request) => {
+          const profileHref = approvedPlayerProfileHref(request);
+          return (
+            <article key={request.id} className="mt-3 rounded-xl border border-white/10 p-3 text-sm">
+              <p className="font-bold">{request.desired_nickname} — {profileRequestStatusLabel(request.status)}</p>
+              <p className="mt-1 text-xs text-white/55">Подано: {dateLabel(request.created_at)}</p>
+              {request.decision_reason && <p className="mt-2 text-amber-200">Причина: {request.decision_reason}</p>}
+              {profileHref && (
+                <a href={profileHref} className="mt-3 inline-block font-semibold text-blue-300 underline-offset-4 hover:underline">
+                  Перейти до профілю →
+                </a>
+              )}
+            </article>
+          );
+        })}
       </section>
       <form onSubmit={submit} className="space-y-4 rounded-2xl border border-blue-400/20 bg-[#07101d] p-5 sm:p-6">
         <h2 className="text-lg font-bold">Заявка на створення профілю</h2>
