@@ -17,15 +17,20 @@ BEGIN
  END IF;
  IF (SELECT count(*) FROM pg_tables WHERE schemaname = 'public'
        AND tablename IN ('il_legacy_players','player_profiles',
-        'player_profile_creation_requests','player_discord_links','player_discord_link_requests')) <> 5 THEN
-   RAISE EXCEPTION 'Expected five tables';
+        'player_profile_creation_requests','player_discord_links','player_discord_link_requests',
+        'il_pending_player_request_slots')) <> 6 THEN
+   RAISE EXCEPTION 'Expected six tables including guarded pending slots';
  END IF;
  IF (SELECT count(*) FROM pg_tables WHERE schemaname='public' AND rowsecurity
        AND tablename IN ('il_legacy_players','player_profiles',
-        'player_profile_creation_requests','player_discord_links','player_discord_link_requests')) <> 5 THEN
-   RAISE EXCEPTION 'RLS not enabled on all five tables';
+        'player_profile_creation_requests','player_discord_links','player_discord_link_requests',
+        'il_pending_player_request_slots')) <> 6 THEN
+   RAISE EXCEPTION 'RLS not enabled on all six tables';
  END IF;
- IF has_table_privilege('anon','public.il_legacy_players','SELECT')
+ IF has_table_privilege('authenticated','public.il_pending_player_request_slots','SELECT')
+    OR has_table_privilege('authenticated','public.il_pending_player_request_slots','INSERT')
+    OR has_table_privilege('anon','public.il_pending_player_request_slots','SELECT')
+    OR has_table_privilege('anon','public.il_legacy_players','SELECT')
     OR has_table_privilege('authenticated','public.il_legacy_players','SELECT')
     OR has_table_privilege('authenticated','public.player_profiles','INSERT')
     OR has_function_privilege('authenticated',
@@ -43,8 +48,13 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role' AND rolbypassrls) THEN
    RAISE EXCEPTION 'service_role BYPASSRLS expected';
  END IF;
+ IF (SELECT count(*) FROM pg_trigger WHERE tgname IN
+     ('il_guard_link_request_slot','il_guard_profile_request_slot')
+     AND NOT tgisinternal AND tgenabled='O') <> 2 THEN
+   RAISE EXCEPTION 'Pending request guards missing';
+ END IF;
 END $$;
-\echo PASS: five tables, legacy registry, RLS and RPC grants
+\echo PASS: six tables, guarded pending slots, legacy registry, RLS and RPC grants
 
 -- A simulated signed-in user may create only her own requests and may read
 -- only her own request rows. An authenticated browser cannot create a profile.
@@ -55,10 +65,19 @@ SET request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
 INSERT INTO public.player_discord_link_requests(auth_user_id,player_id)
 VALUES ('11111111-1111-4111-8111-111111111111','andrew-sm');
 DO $$
-DECLARE n integer;
+DECLARE n integer; v_constraint text;
 BEGIN
  SELECT count(*) INTO n FROM public.player_discord_link_requests;
  IF n <> 1 THEN RAISE EXCEPTION 'Own link request unreadable'; END IF;
+ -- A simultaneous or later newcomer request cannot occupy a second slot.
+ BEGIN
+   INSERT INTO public.player_profile_creation_requests(auth_user_id,desired_nickname)
+     VALUES ('11111111-1111-4111-8111-111111111111','RaceCrossTypeA');
+   RAISE EXCEPTION 'SECURITY FAIL: cross-type newcomer request accepted';
+ EXCEPTION WHEN unique_violation THEN
+   GET STACKED DIAGNOSTICS v_constraint=CONSTRAINT_NAME;
+   IF v_constraint <> 'il_pending_player_request_slots_pkey' THEN RAISE; END IF;
+ END;
  BEGIN
    INSERT INTO public.player_discord_link_requests(auth_user_id,player_id)
    VALUES ('22222222-2222-4222-8222-222222222222','pancher16');
@@ -87,10 +106,18 @@ SET request.jwt.claim.sub = '22222222-2222-4222-8222-222222222222';
 INSERT INTO public.player_profile_creation_requests(auth_user_id,desired_nickname,note)
 VALUES ('22222222-2222-4222-8222-222222222222','SafeRookieSQL','smoke test');
 DO $$
-DECLARE n integer;
+DECLARE n integer; v_constraint text;
 BEGIN
  SELECT count(*) INTO n FROM public.player_discord_link_requests;
  IF n <> 0 THEN RAISE EXCEPTION 'RLS exposed someone else''s link request'; END IF;
+ BEGIN
+   INSERT INTO public.player_discord_link_requests(auth_user_id,player_id)
+     VALUES ('22222222-2222-4222-8222-222222222222','andrew-sm');
+   RAISE EXCEPTION 'SECURITY FAIL: cross-type legacy link request accepted';
+ EXCEPTION WHEN unique_violation THEN
+   GET STACKED DIAGNOSTICS v_constraint=CONSTRAINT_NAME;
+   IF v_constraint <> 'il_pending_player_request_slots_pkey' THEN RAISE; END IF;
+ END;
  SELECT count(*) INTO n FROM public.player_profile_creation_requests;
  IF n <> 1 THEN RAISE EXCEPTION 'Own profile request not readable'; END IF;
  BEGIN
@@ -110,6 +137,9 @@ BEGIN
  v := public.admin_decide_player_discord_link(
    (SELECT id FROM public.player_discord_link_requests WHERE auth_user_id='11111111-1111-4111-8111-111111111111'),'approve',NULL);
  IF v <> 'approved' THEN RAISE EXCEPTION 'Legacy account approval returned %',v; END IF;
+ IF EXISTS (SELECT 1 FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='11111111-1111-4111-8111-111111111111') THEN
+   RAISE EXCEPTION 'Approved legacy request retained pending slot'; END IF;
  IF NOT EXISTS (
    SELECT 1 FROM public.player_discord_links
    WHERE auth_user_id = '11111111-1111-4111-8111-111111111111'
@@ -174,6 +204,9 @@ BEGIN
  IF new_id <> 'il-' || replace((SELECT id FROM public.player_profile_creation_requests WHERE auth_user_id='22222222-2222-4222-8222-222222222222')::text,'-','') THEN
    RAISE EXCEPTION 'Unexpected dynamic player id: %',new_id;
  END IF;
+ IF EXISTS (SELECT 1 FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='22222222-2222-4222-8222-222222222222') THEN
+   RAISE EXCEPTION 'Approved profile request retained pending slot'; END IF;
  IF NOT EXISTS(SELECT 1 FROM public.player_profiles
                WHERE id = new_id AND nickname = 'SafeRookieSQL')
     OR NOT EXISTS(SELECT 1 FROM public.player_discord_links
@@ -245,6 +278,31 @@ BEGIN
 END $$;
 \echo PASS: legacy nickname collision rejected
 
+-- A rejected request releases its slot, permitting a new request of another type.
+DO $$
+DECLARE n integer;
+BEGIN
+ UPDATE public.player_profile_creation_requests
+   SET status='rejected', decided_at=now(), decision_reason='Mismatch test concluded'
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444' AND status='pending';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Missing profile request to reject'; END IF;
+ IF EXISTS (SELECT 1 FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444') THEN
+   RAISE EXCEPTION 'Rejected profile request retained pending slot'; END IF;
+ INSERT INTO public.player_discord_link_requests(auth_user_id,player_id)
+   VALUES ('44444444-4444-4444-8444-444444444444','andrew-sm');
+ SELECT count(*) INTO n FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444' AND request_kind='link';
+ IF n <> 1 THEN RAISE EXCEPTION 'Replacement link request slot missing'; END IF;
+ UPDATE public.player_discord_link_requests
+   SET status='rejected', decided_at=now(), decision_reason='Test concluded: no link'
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444' AND status='pending';
+ IF EXISTS (SELECT 1 FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444') THEN
+   RAISE EXCEPTION 'Rejected link request retained pending slot'; END IF;
+END $$;
+\echo PASS: rejected requests release slot; opposite type may apply later
+
 -- Public may see only ID/nickname from approved dynamic profiles.
 SET ROLE anon;
 DO $$
@@ -268,6 +326,11 @@ BEGIN
  END IF;
  IF (SELECT count(*) FROM public.player_discord_links) <> 2 THEN
    RAISE EXCEPTION 'Unexpected total Discord links';
+ END IF;
+ IF (SELECT count(*) FROM public.il_pending_player_request_slots) <>
+    (SELECT count(*) FROM public.player_discord_link_requests WHERE status='pending') +
+    (SELECT count(*) FROM public.player_profile_creation_requests WHERE status='pending') THEN
+   RAISE EXCEPTION 'Pending slot table and requests disagree';
  END IF;
 END $$;
 \echo === ALL LOCAL SQL INTEGRATION CHECKS PASSED ===

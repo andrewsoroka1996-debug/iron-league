@@ -42,3 +42,13 @@ test('resume cannot bootstrap, overwrite or blindly test a previous database', (
   assert.match(ps, /17-ironleaguetest\/data\|55432\|127\.0\.0\.1\|17\|utf8/);
   assert.match(ps, /Refusing cleanup: unexpected disposable database name/);
 });
+
+
+test('v5 fresh database and concurrent request protection are mandatory', () => {
+  assert.match(ps, /prepared-v5\.sql/);
+  assert.match(ps, /CREATE TABLE public\\.il_pending_player_request_slots|CREATE TABLE public\.il_pending_player_request_slots/);
+  assert.match(ps, /v5 test suite requires a fresh disposable database/);
+  assert.match(ps, /04-concurrent-requests\.ps1/);
+  assert.match(sql, /il_pending_player_request_slots_pkey/);
+  assert.match(sql, /rejected requests release slot/);
+});

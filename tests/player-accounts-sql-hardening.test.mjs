@@ -85,3 +85,21 @@ test("offline generator rejects duplicate normalized historical nicknames", () =
     assert.match(r.stderr, /Duplicate normalized legacy nickname/);
   } finally { rmSync(tmp, {recursive: true, force: true}); }
 });
+
+
+test("v5 database synchronizes cross-type pending application claims atomically", () => {
+  assert.match(sql, /CREATE TABLE public\.il_pending_player_request_slots/);
+  assert.match(sql, /auth_user_id uuid PRIMARY KEY REFERENCES auth\.users\(id\)/);
+  assert.match(sql, /ALTER TABLE public\.il_pending_player_request_slots ENABLE ROW LEVEL SECURITY/);
+  assert.match(sql, /REVOKE ALL ON public\.il_pending_player_request_slots FROM PUBLIC, anon, authenticated/);
+  assert.match(sql, /CREATE FUNCTION public\.il_guard_pending_player_request_slot/);
+  assert.match(sql, /SECURITY DEFINER SET search_path = ''/);
+  assert.match(sql, /CREATE TRIGGER il_guard_link_request_slot/);
+  assert.match(sql, /CREATE TRIGGER il_guard_profile_request_slot/);
+  assert.match(sql, /BEFORE INSERT OR UPDATE OR DELETE ON public\.player_discord_link_requests/);
+  assert.match(sql, /BEFORE INSERT OR UPDATE OR DELETE ON public\.player_profile_creation_requests/);
+  assert.match(sql, /NEW\.status = 'pending'/);
+  assert.match(sql, /OLD\.status = 'pending' AND NEW\.status <> 'pending'/);
+  assert.match(sql, /Decided request cannot be reopened/);
+  assert.match(sql, /Applicant and request ID are immutable/);
+});

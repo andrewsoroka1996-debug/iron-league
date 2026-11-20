@@ -19,7 +19,7 @@ $serverRoot = 'C:\Program Files\PostgreSQL\17-IronLeagueTest'
 $psql = Join-Path $serverRoot 'bin\psql.exe'
 $createdb = Join-Path $serverRoot 'bin\createdb.exe'
 $dropdb = Join-Path $serverRoot 'bin\dropdb.exe'
-$prepared = Join-Path $Repo 'sql\REVIEW-ONLY-iron-league-player-accounts-prepared.sql'
+$prepared = Join-Path $Repo 'sql\REVIEW-ONLY-iron-league-player-accounts-prepared-v5.sql'
 $registry = Join-Path $Repo 'data\players.ts'
 $kitDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $bootstrap = Join-Path $kitDir '00-bootstrap.sql'
@@ -32,7 +32,7 @@ if ($resume) {
     if ($ResumeDatabase -cnotmatch '^il_smoke_[0-9]{8}_[0-9]{6}_[0-9a-f]{8}$') {
         throw 'STOP: ResumeDatabase must be a known disposable il_smoke_* database'
     }
-    $db = $ResumeDatabase
+    throw 'STOP: v5 test suite requires a fresh disposable database; resume is disabled'
 }
 $created = $false
 $finished = $false
@@ -66,8 +66,11 @@ try {
     if ($sqlText.Contains('IL_LEGACY_SNAPSHOT_PLACEHOLDER') -or
         $sqlText -notmatch '(?s)INSERT INTO public\.il_legacy_players\(id, nickname\) VALUES.*?;\s*DO \$\$\s*BEGIN' -or
         $sqlText -notmatch '(?i)CREATE UNIQUE INDEX il_legacy_players_nickname_key_idx' -or
-        $sqlText -notmatch 'count\(DISTINCT x\.id\)') {
-        throw 'STOP: prepared SQL is not the reviewed v4 schema'
+        $sqlText -notmatch 'count\(DISTINCT x\.id\)' -or
+        $sqlText -notmatch 'CREATE TABLE public\.il_pending_player_request_slots' -or
+        $sqlText -notmatch 'CREATE TRIGGER il_guard_link_request_slot' -or
+        $sqlText -notmatch 'CREATE TRIGGER il_guard_profile_request_slot') {
+        throw 'STOP: prepared SQL is not the reviewed v5 schema'
     }
     if ($sqlText -match '(?m)^-- Snapshot rows: (\d+);') {
         $playerCount = [int]$Matches[1]
@@ -77,10 +80,19 @@ try {
     if ($playerCount -lt 1) { throw 'STOP: empty legacy snapshot' }
     Write-Host "Prepared SQL verified: $playerCount historical players; SHA256 matches"
 
-    $sqlDir = Join-Path $Repo 'sql'
-    $sourceStatus = @(& git -C $Repo status --porcelain -- 'data/players.ts' 'sql/REVIEW-ONLY-iron-league-player-accounts-foundation.sql' 'scripts/generate-player-accounts-sql.mjs')
+    # Allow the *reviewed exact* v5 SQL template to be tested before commit.
+    # The historical player data and offline generator must remain unmodified.
+    $sourceStatus = @(& git -C $Repo status --porcelain -- 'data/players.ts' 'scripts/generate-player-accounts-sql.mjs')
     if ($LASTEXITCODE -ne 0) { throw 'Git status check failed' }
-    if ($sourceStatus.Count -gt 0) { throw "STOP: source/template/generator have uncommitted changes: $($sourceStatus -join '; ')" }
+    if ($sourceStatus.Count -gt 0) { throw "STOP: registry/generator modified: $($sourceStatus -join '; ')" }
+    # git hash-object honors the repository's LF/CRLF conversion, so the
+    # identity check stays valid after Windows checkout and later commits.
+    $templateRel = 'sql/REVIEW-ONLY-iron-league-player-accounts-foundation.sql'
+    $expectedTemplateBlob = '4d84ef7978e81a8f2a81c69c8c0ea2cd7c1fede6'
+    $currentTemplateBlob = (& git -C $Repo hash-object -- $templateRel).Trim()
+    if ($LASTEXITCODE -ne 0 -or $currentTemplateBlob -cne $expectedTemplateBlob) {
+        throw 'STOP: SQL template differs from the reviewed v5 security patch'
+    }
 
     Write-Host 'Password: enter the password for LOCAL postgres only (never the Supabase password).'
     $secret = Read-Host 'LOCAL postgres password' -AsSecureString
@@ -147,6 +159,12 @@ SELECT
     Write-Host '=== RUN SECURITY / RLS / APPROVAL INTEGRATION TESTS ==='
     & $psql -h $hostAddress -p $port -U postgres -d $db -X -v ON_ERROR_STOP=1 -P pager=off -f $verify
     Assert-Exit 'SQL integration tests'
+
+    Write-Host '=== RUN PARALLEL CROSS-TYPE REQUEST RACE TEST ==='
+    $raceTest = Join-Path $kitDir '04-concurrent-requests.ps1'
+    if (-not (Test-Path -LiteralPath $raceTest -PathType Leaf)) { throw 'Race test script missing' }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $raceTest -Database $db
+    Assert-Exit 'Concurrent pending request test'
 
     $finished = $true
     Write-Host 'ALL LOCAL INTEGRATION TESTS PASSED.' -ForegroundColor Green

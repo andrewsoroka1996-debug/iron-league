@@ -1,4 +1,4 @@
--- IRON LEAGUE | REVIEW ONLY | COMBINED NEW-PLAYER FOUNDATION v2 | LEGACY REGISTRY GUARDED
+-- IRON LEAGUE | REVIEW ONLY | COMBINED NEW-PLAYER FOUNDATION v5 | CROSS-TYPE PENDING CLAIM GUARDED
 -- DO NOT EXECUTE IN PRODUCTION UNTIL SEPARATELY AUTHORIZED AND REVIEWED.
 -- Requires review of auth Before User Created hook, Discord provider, RLS grants and backup.
 -- PRECONDITION: original 4 tables and both new functions absent, confirmed on 2026-11-20.
@@ -18,7 +18,7 @@ BEGIN
   FOREACH v_name IN ARRAY ARRAY[
     'player_profiles','player_profile_creation_requests',
     'player_discord_links','player_discord_link_requests',
-    'il_legacy_players'
+    'il_legacy_players','il_pending_player_request_slots'
   ] LOOP
     IF to_regclass('public.' || v_name) IS NOT NULL THEN
       RAISE EXCEPTION 'STOP: table public.% already exists', v_name;
@@ -27,7 +27,8 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.proname IN (
-      'admin_approve_new_player_profile','admin_decide_player_discord_link'
+      'admin_approve_new_player_profile','admin_decide_player_discord_link',
+      'il_guard_pending_player_request_slot'
     )
   ) THEN
     RAISE EXCEPTION 'STOP: targeted function already exists';
@@ -205,6 +206,79 @@ CREATE POLICY applicant_inserts_only_own_pending_profile_request
   WITH CHECK ((SELECT auth.uid()) = auth_user_id
     AND status = 'pending' AND decided_at IS NULL
     AND decision_reason IS NULL AND approved_player_id IS NULL);
+
+-- Database-enforced cross-table invariant: a Supabase auth user may have
+-- at most one pending account request, regardless of its type. A unique key
+-- on a *shared* table is concurrency safe even for simultaneous inserts.
+-- The slot is created/deleted in the same transaction as the request; an
+-- aborted INSERT/UPDATE rolls the slot change back automatically.
+-- This is an internal-only table. Browser roles cannot query or modify it.
+CREATE TABLE public.il_pending_player_request_slots (
+  auth_user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  request_kind text NOT NULL CHECK (request_kind IN ('link','profile')),
+  request_id uuid NOT NULL UNIQUE
+);
+ALTER TABLE public.il_pending_player_request_slots ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.il_pending_player_request_slots FROM PUBLIC, anon, authenticated;
+-- Intentionally no browser policies/grants; trigger uses its owner's rights.
+
+CREATE FUNCTION public.il_guard_pending_player_request_slot()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_kind text;
+BEGIN
+  IF TG_TABLE_SCHEMA <> 'public' THEN
+    RAISE EXCEPTION 'Unexpected request schema';
+  END IF;
+  IF TG_TABLE_NAME = 'player_discord_link_requests' THEN
+    v_kind := 'link';
+  ELSIF TG_TABLE_NAME = 'player_profile_creation_requests' THEN
+    v_kind := 'profile';
+  ELSE
+    RAISE EXCEPTION 'Unexpected request table';
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.status = 'pending' THEN
+      INSERT INTO public.il_pending_player_request_slots(auth_user_id,request_kind,request_id)
+        VALUES (NEW.auth_user_id,v_kind,NEW.id);
+    END IF;
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF NEW.auth_user_id IS DISTINCT FROM OLD.auth_user_id
+       OR NEW.id IS DISTINCT FROM OLD.id THEN
+      RAISE EXCEPTION 'Applicant and request ID are immutable';
+    END IF;
+    IF OLD.status = 'pending' AND NEW.status <> 'pending' THEN
+      DELETE FROM public.il_pending_player_request_slots s
+        WHERE s.auth_user_id=OLD.auth_user_id
+          AND s.request_kind=v_kind AND s.request_id=OLD.id;
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'Pending request slot missing';
+      END IF;
+    ELSIF OLD.status <> 'pending' AND NEW.status = 'pending' THEN
+      RAISE EXCEPTION 'Decided request cannot be reopened';
+    END IF;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    IF OLD.status = 'pending' THEN
+      DELETE FROM public.il_pending_player_request_slots s
+        WHERE s.auth_user_id=OLD.auth_user_id
+          AND s.request_kind=v_kind AND s.request_id=OLD.id;
+    END IF;
+    RETURN OLD;
+  END IF;
+  RAISE EXCEPTION 'Unsupported request operation';
+END;
+$$;
+REVOKE ALL ON FUNCTION public.il_guard_pending_player_request_slot()
+  FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER il_guard_link_request_slot
+  BEFORE INSERT OR UPDATE OR DELETE ON public.player_discord_link_requests
+  FOR EACH ROW EXECUTE FUNCTION public.il_guard_pending_player_request_slot();
+CREATE TRIGGER il_guard_profile_request_slot
+  BEFORE INSERT OR UPDATE OR DELETE ON public.player_profile_creation_requests
+  FOR EACH ROW EXECUTE FUNCTION public.il_guard_pending_player_request_slot();
 
 -- The SQL functions are restricted to service_role. The Next.js API must
 -- check ADMIN_PASSWORD and the individual server-only approval gate first.
