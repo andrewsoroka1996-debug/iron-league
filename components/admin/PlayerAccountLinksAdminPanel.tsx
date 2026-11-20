@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import NewProfileRequestsAdminPanel from "./NewProfileRequestsAdminPanel";
 
 type PendingLink = {
   id: string;
@@ -192,10 +193,7 @@ export default function PlayerAccountLinksAdminPanel() {
         })}
       </section>
 
-      <section className="rounded-2xl border border-white/10 p-4 text-sm text-white/65 sm:p-6">
-        <h2 className="text-base font-bold text-white">Нові гравці — наступний етап</h2>
-        <p className="mt-2">Створення профілю для користувача, якого ще немає в реєстрі гравців, потребує окремої заявки та схвалення. Тут поки немає кнопки створення: цей патч не змінює реєстр профілів і не створює гравців автоматично.</p>
-      </section>
+      <NewProfileRequestsAdminPanel password={password} />
     </div>
   );
 }

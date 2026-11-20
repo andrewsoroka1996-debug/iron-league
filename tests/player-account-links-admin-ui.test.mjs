@@ -39,8 +39,8 @@ test("existing server API retains admin authentication and atomic RPC", () => {
   assert.match(api, /if \(!dynamicLinkFeatureEnabled\(\)\) return featureDisabledResponse\(\)/);
 });
 
-test("new profiles stay outside this patch", () => {
+test("new profile request panel is embedded without automatic account creation", () => {
   const panel = read("components/admin/PlayerAccountLinksAdminPanel.tsx");
-  assert.match(panel, /Нові гравці — наступний етап/);
+  assert.match(panel, /<NewProfileRequestsAdminPanel password=\{password\} \/>/);
   assert.doesNotMatch(panel, /\.from\("players"\)|createPlayer|insertPlayer/);
 });
