@@ -2,6 +2,7 @@ import StadiumBackground from "../../components/StadiumBackground";
 import SiteHeader from "../../components/public/SiteHeader";
 import SiteFooter from "../../components/public/SiteFooter";
 import { players } from "../../data/players";
+import { mergePlayerDirectory, searchPlayerDirectory } from "../../lib/player-directory";
 import { dynamicProfilesEnabled, listDynamicPlayers } from "../../lib/dynamic-player-profiles-server";
 import PlayerEmblem from "../../components/PlayerEmblem";
 import { getPlayerEmblemUrls } from "../../lib/player-emblem-urls";
@@ -19,6 +20,8 @@ type PageProps = {
   searchParams: Promise<{
     season?: string;
     division?: string;
+    view?: string;
+    q?: string;
   }>;
 };
 
@@ -292,7 +295,7 @@ function getSeasonStatus(
   }
 
   if (season === 3) {
-    return "Поточний сезон";
+    return "Завершений сезон";
   }
 
   return "Підготовка";
@@ -309,7 +312,7 @@ function getPlayerStatus(
   }
 
   if (season === 3) {
-    return "Учасник Iron League";
+    return "Учасник цього сезону";
   }
 
   return "Учасник майбутнього сезону";
@@ -326,6 +329,12 @@ export default async function PlayersPage({
 }: PageProps) {
   const params =
     await searchParams;
+
+  // Legacy season links (e.g. /players?season=3) keep their old meaning.
+  // /players without parameters now opens the full player directory.
+  const seasonMode = params.view === "seasons" ||
+    (params.view !== "all" && (params.season !== undefined || params.division !== undefined));
+  const searchQuery = typeof params.q === "string" ? params.q.trim().slice(0, 64) : "";
 
   /*
     ========================================
@@ -378,10 +387,10 @@ export default async function PlayersPage({
     ========================================
   */
 
-  const seasonPlayers =
-    await getSeasonPlayers(
-      season
-    );
+  // Directory mode intentionally skips season replacement queries.
+  const seasonPlayers = seasonMode
+    ? await getSeasonPlayers(season)
+    : [];
 
   /*
     ========================================
@@ -410,7 +419,7 @@ export default async function PlayersPage({
 
   // New, approved database profiles are separate from historical season squads.
   // A missing table or DB failure must never break the established player list.
-  const showDynamicProfiles = dynamicProfilesEnabled() && season >= 3;
+  const showDynamicProfiles = dynamicProfilesEnabled() && (!seasonMode || season >= 3);
   let newRegisteredPlayers: Awaited<ReturnType<typeof listDynamicPlayers>> = [];
   let newProfilesUnavailable = false;
   if (showDynamicProfiles) {
@@ -422,6 +431,12 @@ export default async function PlayersPage({
     }
   }
 
+  const directory = seasonMode
+    ? []
+    : mergePlayerDirectory(players, newRegisteredPlayers);
+  const matchingDirectory = seasonMode
+    ? []
+    : searchPlayerDirectory(directory, searchQuery);
   const emblemUrls = await getPlayerEmblemUrls();
 
   return (
@@ -459,12 +474,26 @@ export default async function PlayersPage({
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
-              Учасники Iron League обраного сезону,
-              їхні дивізіони та персональні профілі.
-              Знаходь гравців і переглядай історію їхніх виступів.
+              {seasonMode
+                ? "Учасники Iron League обраного сезону, їхні дивізіони та персональні профілі. Знаходь гравців і переглядай історію їхніх виступів."
+                : "Єдиний каталог усіх профілів Iron League незалежно від сезону. Знаходь гравців, переглядай їхні емблеми та історію виступів."}
             </p>
           </div>
 
+          {/* DIRECTORY / SEASON MODE SWITCHER */}
+          <nav aria-label="Режим каталогу гравців"
+            className="mt-6 grid w-full max-w-lg grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#07101d]/90 p-1 sm:mt-8">
+            <a href="/players" aria-current={!seasonMode ? "page" : undefined}
+              className={`flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-black transition sm:text-sm ${!seasonMode ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" : "text-white/55 hover:bg-white/5 hover:text-white"}`}>
+              Усі профілі
+            </a>
+            <a href={`/players?view=seasons&season=${season}`} aria-current={seasonMode ? "page" : undefined}
+              className={`flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-black transition sm:text-sm ${seasonMode ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" : "text-white/55 hover:bg-white/5 hover:text-white"}`}>
+              За сезонами
+            </a>
+          </nav>
+
+          {seasonMode ? <>
           {/* SEASON SWITCHER */}
           <div className="mt-6 sm:mt-8">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-white/50">
@@ -533,11 +562,29 @@ export default async function PlayersPage({
               </div>
             </div>
           </div>
+          </> : (
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-3 sm:gap-3">
+              <div className="min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 sm:px-4">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">Усього профілів</div>
+                <div className="mt-1 text-xl font-black text-white sm:text-2xl">{directory.length}</div>
+              </div>
+              <div className="min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 sm:px-4">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">Історичних</div>
+                <div className="mt-1 text-xl font-black text-blue-300 sm:text-2xl">{players.length}</div>
+              </div>
+              <div className="col-span-2 min-w-0 rounded-xl border border-white/10 bg-[#07101d]/90 px-3 py-3 sm:col-span-1 sm:px-4">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:text-xs">Нових профілів</div>
+                <div className="mt-1 text-xl font-black text-blue-300 sm:text-2xl">
+                  {newProfilesUnavailable ? "—" : newRegisteredPlayers.length}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* DIVISION FILTER */}
-      <section className="border-b border-white/10 bg-white/[0.015]">
+      {/* DIVISION FILTER — available only in season mode */}
+      {seasonMode && <section className="border-b border-white/10 bg-white/[0.015]">
         <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
           <div className="text-[11px] font-bold uppercase tracking-widest text-white/50">
             Фільтр за дивізіоном
@@ -583,11 +630,10 @@ export default async function PlayersPage({
             ))}
           </nav>
         </div>
-      </section>
+      </section>}
 
       {/* PLAYERS */}
-
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
+      {seasonMode ? <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">
@@ -721,10 +767,75 @@ export default async function PlayersPage({
           </div>
 
         )}
-      </section>
+      </section> : (
+        <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16" aria-label="Загальний каталог профілів Iron League">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">Реєстр ліги</div>
+              <h2 className="mt-3 text-2xl font-black sm:text-3xl">Усі профілі гравців</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">Кожен гравець відображається один раз незалежно від кількості сезонів. Нові профілі з’являються після схвалення заявки.</p>
+            </div>
+            <div className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-white/50" aria-live="polite">
+              Знайдено: <span className="font-black text-white">{matchingDirectory.length}</span>
+            </div>
+          </div>
+
+          <form action="/players" method="get" role="search" className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end">
+            <input type="hidden" name="view" value="all" />
+            <label htmlFor="player-directory-search" className="flex-1 text-xs font-bold text-white/65">
+              Пошук за ніком, ID або акаунтом
+              <input id="player-directory-search" name="q" type="search" maxLength={64}
+                defaultValue={searchQuery} placeholder="Введіть нік гравця"
+                className="mt-2 block min-h-11 w-full rounded-xl border border-white/15 bg-[#07101d] px-4 py-2 text-sm font-medium text-white outline-none placeholder:text-white/35 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20" />
+            </label>
+            <div className="flex gap-2">
+              <button type="submit" className="min-h-11 flex-1 rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-black text-white transition hover:bg-blue-400 sm:flex-none">Знайти</button>
+              {searchQuery && <a href="/players" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 px-4 py-2.5 text-sm font-bold text-white/70 transition hover:bg-white/5 hover:text-white">Очистити</a>}
+            </div>
+          </form>
+
+          {newProfilesUnavailable && (
+            <p role="status" className="mb-6 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4 text-sm text-amber-200">
+              Реєстр нових профілів тимчасово недоступний. Історичні профілі продовжують відображатися.
+            </p>
+          )}
+
+          {matchingDirectory.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-[#07101d] px-6 py-12 text-center">
+              <h3 className="text-xl font-black">Гравців не знайдено</h3>
+              <p className="mt-3 text-sm text-white/50">Спробуйте інший нікнейм або очистіть пошук.</p>
+              <a href="/players" className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-blue-400/35 px-4 text-sm font-bold text-blue-300">Показати всі профілі</a>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+              {matchingDirectory.map((player) => (
+                <a key={player.id} href={`/players/${player.id}`}
+                  aria-label={`Відкрити профіль ${player.nickname}`}
+                  className="group relative block min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#07101d] p-4 transition duration-300 hover:-translate-y-0.5 hover:border-blue-400/35 hover:bg-[#0a1628] hover:shadow-[0_16px_40px_rgba(0,0,0,0.2)] sm:p-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <PlayerEmblem nickname={player.nickname} initials={getInitials(player.nickname)}
+                      src={emblemUrls[player.id]} variant="card" />
+                    <div className="min-w-0 flex-1">
+                      <h3 title={player.nickname} className="truncate text-base font-black leading-6 text-white sm:text-lg">{player.nickname}</h3>
+                      {player.account && <div title={player.account} className="mt-0.5 truncate text-xs font-medium text-white/40">({player.account})</div>}
+                    </div>
+                  </div>
+                  <div className="mt-4 text-xs font-semibold text-blue-300">
+                    {player.source === "dynamic" ? "Новий схвалений профіль" : "Профіль Iron League"}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                    <span className="text-[11px] font-semibold text-white/40">{player.source === "dynamic" ? "Поза сезонними складами" : "Єдиний реєстр"}</span>
+                    <span className="inline-flex items-center gap-2 text-xs font-bold text-blue-300 transition group-hover:text-blue-200">Відкрити профіль <span className="text-base leading-none transition group-hover:translate-x-1">→</span></span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* APPROVED NEW PROFILES: OUTSIDE ALL SEASON STANDINGS */}
-      {showDynamicProfiles && (
+      {seasonMode && showDynamicProfiles && (
         <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 sm:pb-16" aria-label="Зареєстровані гравці поза сезонними складами">
           <div className="mb-5">
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-blue-400">Нові профілі</div>
