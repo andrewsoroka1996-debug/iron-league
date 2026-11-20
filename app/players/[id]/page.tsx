@@ -2165,7 +2165,7 @@ export default async function PlayerPage({
       </section>
 
       {/* PLAYER ACCOUNT / guarded until explicitly enabled */}
-      {player.source === "legacy" && playerAccountsEnabled(process.env.PLAYER_ACCOUNTS_ENABLED) && (
+      {playerAccountsEnabled(process.env.PLAYER_ACCOUNTS_ENABLED) && (
         <PlayerAccountPanel key={playerId} playerId={playerId} />
       )}
 

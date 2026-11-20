@@ -1,6 +1,7 @@
 import "server-only";
 
 import { players } from "../data/players";
+import { resolvePublicPlayer } from "./dynamic-player-profiles-server";
 import { supabase } from "./supabase";
 import {
   groupDirectPlayerMatches,
@@ -19,9 +20,16 @@ export async function loadSeason4DirectPlayerMatchGroups(
   playerId: string,
 ): Promise<PlayerMatchGroup[]> {
   // The ID is interpolated into a PostgREST OR filter: allow only safe ID characters.
-  if (!/^[A-Za-z0-9_-]+$/.test(playerId) ||
-      !players.some((player) => player.id === playerId)) {
+  if (!/^[A-Za-z0-9_-]+$/.test(playerId)) {
     throw new Error("Unknown or invalid player profile.");
+  }
+  if (!players.some((player) => player.id === playerId)) {
+    // New profiles must be explicitly approved and publicly resolvable.
+    // Do not add them to any historical season roster or invent match rows.
+    const profile = await resolvePublicPlayer(playerId);
+    if (!profile || profile.source !== "dynamic") {
+      throw new Error("Unknown or invalid player profile.");
+    }
   }
   // The existing public match calendar uses the same columns and id pagination.
   const pageSize = 500;

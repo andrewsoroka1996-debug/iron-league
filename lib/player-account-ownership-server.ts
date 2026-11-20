@@ -3,6 +3,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
 import { players } from "../data/players";
+import { dynamicProfilesEnabled, resolvePublicPlayer } from "./dynamic-player-profiles-server";
 import {
   decidePlayerOwnership,
   playerAccountsEnabled,
@@ -36,8 +37,15 @@ export async function checkPlayerOwnershipForRequest(
     return checked("disabled");
   }
 
+  // Static historical IDs are immutable. Dynamic IDs are accepted only when
+  // the public profile resolves from the admin-managed player_profiles table.
+  // The requested ID alone, a nickname or an unapproved request is never proof.
+  let validatedPlayerIds: ReadonlySet<string> = knownPlayerIds;
   if (!knownPlayerIds.has(requestedPlayerId)) {
-    return checked("invalid_profile");
+    if (!dynamicProfilesEnabled()) return checked("invalid_profile");
+    const profile = await resolvePublicPlayer(requestedPlayerId);
+    if (!profile || profile.source !== "dynamic") return checked("invalid_profile");
+    validatedPlayerIds = new Set([profile.id]);
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -109,7 +117,7 @@ export async function checkPlayerOwnershipForRequest(
       authUserId: authData.user.id,
       decision: decidePlayerOwnership({
         requestedPlayerId,
-        knownPlayerIds,
+        knownPlayerIds: validatedPlayerIds,
         verifiedAuthUserId: authData.user.id,
         approvedLink: link ?? null,
       }),

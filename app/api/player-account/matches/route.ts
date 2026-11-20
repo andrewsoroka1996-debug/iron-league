@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { players } from "../../../../data/players";
+import { resolvePublicPlayer } from "../../../../lib/dynamic-player-profiles-server";
 import { checkPlayerOwnershipForRequest } from "../../../../lib/player-account-ownership-server";
 import { loadSeason4DirectPlayerMatchGroups } from "../../../../lib/player-account-matches-server";
 
@@ -52,6 +53,12 @@ export async function GET(request: NextRequest) {
     const playerNames: Record<string, string> = {};
     for (const player of players) {
       if (ids.has(player.id)) playerNames[player.id] = player.nickname;
+    }
+    // For a newly approved owner, display their chosen nickname instead of
+    // their generated player ID. Ownership was checked before this lookup.
+    if (!playerNames[playerId]) {
+      const profile = await resolvePublicPlayer(playerId);
+      if (profile?.source === "dynamic") playerNames[playerId] = profile.nickname;
     }
     return reply({ groups, playerNames }, 200);
   } catch (error) {
