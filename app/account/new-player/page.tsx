@@ -11,6 +11,12 @@ export default function NewPlayerApplicationPage() {
     <main className="min-h-screen bg-[#030711] px-4 py-10 text-white">
       <div className="mx-auto max-w-2xl">
         <NewPlayerApplicationForm />
+        <p className="mt-6 text-sm text-white/65">
+          Уже маєте історичний профіль Iron League?{" "}
+          <a href="/account/link-player" className="font-semibold text-blue-300 underline hover:text-blue-200">
+            Подайте заявку на його прив'язку до Discord
+          </a>.
+        </p>
       </div>
     </main>
   );
