@@ -76,7 +76,8 @@ const seed = `-- VERIFIED OFFLINE SOURCE: ${sourceName}\n` +
 const template = readFileSync(templatePath, "utf8");
 const placeholder = "DO $$ BEGIN RAISE EXCEPTION 'STOP: legacy registry not seeded; generate a reviewed SQL snapshot first'; END $$; -- IL_LEGACY_SNAPSHOT_PLACEHOLDER";
 if (template.split(placeholder).length !== 2) throw new Error("Expected exactly one guarded seed placeholder");
-const result = template.replace(placeholder, seed);
+// Function replacement preserves literal $ sequences in dollar-quoted SQL and nicknames.
+const result = template.replace(placeholder, () => seed);
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, result, { encoding: "utf8", flag: "wx" });
 console.log(`REVIEW-ONLY SQL generated: ${outputPath}`);

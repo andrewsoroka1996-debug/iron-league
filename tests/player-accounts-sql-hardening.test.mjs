@@ -44,13 +44,19 @@ test("offline generator extracts AST literals and escapes SQL quotes safely", ()
   try {
     const source=path.join(tmp,"players.ts");
     const target=path.join(tmp,"output.sql");
-    writeFileSync(source,"export const players = [{id: 'first-id', nickname: 'Сокіл'}, {id: 'second-id', nickname: \"O'Hara\"}];\n");
+    writeFileSync(source,"export const players = [{id: 'first-id', nickname: 'Сокіл'}, {id: 'second-id', nickname: \"O'Hara $& $$\"}];\n");
     const r=spawnSync(process.execPath, ["scripts/generate-player-accounts-sql.mjs", "--source", source,
       "--template","sql/REVIEW-ONLY-iron-league-player-accounts-foundation.sql", "--output",target],
       {cwd:root, encoding:"utf8"});
     assert.equal(r.status,0,r.stderr || r.stdout);
     const contents=readFileSync(target,"utf8");
-    assert.match(contents,/\('second-id', 'O''Hara'\)/);
+    assert.match(contents,/\('second-id', 'O''Hara \$& \$\$'\)/);
+    // Must preserve the raw PostgreSQL dollar delimiter, not collapse $$ to $.
+    assert.match(contents,/DO \$\$ BEGIN/);
+    assert.match(contents,/END \$\$;/);
+    assert.doesNotMatch(contents,/DO \$ BEGIN/);
+    // JS string replacement must never interpolate the placeholder at "$&".
+    assert.equal((contents.match(/IL_LEGACY_SNAPSHOT_PLACEHOLDER/g) ?? []).length, 0);
     assert.match(contents,/Snapshot rows: 2/);
     assert.doesNotMatch(contents,/IL_LEGACY_SNAPSHOT_PLACEHOLDER/);
     assert.match(contents,/CREATE FUNCTION public\.admin_decide_player_discord_link/);
