@@ -123,9 +123,13 @@ export async function handlePlayerLinkRequest(request: NextRequest, method: "GET
       return reply({ error: "У вас уже є прив'язка або активна заявка. Перевірте статус поданих заявок." }, 409);
     }
 
-    // RLS enforces auth.uid() = auth_user_id and status = pending.
+    // Direct browser INSERT is denied by SQL v5.2. This privileged writer is
+    // reached only after getUser(), verified Discord identity, validation and
+    // the server-side feature gate. Never pass client-supplied auth_user_id.
+    const writer = privilegedClient();
+    if (!writer) return reply({ error: errorText }, 503);
     // A pending request NEVER grants player ownership.
-    const { data, error } = await client.from("player_discord_link_requests")
+    const { data, error } = await writer.from("player_discord_link_requests")
       .insert({ auth_user_id: auth.user.id, player_id: playerId })
       .select("id, player_id, status, created_at")
       .single();
@@ -163,6 +167,11 @@ export async function handleAdminLinkRequest(request: NextRequest) {
   }
   const action = parseAdminLinkAction(input);
   if (!action) return respond({ error: "Невірна дія або причина відхилення" }, 400);
+  // Separate fail-closed approval gate for historical player ownership.
+  if (action.action === "approve" &&
+      process.env.IRON_LEAGUE_EXISTING_PLAYER_APPROVAL_ENABLED !== "true") {
+    return featureDisabledResponse();
+  }
   const admin = privilegedClient();
   if (!admin) return respond({ error: errorText }, 503);
 

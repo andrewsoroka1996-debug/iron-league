@@ -1,0 +1,343 @@
+-- Local PostgreSQL integration suite. No connection to Supabase.
+\set ON_ERROR_STOP on
+\echo === Iron League SQL integration tests ===
+
+DO $$
+DECLARE n integer;
+BEGIN
+ IF current_database() NOT LIKE 'il_smoke_%' OR current_setting('port') <> '55432'
+    OR current_setting('listen_addresses') <> '127.0.0.1'
+    OR current_setting('data_directory') NOT LIKE '%17-IronLeagueTest/data' THEN
+   RAISE EXCEPTION 'STOP: integration tests outside isolated local cluster';
+ END IF;
+ SELECT count(*) INTO n FROM public.il_legacy_players;
+ IF n < 1 OR n <> (SELECT count(DISTINCT id) FROM public.il_legacy_players)
+    OR n <> (SELECT count(DISTINCT nickname_key) FROM public.il_legacy_players) THEN
+   RAISE EXCEPTION 'Legacy snapshot inconsistent: % rows', n;
+ END IF;
+ IF (SELECT count(*) FROM pg_tables WHERE schemaname = 'public'
+       AND tablename IN ('il_legacy_players','player_profiles',
+        'player_profile_creation_requests','player_discord_links','player_discord_link_requests',
+        'il_pending_player_request_slots')) <> 6 THEN
+   RAISE EXCEPTION 'Expected six tables including guarded pending slots';
+ END IF;
+ IF (SELECT count(*) FROM pg_tables WHERE schemaname='public' AND rowsecurity
+       AND tablename IN ('il_legacy_players','player_profiles',
+        'player_profile_creation_requests','player_discord_links','player_discord_link_requests',
+        'il_pending_player_request_slots')) <> 6 THEN
+   RAISE EXCEPTION 'RLS not enabled on all six tables';
+ END IF;
+ IF has_table_privilege('authenticated','public.il_pending_player_request_slots','SELECT')
+    OR has_table_privilege('authenticated','public.il_pending_player_request_slots','INSERT')
+    OR has_table_privilege('anon','public.il_pending_player_request_slots','SELECT')
+    OR has_table_privilege('anon','public.il_legacy_players','SELECT')
+    OR has_table_privilege('authenticated','public.il_legacy_players','SELECT')
+    OR has_table_privilege('authenticated','public.player_profiles','INSERT')
+    OR has_table_privilege('authenticated','public.player_discord_link_requests','INSERT')
+    OR has_table_privilege('authenticated','public.player_profile_creation_requests','INSERT')
+    OR has_column_privilege('authenticated','public.player_discord_link_requests','auth_user_id','INSERT')
+    OR has_column_privilege('authenticated','public.player_profile_creation_requests','auth_user_id','INSERT')
+    OR has_function_privilege('authenticated',
+         'public.admin_approve_new_player_profile(uuid,text,text[],text[])','EXECUTE')
+    OR has_function_privilege('anon',
+         'public.admin_decide_player_discord_link(uuid,text,text)','EXECUTE') THEN
+   RAISE EXCEPTION 'Unexpected public/role privilege';
+ END IF;
+ IF NOT has_function_privilege('service_role',
+       'public.admin_approve_new_player_profile(uuid,text,text[],text[])','EXECUTE')
+    OR NOT has_function_privilege('service_role',
+       'public.admin_decide_player_discord_link(uuid,text,text)','EXECUTE') THEN
+   RAISE EXCEPTION 'Service role cannot execute admin RPC';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role' AND rolbypassrls) THEN
+   RAISE EXCEPTION 'service_role BYPASSRLS expected';
+ END IF;
+ IF (SELECT count(*) FROM pg_trigger WHERE tgname IN
+     ('il_guard_link_request_slot','il_guard_profile_request_slot')
+     AND NOT tgisinternal AND tgenabled='O') <> 2 THEN
+   RAISE EXCEPTION 'Pending request guards missing';
+ END IF;
+END $$;
+\echo PASS: six tables, guarded pending slots, legacy registry, RLS and RPC grants
+
+-- Server (service_role) creates requests; browser may only read its own.
+-- This fixture represents a request created by the authenticated Next.js API.
+SET ROLE service_role;
+INSERT INTO public.player_discord_link_requests(auth_user_id,player_id)
+VALUES ('11111111-1111-4111-8111-111111111111','andrew-sm');
+RESET ROLE;
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+DO $$
+DECLARE n integer; v_constraint text;
+BEGIN
+ SELECT count(*) INTO n FROM public.player_discord_link_requests;
+ IF n <> 1 THEN RAISE EXCEPTION 'Own link request unreadable'; END IF;
+ -- Browser cannot insert either request type, even for its own UUID.
+ BEGIN
+   INSERT INTO public.player_discord_link_requests(auth_user_id,player_id)
+     VALUES ('11111111-1111-4111-8111-111111111111','pancher16');
+   RAISE EXCEPTION 'SECURITY FAIL: direct browser link INSERT was accepted';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+   INSERT INTO public.player_profile_creation_requests(auth_user_id,desired_nickname)
+     VALUES ('11111111-1111-4111-8111-111111111111','RaceCrossTypeA');
+   RAISE EXCEPTION 'SECURITY FAIL: direct browser profile INSERT was accepted';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+   INSERT INTO public.player_discord_link_requests(auth_user_id,player_id)
+   VALUES ('22222222-2222-4222-8222-222222222222','pancher16');
+   RAISE EXCEPTION 'SECURITY FAIL: impersonating another user was allowed';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+   INSERT INTO public.player_profiles(id,nickname) VALUES ('il-forged','FakePlayer');
+   RAISE EXCEPTION 'SECURITY FAIL: browser created player profile';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+   PERFORM public.admin_decide_player_discord_link(
+     (SELECT id FROM public.player_discord_link_requests WHERE auth_user_id='11111111-1111-4111-8111-111111111111'),'approve',NULL);
+   RAISE EXCEPTION 'SECURITY FAIL: browser executed admin function';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+END $$;
+RESET ROLE;
+RESET request.jwt.claim.sub;
+\echo PASS: authenticated request ownership and admin function protection
+
+SET ROLE service_role;
+INSERT INTO public.player_profile_creation_requests(auth_user_id,desired_nickname,note)
+VALUES ('22222222-2222-4222-8222-222222222222','SafeRookieSQL','smoke test');
+RESET ROLE;
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '22222222-2222-4222-8222-222222222222';
+DO $$
+DECLARE n integer; v_constraint text;
+BEGIN
+ SELECT count(*) INTO n FROM public.player_discord_link_requests;
+ IF n <> 0 THEN RAISE EXCEPTION 'RLS exposed someone else''s link request'; END IF;
+ BEGIN
+   INSERT INTO public.player_discord_link_requests(auth_user_id,player_id)
+     VALUES ('22222222-2222-4222-8222-222222222222','andrew-sm');
+   RAISE EXCEPTION 'SECURITY FAIL: direct browser link INSERT was accepted';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ SELECT count(*) INTO n FROM public.player_profile_creation_requests;
+ IF n <> 1 THEN RAISE EXCEPTION 'Own profile request not readable'; END IF;
+ BEGIN
+   SELECT count(*) INTO n FROM public.il_legacy_players;
+   RAISE EXCEPTION 'SECURITY FAIL: browser could read private legacy snapshot';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+END $$;
+RESET ROLE;
+RESET request.jwt.claim.sub;
+\echo PASS: RLS isolates different applicants
+
+-- Test approved existing legacy account link.
+DO $$
+DECLARE v text;
+BEGIN
+ v := public.admin_decide_player_discord_link(
+   (SELECT id FROM public.player_discord_link_requests WHERE auth_user_id='11111111-1111-4111-8111-111111111111'),'approve',NULL);
+ IF v <> 'approved' THEN RAISE EXCEPTION 'Legacy account approval returned %',v; END IF;
+ IF EXISTS (SELECT 1 FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='11111111-1111-4111-8111-111111111111') THEN
+   RAISE EXCEPTION 'Approved legacy request retained pending slot'; END IF;
+ IF NOT EXISTS (
+   SELECT 1 FROM public.player_discord_links
+   WHERE auth_user_id = '11111111-1111-4111-8111-111111111111'
+     AND player_id = 'andrew-sm' AND discord_user_id = '123456789012345678'
+ ) THEN RAISE EXCEPTION 'Legacy account link missing'; END IF;
+END $$;
+\echo PASS: legacy player -> Discord approval
+
+-- Verify strict legacy registry matching: replacing one valid id with a
+-- duplicate of another valid id must be rejected by the database.
+DO $$
+DECLARE ids text[]; names text[]; v_error text;
+BEGIN
+ SELECT array_agg(id ORDER BY id), array_agg(nickname ORDER BY id)
+ INTO ids,names FROM public.il_legacy_players;
+ ids[2] := ids[1]; names[2] := names[1];
+ BEGIN
+   PERFORM public.admin_approve_new_player_profile(
+     (SELECT id FROM public.player_profile_creation_requests WHERE auth_user_id='22222222-2222-4222-8222-222222222222'),'223456789012345678',ids,names);
+   RAISE EXCEPTION 'SECURITY FAIL: duplicate legacy id array accepted';
+ EXCEPTION WHEN OTHERS THEN
+   GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+   IF v_error NOT LIKE 'Legacy registry mismatch:%' THEN RAISE; END IF;
+ END;
+ IF EXISTS(SELECT 1 FROM public.player_profiles) THEN
+   RAISE EXCEPTION 'Failed approval created a profile';
+ END IF;
+END $$;
+\echo PASS: duplicate/missing legacy IDs rejected, no partial profile
+
+-- Verify mismatch between admin-entered id and actual Supabase identity.
+INSERT INTO public.player_profile_creation_requests(id,auth_user_id,desired_nickname)
+VALUES ('c4444444-4444-4444-8444-444444444444',
+        '44444444-4444-4444-8444-444444444444','andrew_sm');
+DO $$
+DECLARE ids text[]; names text[]; v_error text;
+BEGIN
+ SELECT array_agg(id ORDER BY id), array_agg(nickname ORDER BY id)
+ INTO ids,names FROM public.il_legacy_players;
+ BEGIN
+   PERFORM public.admin_approve_new_player_profile(
+     'c4444444-4444-4444-8444-444444444444','999999999999999999',ids,names);
+   RAISE EXCEPTION 'SECURITY FAIL: wrong Discord id accepted';
+ EXCEPTION WHEN OTHERS THEN
+   GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+   IF v_error <> 'Discord identity is missing or changed' THEN RAISE; END IF;
+ END;
+ IF EXISTS(SELECT 1 FROM public.player_profiles WHERE nickname = 'andrew_sm') THEN
+   RAISE EXCEPTION 'Failed discord check created a profile';
+ END IF;
+END $$;
+\echo PASS: Discord identity mismatch rejected atomically
+
+-- Test a successful newcomer approval, then double approval blocked.
+DO $$
+DECLARE ids text[]; names text[]; new_id text; v_error text;
+BEGIN
+ SELECT array_agg(id ORDER BY id), array_agg(nickname ORDER BY id)
+ INTO ids,names FROM public.il_legacy_players;
+ new_id := public.admin_approve_new_player_profile(
+   (SELECT id FROM public.player_profile_creation_requests WHERE auth_user_id='22222222-2222-4222-8222-222222222222'),'223456789012345678',ids,names);
+ IF new_id <> 'il-' || replace((SELECT id FROM public.player_profile_creation_requests WHERE auth_user_id='22222222-2222-4222-8222-222222222222')::text,'-','') THEN
+   RAISE EXCEPTION 'Unexpected dynamic player id: %',new_id;
+ END IF;
+ IF EXISTS (SELECT 1 FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='22222222-2222-4222-8222-222222222222') THEN
+   RAISE EXCEPTION 'Approved profile request retained pending slot'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.player_profiles
+               WHERE id = new_id AND nickname = 'SafeRookieSQL')
+    OR NOT EXISTS(SELECT 1 FROM public.player_discord_links
+               WHERE auth_user_id='22222222-2222-4222-8222-222222222222' AND player_id=new_id)
+    OR NOT EXISTS(SELECT 1 FROM public.player_profile_creation_requests
+               WHERE auth_user_id='22222222-2222-4222-8222-222222222222'
+                 AND status='approved' AND approved_player_id=new_id) THEN
+   RAISE EXCEPTION 'Incomplete newcomer approval transaction';
+ END IF;
+ BEGIN
+   PERFORM public.admin_approve_new_player_profile(
+     (SELECT id FROM public.player_profile_creation_requests WHERE auth_user_id='22222222-2222-4222-8222-222222222222'),'223456789012345678',ids,names);
+   RAISE EXCEPTION 'SECURITY FAIL: second approval accepted';
+ EXCEPTION WHEN OTHERS THEN
+   GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+   IF v_error <> 'Request not pending' THEN RAISE; END IF;
+ END;
+END $$;
+\echo PASS: newcomer approval atomic and cannot run twice
+
+-- Missing link target must be denied by the PostgreSQL trigger.
+INSERT INTO public.player_discord_link_requests(id,auth_user_id,player_id)
+VALUES ('e5555555-5555-4555-8555-555555555555',
+        '55555555-5555-4555-8555-555555555555','definitely-not-a-player');
+DO $$
+DECLARE v_error text;
+BEGIN
+ BEGIN
+   PERFORM public.admin_decide_player_discord_link(
+     'e5555555-5555-4555-8555-555555555555','approve',NULL);
+   RAISE EXCEPTION 'SECURITY FAIL: unknown legacy player linked';
+ EXCEPTION WHEN OTHERS THEN
+   GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+   IF v_error <> 'Target is not an existing legacy player' THEN RAISE; END IF;
+ END;
+ BEGIN
+   INSERT INTO public.player_discord_links(auth_user_id,player_id,discord_user_id)
+   VALUES ('55555555-5555-4555-8555-555555555555',
+           'nonexistent-id','523456789012345678');
+   RAISE EXCEPTION 'SECURITY FAIL: direct unknown player id linked';
+ EXCEPTION WHEN OTHERS THEN
+   GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+   IF v_error <> 'Unknown player profile' THEN RAISE; END IF;
+ END;
+ IF EXISTS(SELECT 1 FROM public.player_discord_links
+           WHERE auth_user_id='55555555-5555-4555-8555-555555555555') THEN
+   RAISE EXCEPTION 'Forged link persisted';
+ END IF;
+END $$;
+\echo PASS: unknown legacy IDs rejected via RPC and DB trigger
+
+-- Duplicate existing nickname (different case) must be denied by DB.
+DO $$
+DECLARE ids text[]; names text[]; v_error text;
+BEGIN
+ SELECT array_agg(id ORDER BY id), array_agg(nickname ORDER BY id)
+ INTO ids,names FROM public.il_legacy_players;
+ BEGIN
+   PERFORM public.admin_approve_new_player_profile(
+     'c4444444-4444-4444-8444-444444444444','423456789012345678',ids,names);
+   RAISE EXCEPTION 'SECURITY FAIL: legacy nickname collision allowed';
+ EXCEPTION WHEN OTHERS THEN
+   GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+   IF v_error <> 'Legacy player ID or nickname collision' THEN RAISE; END IF;
+ END;
+ IF EXISTS(SELECT 1 FROM public.player_profiles WHERE nickname='andrew_sm') THEN
+   RAISE EXCEPTION 'Colliding nickname persisted';
+ END IF;
+END $$;
+\echo PASS: legacy nickname collision rejected
+
+-- A rejected request releases its slot, permitting a new request of another type.
+DO $$
+DECLARE n integer;
+BEGIN
+ UPDATE public.player_profile_creation_requests
+   SET status='rejected', decided_at=now(), decision_reason='Mismatch test concluded'
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444' AND status='pending';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Missing profile request to reject'; END IF;
+ IF EXISTS (SELECT 1 FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444') THEN
+   RAISE EXCEPTION 'Rejected profile request retained pending slot'; END IF;
+ INSERT INTO public.player_discord_link_requests(auth_user_id,player_id)
+   VALUES ('44444444-4444-4444-8444-444444444444','andrew-sm');
+ SELECT count(*) INTO n FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444' AND request_kind='link';
+ IF n <> 1 THEN RAISE EXCEPTION 'Replacement link request slot missing'; END IF;
+ UPDATE public.player_discord_link_requests
+   SET status='rejected', decided_at=now(), decision_reason='Test concluded: no link'
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444' AND status='pending';
+ IF EXISTS (SELECT 1 FROM public.il_pending_player_request_slots
+   WHERE auth_user_id='44444444-4444-4444-8444-444444444444') THEN
+   RAISE EXCEPTION 'Rejected link request retained pending slot'; END IF;
+END $$;
+\echo PASS: rejected requests release slot; opposite type may apply later
+
+-- Public may see only ID/nickname from approved dynamic profiles.
+SET ROLE anon;
+DO $$
+DECLARE n integer;
+BEGIN
+ SELECT count(*) INTO n FROM public.player_profiles WHERE nickname='SafeRookieSQL';
+ IF n <> 1 THEN RAISE EXCEPTION 'Public approved profile not visible'; END IF;
+ BEGIN
+   PERFORM created_at FROM public.player_profiles LIMIT 1;
+   RAISE EXCEPTION 'SECURITY FAIL: private profile timestamp exposed';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+END $$;
+RESET ROLE;
+\echo PASS: public can read only approved profile columns
+
+DO $$
+BEGIN
+ IF (SELECT count(*) FROM public.player_profiles) <> 1 THEN
+   RAISE EXCEPTION 'Unexpected total dynamic profiles';
+ END IF;
+ IF (SELECT count(*) FROM public.player_discord_links) <> 2 THEN
+   RAISE EXCEPTION 'Unexpected total Discord links';
+ END IF;
+ IF (SELECT count(*) FROM public.il_pending_player_request_slots) <>
+    (SELECT count(*) FROM public.player_discord_link_requests WHERE status='pending') +
+    (SELECT count(*) FROM public.player_profile_creation_requests WHERE status='pending') THEN
+   RAISE EXCEPTION 'Pending slot table and requests disagree';
+ END IF;
+END $$;
+\echo === ALL LOCAL SQL INTEGRATION CHECKS PASSED ===

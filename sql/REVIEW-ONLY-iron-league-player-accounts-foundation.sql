@@ -1,10 +1,11 @@
--- IRON LEAGUE | REVIEW ONLY | COMBINED NEW-PLAYER FOUNDATION v5 | CROSS-TYPE PENDING CLAIM GUARDED
+-- IRON LEAGUE | REVIEW ONLY | COMBINED NEW-PLAYER FOUNDATION v5.2 | SERVER-ONLY REQUEST WRITES
 -- DO NOT EXECUTE IN PRODUCTION UNTIL SEPARATELY AUTHORIZED AND REVIEWED.
 -- Requires review of auth Before User Created hook, Discord provider, RLS grants and backup.
--- PRECONDITION: original 4 tables and both new functions absent, confirmed on 2026-11-20.
--- This template is deliberately NON-EXECUTABLE: generate a reviewed SQL snapshot
--- with scripts/generate-player-accounts-sql.mjs. It will not run automatically.
--- The generated snapshot must be reviewed against data/players.ts before execution.
+-- PRECONDITION: all 6 target tables and all 5 targeted functions must be absent.
+-- This SOURCE TEMPLATE is deliberately NON-EXECUTABLE; the generator replaces a STOP guard.
+-- The GENERATED SQL SNAPSHOT IS EXECUTABLE. It does not run automatically.
+-- Do not execute the generated snapshot before independent review and authorization.
+-- The generated snapshot must be verified against data/players.ts before execution.
 -- DO NOT RUN OLD REVIEW-ONLY-player-profile-requests.sql or
 -- REVIEW-ONLY-dynamic-player-profiles.sql in addition to this file.
 -- This migration never touches historical matches, divisions, seasons or legacy data/players.ts.
@@ -28,7 +29,8 @@ BEGIN
     SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.proname IN (
       'admin_approve_new_player_profile','admin_decide_player_discord_link',
-      'il_guard_pending_player_request_slot'
+      'il_guard_pending_player_request_slot',
+      'il_reject_legacy_profile_collision','il_validate_discord_link_target'
     )
   ) THEN
     RAISE EXCEPTION 'STOP: targeted function already exists';
@@ -51,8 +53,8 @@ ALTER TABLE public.il_legacy_players ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.il_legacy_players FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.il_legacy_players TO service_role;
 
--- BUILD STOP. A generator replaces the entire next statement with a seeded
--- INSERT and row-count assertion. Never run this unprepared SQL template.
+-- OFFLINE GENERATION POINT: the source template contains a blocking statement.
+-- The generator replaces it with a seeded INSERT and row-count assertion.
 DO $$ BEGIN RAISE EXCEPTION 'STOP: legacy registry not seeded; generate a reviewed SQL snapshot first'; END $$; -- IL_LEGACY_SNAPSHOT_PLACEHOLDER
 
 CREATE TABLE public.player_profiles (
@@ -152,16 +154,12 @@ CREATE INDEX link_requests_admin_queue
 ALTER TABLE public.player_discord_link_requests ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.player_discord_link_requests FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.player_discord_link_requests TO authenticated;
-GRANT INSERT (auth_user_id, player_id)
-  ON public.player_discord_link_requests TO authenticated;
+-- Browser roles cannot INSERT: only server-side service_role may create requests
+-- after validating the Supabase Auth user and Discord identity and feature gates.
 GRANT ALL ON public.player_discord_link_requests TO service_role;
 CREATE POLICY applicant_reads_only_own_link_requests
   ON public.player_discord_link_requests FOR SELECT TO authenticated
   USING ((SELECT auth.uid()) = auth_user_id);
-CREATE POLICY applicant_inserts_only_own_pending_link_request
-  ON public.player_discord_link_requests FOR INSERT TO authenticated
-  WITH CHECK ((SELECT auth.uid()) = auth_user_id
-    AND status = 'pending' AND decided_at IS NULL AND decision_reason IS NULL);
 
 CREATE TABLE public.player_profile_creation_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -195,17 +193,12 @@ CREATE INDEX profile_requests_admin_queue
 ALTER TABLE public.player_profile_creation_requests ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.player_profile_creation_requests FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.player_profile_creation_requests TO authenticated;
-GRANT INSERT (auth_user_id, desired_nickname, note)
-  ON public.player_profile_creation_requests TO authenticated;
+-- Browser roles cannot INSERT: only server-side service_role may create requests
+-- after validating the Supabase Auth user and Discord identity and feature gates.
 GRANT ALL ON public.player_profile_creation_requests TO service_role;
 CREATE POLICY applicant_reads_only_own_profile_requests
   ON public.player_profile_creation_requests FOR SELECT TO authenticated
   USING ((SELECT auth.uid()) = auth_user_id);
-CREATE POLICY applicant_inserts_only_own_pending_profile_request
-  ON public.player_profile_creation_requests FOR INSERT TO authenticated
-  WITH CHECK ((SELECT auth.uid()) = auth_user_id
-    AND status = 'pending' AND decided_at IS NULL
-    AND decision_reason IS NULL AND approved_player_id IS NULL);
 
 -- Database-enforced cross-table invariant: a Supabase auth user may have
 -- at most one pending account request, regardless of its type. A unique key

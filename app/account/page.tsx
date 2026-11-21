@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PublicDiscordSignOut from "../../components/player-account/PublicDiscordSignOut";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
@@ -116,6 +117,7 @@ export default async function PlayerAccountHomePage() {
             IRON LEAGUE · АКАУНТ ГРАВЦЯ
           </p>
           <h1 className="mt-3 text-2xl font-black sm:text-3xl">Мій акаунт</h1>
+          {state.kind !== "signed-out" && <PublicDiscordSignOut />}
           <p className="mt-2 text-sm text-white/65">
             Персональний доступ надається тільки після підтвердження Discord і схваленої прив'язки профілю.
           </p>

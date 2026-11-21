@@ -140,9 +140,12 @@ export async function handleApplicantRequest(request: NextRequest, method: "GET"
       return reply({ error: "Вже існує прив'язка або активна заявка. Нову заявку створювати не потрібно." }, 409);
     }
 
-    // Only authenticated user's ID; client cannot supply an auth_user_id or status.
-    // Database column grants, RLS and a unique pending index enforce this independently.
-    const { data, error } = await client.from(TABLE)
+    // SQL v5.2 denies direct browser INSERT. This server-only writer uses
+    // only the getUser()-verified auth ID and validated fields, after the
+    // feature gate, Discord check, rate check and pending-slot checks.
+    const writer = adminClient();
+    if (!writer) return reply({ error: unavailable }, 503);
+    const { data, error } = await writer.from(TABLE)
       .insert({ auth_user_id: auth.user.id, desired_nickname: nickname, note })
       .select("id, desired_nickname, note, status, created_at").single();
     if (error) return reply({ error: "Заявку не створено. Перевірте, чи немає іншої активної заявки." }, 409);
