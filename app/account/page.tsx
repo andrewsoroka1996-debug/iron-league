@@ -4,7 +4,10 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getDiscordProviderId } from "../../lib/discord-identity-provider-id";
-import { playerAccountsEnabled } from "../../lib/player-account-access-policy";
+import {
+  existingPlayerApplicationsEnabled,
+  playerAccountsEnabled,
+} from "../../lib/player-account-access-policy";
 import { profileApplicationsEnabled } from "../../lib/player-profile-request-server";
 import { publicDiscordAuthEnabled } from "../../lib/player-public-oauth-policy";
 import { resolvePublicPlayer } from "../../lib/dynamic-player-profiles-server";
@@ -95,6 +98,10 @@ export default async function PlayerAccountHomePage() {
   if (!playerAccountsEnabled(process.env.PLAYER_ACCOUNTS_ENABLED)) notFound();
   const state = await loadHubState();
   const newApplicationsAvailable = profileApplicationsEnabled();
+  const existingApplicationsAvailable = existingPlayerApplicationsEnabled(
+    process.env.PLAYER_ACCOUNTS_ENABLED,
+    process.env.IRON_LEAGUE_EXISTING_PLAYER_APPLICATIONS_ENABLED,
+  );
   const publicLoginAvailable = publicDiscordAuthEnabled({
     nodeEnv: process.env.NODE_ENV,
     accountsEnabled: process.env.PLAYER_ACCOUNTS_ENABLED,
@@ -130,7 +137,7 @@ export default async function PlayerAccountHomePage() {
               {publicLoginAvailable ? (
                 <>
                   <p className="text-sm text-white/70">
-                    Увійдіть через Discord, щоб переглянути прив'язаний профіль або подати заявку.
+                    Увійдіть через Discord, щоб переглянути стан свого акаунта.
                   </p>
                   <Link href="/auth/discord" className="inline-flex rounded-xl border border-blue-300/40 bg-blue-500/25 px-4 py-3 text-sm font-bold text-blue-100 hover:bg-blue-500/35">
                     Увійти через Discord
@@ -153,23 +160,31 @@ export default async function PlayerAccountHomePage() {
           )}
           {state.kind === "unlinked" && (
             <>
-              <h2 className="text-lg font-bold">Оберіть свій шлях</h2>
-              <p className="text-sm text-white/70">
-                Якщо вже брали участь в Iron League, подайте заявку на прив'язку історичного профілю.
-                Новачки можуть подати заявку на створення профілю, коли прийом заявок увімкнено.
-                Обидва варіанти потребують рішення адміністратора.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Link href="/account/link-player" className="rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-3 text-sm font-bold text-blue-100 hover:bg-blue-500/30">
-                  Це мій профіль
-                </Link>
-                {newApplicationsAvailable && (
-                  <Link href="/account/new-player" className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-bold text-white hover:bg-white/15">
-                    Я новий гравець
-                  </Link>
-                )}
-              </div>
-              <p className="text-xs text-white/50">Статус поданої заявки можна переглянути на відповідній сторінці.</p>
+              <h2 className="text-lg font-bold">Профіль ще не прив'язаний</h2>
+              {!existingApplicationsAvailable && !newApplicationsAvailable ? (
+                <p className="text-sm text-white/70">
+                  Вхід через Discord підтверджено. Прийом заявок на прив'язку та створення профілів
+                  поки закритий. Доступ до профілю з'явиться лише після схвалення організатором.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-white/70">
+                    Можна подати заявку лише за відкритим напрямом. Подання заявки не надає прав на профіль без рішення адміністратора.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {existingApplicationsAvailable && (
+                      <Link href="/account/link-player" className="rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-3 text-sm font-bold text-blue-100 hover:bg-blue-500/30">
+                        Це мій профіль
+                      </Link>
+                    )}
+                    {newApplicationsAvailable && (
+                      <Link href="/account/new-player" className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-bold text-white hover:bg-white/15">
+                        Я новий гравець
+                      </Link>
+                    )}
+                  </div>
+                </>
+              )}
             </>
           )}
           {state.kind === "linked" && (

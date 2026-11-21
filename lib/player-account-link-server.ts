@@ -6,7 +6,10 @@ import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { players } from "../data/players";
 import { getDiscordProviderId } from "./discord-identity-provider-id";
-import { playerAccountsEnabled } from "./player-account-access-policy";
+import {
+  existingPlayerApplicationsEnabled,
+  playerAccountsEnabled,
+} from "./player-account-access-policy";
 import {
   decideLinkRequest,
   parseAdminLinkAction,
@@ -14,6 +17,13 @@ import {
 
 export const dynamicLinkFeatureEnabled = () =>
   playerAccountsEnabled(process.env.PLAYER_ACCOUNTS_ENABLED);
+
+/** A login-only rollout must NOT also open the historical application POST. */
+export const dynamicLinkApplicationsEnabled = () =>
+  existingPlayerApplicationsEnabled(
+    process.env.PLAYER_ACCOUNTS_ENABLED,
+    process.env.IRON_LEAGUE_EXISTING_PLAYER_APPLICATIONS_ENABLED,
+  );
 
 const knownPlayerIds = new Set(players.map((player) => player.id));
 const errorText = "Не вдалося виконати операцію. Перевірте налаштування або зверніться до організатора.";
@@ -67,6 +77,9 @@ function userClient(request: NextRequest) {
 /** User actions only use the logged-in user's RLS-scoped client. */
 export async function handlePlayerLinkRequest(request: NextRequest, method: "GET" | "POST") {
   if (!dynamicLinkFeatureEnabled()) return featureDisabledResponse();
+  // Check before parsing, authentication or privileged writes.
+  // GET can still display older request statuses during a paused intake.
+  if (method === "POST" && !dynamicLinkApplicationsEnabled()) return featureDisabledResponse();
   const session = userClient(request);
   if (!session) return respond({ error: errorText }, 503);
   const { client, reply } = session;

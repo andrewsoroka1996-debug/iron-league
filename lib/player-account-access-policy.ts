@@ -22,6 +22,14 @@ export function playerAccountsEnabled(rawValue: string | undefined): boolean {
   return rawValue === "true";
 }
 
+/** Independent fail-closed gate for historical profile-link applications. */
+export function existingPlayerApplicationsEnabled(
+  accountsFlag: string | undefined,
+  applicationsFlag: string | undefined,
+): boolean {
+  return playerAccountsEnabled(accountsFlag) && applicationsFlag === "true";
+}
+
 /**
  * The link MUST be read from the admin-controlled player_discord_links table
  * using the verified Supabase Auth user ID. The table must enforce uniqueness
