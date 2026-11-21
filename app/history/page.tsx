@@ -7,16 +7,16 @@ import SiteFooter from "../../components/public/SiteFooter";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// Статуси сезонів редакційні: завершені 1–2 не перераховуємо,
-// сезон 3 активний, сезон 4 лише готується.
+// Статуси сезонів редакційні: завершено сезони 1–3,
+// сезон 4 у підготовці.
 const seasons = [
   {
     number: 3,
     title: "Сезон 3",
-    status: "Триває",
+    status: "Завершений",
     href: "/history/season-3",
-    description: "Актуальна боротьба, результати матчів та вже підтверджені трофеї.",
-    kicker: "СЬОГОДНІ",
+    description: "Підсумкові таблиці, результати матчів і здобуті трофеї третього сезону.",
+    kicker: "АРХІВ",
   },
   {
     number: 2,
@@ -46,8 +46,8 @@ const seasons = [
 
 const summary = [
   { value: "04", label: "Сезони у розділі", note: "Від початку до планів" },
-  { value: "02", label: "Завершені сезони", note: "Результати в архіві" },
-  { value: "01", label: "Активний сезон", note: "Триває боротьба" },
+  { value: "03", label: "Завершені сезони", note: "Результати в архіві" },
+  { value: "00", label: "Активних сезонів", note: "Міжсезоння" },
   { value: "01", label: "У підготовці", note: "Майбутні турніри" },
 ];
 
@@ -86,7 +86,7 @@ export default function HistoryPage() {
                   href="/history/season-3"
                   className="inline-flex min-h-11 items-center gap-3 rounded-xl border border-blue-400/60 bg-blue-500 px-4 py-2.5 text-sm font-black text-white shadow-[0_8px_30px_rgba(37,99,235,0.20)] transition hover:bg-blue-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
                 >
-                  Поточний сезон <span aria-hidden="true">↗</span>
+                  Завершений сезон 3 <span aria-hidden="true">↗</span>
                 </Link>
                 <Link href="/history/overall" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-yellow-400/30 bg-yellow-400/[0.08] px-4 py-2.5 text-sm font-black text-yellow-200 transition hover:border-yellow-400/60 hover:text-white">
                   Загальна історія <span aria-hidden="true">↗</span>
@@ -99,21 +99,21 @@ export default function HistoryPage() {
 
             <Link
               href="/history/season-3"
-              aria-label="Переглянути актуальний сезон 3"
+              aria-label="Переглянути завершений сезон 3"
               className="group history-v7-featured-season relative flex min-w-0 flex-col gap-5 overflow-hidden rounded-[22px] border border-blue-400/30 bg-gradient-to-br from-[#142b47] via-[#0b1d32] to-[#07111f] p-5 shadow-[0_16px_40px_rgba(0,0,0,0.20)] transition hover:border-blue-300/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 sm:p-6 lg:min-h-[260px] lg:justify-between lg:p-7"
             >
               <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-sky-400 via-blue-400/70 to-transparent" />
               <div className="relative flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-200 sm:text-[11px]">АКТУАЛЬНИЙ СЕЗОН</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-200 sm:text-[11px]">ЗАВЕРШЕНИЙ СЕЗОН</span>
                 <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.07] px-2.5 py-1 text-[10px] font-bold text-emerald-200 sm:text-[11px]">
                   <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-                  Триває
+                  Завершено
                 </span>
               </div>
               <div className="relative min-w-0">
                 <h2 className="text-[clamp(1.9rem,7vw,2.5rem)] font-black leading-tight tracking-tight text-white sm:text-4xl">Сезон 3</h2>
                 <p className="mt-3 max-w-sm text-sm leading-6 text-blue-100/70">
-                  Поточний розіграш Iron League. Результати, таблиці та боротьба за нові трофеї.
+                  Третій сезон Iron League завершено. Підсумкові таблиці, результати та всі здобуті трофеї.
                 </p>
               </div>
               <div className="relative flex items-center justify-between gap-3 border-t border-blue-200/15 pt-4 text-sm font-bold text-blue-200 transition group-hover:text-white">
@@ -146,43 +146,43 @@ export default function HistoryPage() {
 
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-12 lg:gap-4">
           {seasons.map((season) => {
-            const isCurrent = season.number === 3;
+            const isFeatured = season.number === 3;
             const isPreparing = season.number === 4;
-            const isArchive = season.number <= 2;
+            const isArchive = season.number <= 3;
             return (
               <Link
                 key={season.number}
                 href={season.href}
                 aria-label={`Відкрити ${season.title}`}
                 className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-[20px] border p-5 transition duration-300 hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 sm:p-6 ${
-                  isCurrent
+                  isFeatured
                     ? "min-h-[240px] border-blue-400/35 bg-gradient-to-br from-[#17385b] via-[#0b1e34] to-[#06101e] shadow-[0_18px_45px_rgba(3,7,18,0.25)] lg:col-span-7 lg:row-span-2 lg:min-h-[380px] lg:p-8"
                     : isPreparing
                       ? "min-h-[158px] border-white/10 bg-gradient-to-r from-[#111c2a] to-[#0a111c] lg:col-span-12 lg:min-h-[144px]"
                       : "min-h-[164px] border-white/10 bg-gradient-to-br from-[#111e2d] to-[#07111f] hover:border-amber-300/30 lg:col-span-5"
                 }`}
               >
-                <span aria-hidden="true" className={`pointer-events-none absolute -bottom-8 right-2 select-none font-black leading-none tracking-tighter ${isCurrent ? "text-[190px] text-blue-200/[0.045] lg:text-[270px]" : "text-[135px] text-white/[0.035]"}`}>
+                <span aria-hidden="true" className={`pointer-events-none absolute -bottom-8 right-2 select-none font-black leading-none tracking-tighter ${isFeatured ? "text-[190px] text-blue-200/[0.045] lg:text-[270px]" : "text-[135px] text-white/[0.035]"}`}>
                   {String(season.number).padStart(2, "0")}
                 </span>
-                <div aria-hidden="true" className={`pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${isCurrent ? "from-sky-400 via-blue-500/60" : isPreparing ? "from-slate-500/50 via-slate-400/15" : "from-yellow-300/70 via-yellow-500/15"} to-transparent`} />
+                <div aria-hidden="true" className={`pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${isFeatured ? "from-sky-400 via-blue-500/60" : isPreparing ? "from-slate-500/50 via-slate-400/15" : "from-yellow-300/70 via-yellow-500/15"} to-transparent`} />
                 <div className="relative flex items-start justify-between gap-3">
                   <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isArchive ? "text-yellow-300/80" : "text-blue-300"}`}>{season.kicker} · {String(season.number).padStart(2, "0")}</span>
-                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${isCurrent ? "border-blue-400/30 bg-blue-400/10 text-blue-200" : isPreparing ? "border-white/10 bg-white/[0.035] text-white/55" : "border-yellow-300/15 bg-yellow-300/[0.06] text-yellow-100/70"}`}>
+                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${isFeatured ? "border-blue-400/30 bg-blue-400/10 text-blue-200" : isPreparing ? "border-white/10 bg-white/[0.035] text-white/55" : "border-yellow-300/15 bg-yellow-300/[0.06] text-yellow-100/70"}`}>
                     {season.status}
                   </span>
                 </div>
                 <div className="relative mt-6 flex items-center gap-4 lg:mt-4">
-                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border text-2xl font-black tabular-nums sm:h-16 sm:w-16 ${isCurrent ? "border-blue-300/40 bg-blue-300/10 text-blue-100" : isPreparing ? "border-white/10 bg-white/[0.025] text-white/50" : "border-yellow-400/20 bg-yellow-400/[0.04] text-yellow-200/90"}`}>
+                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border text-2xl font-black tabular-nums sm:h-16 sm:w-16 ${isFeatured ? "border-blue-300/40 bg-blue-300/10 text-blue-100" : isPreparing ? "border-white/10 bg-white/[0.025] text-white/50" : "border-yellow-400/20 bg-yellow-400/[0.04] text-yellow-200/90"}`}>
                     {String(season.number).padStart(2, "0")}
                   </div>
                   <div className="min-w-0">
-                    <h3 className={`font-black tracking-tight text-white ${isCurrent ? "text-2xl sm:text-3xl lg:text-4xl" : "text-xl sm:text-2xl"}`}>{season.title}</h3>
+                    <h3 className={`font-black tracking-tight text-white ${isFeatured ? "text-2xl sm:text-3xl lg:text-4xl" : "text-xl sm:text-2xl"}`}>{season.title}</h3>
                     <p className="mt-1 max-w-md text-xs leading-5 text-white/55 sm:text-sm sm:leading-6">{season.description}</p>
                   </div>
                 </div>
                 <div className="relative mt-5 flex items-center justify-between gap-2 border-t border-white/10 pt-3 text-xs font-bold text-blue-200/80 transition group-hover:text-white">
-                  <span>{isCurrent ? "Поточні турніри й нагороди" : isPreparing ? "Переглянути підготовку" : "Турніри та чемпіони"}</span>
+                  <span>{isFeatured ? "Результати та нагороди" : isPreparing ? "Переглянути підготовку" : "Турніри та чемпіони"}</span>
                   <span aria-hidden="true" className="text-lg transition group-hover:translate-x-1">→</span>
                 </div>
               </Link>
@@ -228,7 +228,7 @@ export default function HistoryPage() {
                 <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-black uppercase tracking-[0.12em] text-yellow-300/75">ЗАЛ СЛАВИ</div>
                   <div className="mt-1 text-sm font-black text-white sm:text-base">Сезон {number}</div>
-                  <div className="mt-0.5 text-[11px] text-white/45">{number === 3 ? "Підтверджені нагороди" : "Архів чемпіонів"}</div>
+                  <div className="mt-0.5 text-[11px] text-white/45">{"Архів чемпіонів"}</div>
                 </div>
                 <span aria-hidden="true" className="text-lg text-yellow-300 transition group-hover:translate-x-1">→</span>
               </Link>

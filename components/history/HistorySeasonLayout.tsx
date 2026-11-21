@@ -33,9 +33,9 @@ const seasonDetails = {
     note: "Результати та досягнення завершеного сезону збережені в історії.",
   },
   3: {
-    status: "Поточний сезон",
-    lead: "Третій сезон Iron League: актуальні турніри, результати матчів і підтверджені досягнення.",
-    note: "Сезон триває. Досягнення з'являються лише після визначення переможців відповідних турнірів.",
+    status: "Завершений",
+    lead: "Третій сезон Iron League завершено: підсумкові турнірні таблиці, результати матчів і здобуті трофеї.",
+    note: "Результати та досягнення завершеного сезону збережені в історії.",
   },
   4: {
     status: "Підготовка",
@@ -63,8 +63,7 @@ export default function HistorySeasonLayout({
   tournaments,
 }: Props) {
   const detail = seasonDetails[season];
-  const isActive = season === 3;
-  const isArchive = season <= 2;
+  const isArchive = season <= 3;
 
   const stats = [
     { label: "Дивізіонів", value: divisionCount },
@@ -113,11 +112,9 @@ export default function HistorySeasonLayout({
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span
                       className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold ${
-                        isActive
-                          ? "border-blue-400/35 bg-blue-500/15 text-blue-200"
-                          : isArchive
-                            ? "border-white/15 bg-white/[0.06] text-white/70"
-                            : "border-white/10 bg-white/[0.04] text-white/55"
+                        isArchive
+                          ? "border-white/15 bg-white/[0.06] text-white/70"
+                          : "border-white/10 bg-white/[0.04] text-white/55"
                       }`}
                     >
                       {detail.status}

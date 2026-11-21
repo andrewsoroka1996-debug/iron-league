@@ -762,7 +762,7 @@ export default async function DivisionCupsPage({
     season === 2
       ? "Архів"
       : season === 3
-        ? "Поточний сезон"
+        ? "Завершений"
         : "Підготовка";
 
   return (
