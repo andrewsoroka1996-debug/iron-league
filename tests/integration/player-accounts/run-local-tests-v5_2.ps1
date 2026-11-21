@@ -51,14 +51,22 @@ try {
         if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing required file: $file" }
     }
 
-    if ((& git -C $Repo branch --show-current).Trim() -ne 'main') {
-        throw 'STOP: the repository must be on main'
+    # Test the reviewed sources on any named branch (main or isolated work branch).
+    # File hashes below, not the branch name, determine what SQL is allowed to run.
+    $activeBranch = (& git -C $Repo branch --show-current)
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($activeBranch -join ''))) {
+        throw 'STOP: repository must be on a named Git branch'
     }
     $head = (& git -C $Repo rev-parse --short HEAD).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'Git HEAD check failed' }
     Write-Host "Repository HEAD: $head (no code changes will be made)"
 
     $srcHash = (Get-FileHash -LiteralPath $registry -Algorithm SHA256).Hash.ToLowerInvariant()
+    # The generated, executable SQL snapshot is pinned by a second exact hash.
+    # This detects accidental or unreviewed differences after a clean checkout.
+    $expectedSqlSha = '20c7647790ebe79c5d72db46665d9fe7de2de04b67cab996c1496b88446882ed'
+    $actualSqlSha = (Get-FileHash -LiteralPath $prepared -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualSqlSha -cne $expectedSqlSha) { throw 'STOP: prepared v5.2 SQL SHA256 mismatch' }
     $sqlText = [System.IO.File]::ReadAllText($prepared, [System.Text.Encoding]::UTF8)
     if (-not $sqlText.Contains("-- Source SHA256: $srcHash")) {
         throw 'STOP: prepared SQL does not match the current data/players.ts hash'
